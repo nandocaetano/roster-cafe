@@ -23,6 +23,28 @@ from database import (
 )
 from logic import calcular_horas_turno, gerar_escala_automatica, gerar_pdf_escala
 
+
+# ==========================================
+# CACHED DB WRAPPERS  (avoid repeated round-trips to Supabase on every rerun)
+# ==========================================
+
+@st.cache_data(ttl=300)
+def _cached_cafe(cafe_id, _v=0):
+    """Cache cafe lookup for 5 min — changes very rarely."""
+    return get_cafe_by_id(cafe_id)
+
+
+@st.cache_data(ttl=60)
+def _cached_funcionarios(tenant_id, _v=0):
+    """Cache employee list for 60 s; _v is a cache-bust counter incremented on every write."""
+    return get_funcionarios_ativos(tenant_id)
+
+
+@st.cache_data(ttl=30)
+def _cached_rosters(tenant_id, _v=0):
+    """Cache roster list for 30 s; _v is incremented on save/delete."""
+    return get_rosters(tenant_id)
+
 # ==========================================
 # UI HELPERS
 # ==========================================
@@ -85,7 +107,13 @@ def render_availability_selector(prefix, defaults=None):
 # APP SETUP
 # ==========================================
 st.set_page_config(page_title="Gerador de Escalas", layout="wide")
-init_db()
+
+# Run init_db only once per browser session — not on every Streamlit rerun.
+# On Supabase, every _get_conn() is a network round-trip (~200-400 ms);
+# init_db sends 6+ DDL statements, so skipping it after the first run saves 1-2 s.
+if 'db_initialized' not in st.session_state:
+    init_db()
+    st.session_state['db_initialized'] = True
 
 if 'user' not in st.session_state:
     st.session_state['user'] = None
@@ -149,7 +177,14 @@ if st.session_state['user'] is None:
 # ------------------------------------------
 TENANT_ID = st.session_state['tenant_id']
 _user = st.session_state['user']
-_cafe = get_cafe_by_id(TENANT_ID)
+
+# Version counters — incremented after each write so @st.cache_data misses and re-fetches.
+if 'equipe_v' not in st.session_state:
+    st.session_state['equipe_v'] = 0
+if 'roster_v' not in st.session_state:
+    st.session_state['roster_v'] = 0
+
+_cafe = _cached_cafe(TENANT_ID)
 _cafe_nome = _cafe['name'] if _cafe else "Cafe"
 
 with st.sidebar:
@@ -198,7 +233,7 @@ lista_cargos_oficiais = ["Manager", "Assistant Manager", "Head Barista", "Barist
 # ------------------------------------------
 with aba1:
     st.header("Equipe Atual")
-    df_equipe = get_funcionarios_ativos(TENANT_ID)
+    df_equipe = _cached_funcionarios(TENANT_ID, st.session_state['equipe_v'])
 
     espaco_esq, col_tabela, espaco_dir = st.columns([1, 6, 1])
     with col_tabela:
@@ -237,6 +272,7 @@ with aba1:
             try:
                 adicionar_funcionario(TENANT_ID, nome_novo, cargo_novo, contrato_novo, h_min_nova, h_max_nova, dias_selecionados, nivel_novo)
                 st.success(f"{nome_novo} adicionado!")
+                st.session_state['equipe_v'] += 1
                 st.session_state['novo_k'] += 1
                 st.rerun()
             except ValueError as _ve:
@@ -279,11 +315,13 @@ with aba1:
             if col_btn1.button("💾 Salvar", key=f"{_pfx}_salvar"):
                 atualizar_funcionario(TENANT_ID, int(dados_atuais['id_funcionario']), nome_ed, cargo_ed, contrato_ed, h_min_ed, h_max_ed, dias_ed, nivel_ed)
                 st.success("Atualizado!")
+                st.session_state['equipe_v'] += 1
                 for _sk in [k for k in st.session_state if k.startswith(f"ed_{func_selecionado}")]:
                     del st.session_state[_sk]
                 st.rerun()
             if col_btn2.button("❌ Desativar", key=f"{_pfx}_desativar"):
                 desativar_funcionario(TENANT_ID, int(dados_atuais['id_funcionario']))
+                st.session_state['equipe_v'] += 1
                 st.warning("Removido.")
                 st.rerun()
 
@@ -396,7 +434,7 @@ with aba3:
         "Dom": ["07:30 - 14:00", "07:30 - 15:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
     }
 
-    df_equipe_atual = get_funcionarios_ativos(TENANT_ID)
+    df_equipe_atual = _cached_funcionarios(TENANT_ID, st.session_state.get('equipe_v', 0))
     lista_nomes = df_equipe_atual['nome'].tolist() if not df_equipe_atual.empty else []
     lista_nomes.append("Someone (Outra Loja)")
 
@@ -533,12 +571,13 @@ with aba3:
                     dados_json = roster_editado.to_json(orient="records", force_ascii=False)
                     salvar_roster(TENANT_ID, semana_label.strip(), dados_json)
                     st.session_state['_last_semana_label'] = semana_label.strip()
+                    st.session_state['roster_v'] += 1
                     st.success(f"Escala '{semana_label}' salva!")
                     st.rerun()
 
         with col_historico:
             st.write("**Escalas salvas**")
-            df_rosters = get_rosters(TENANT_ID)
+            df_rosters = _cached_rosters(TENANT_ID, st.session_state['roster_v'])
             if df_rosters.empty:
                 st.info("Nenhuma escala salva ainda.")
             else:
@@ -555,6 +594,7 @@ with aba3:
                             st.rerun()
                     if btn_del:
                         deletar_roster(TENANT_ID, int(r_row['id']))
+                        st.session_state['roster_v'] += 1
                         st.rerun()
 
 # ------------------------------------------
