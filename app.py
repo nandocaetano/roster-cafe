@@ -186,22 +186,26 @@ with aba1:
 
     with col1:
         st.subheader("➕ Novo Funcionário")
-        with st.form("form_novo_func", clear_on_submit=True):
-            nome_novo = st.text_input("Nome")
-            c_cargo, c_contrato = st.columns(2)
-            cargo_novo = c_cargo.selectbox("Cargo", lista_cargos_oficiais)
-            contrato_novo = c_contrato.selectbox("Contrato", ["Full-time", "Part-time"])
+        if 'novo_k' not in st.session_state:
+            st.session_state['novo_k'] = 0
+        _nk = st.session_state['novo_k']
 
-            c_min, c_max = st.columns(2)
-            h_min_nova = c_min.number_input("Horas Mín.", min_value=0, max_value=60, value=20)
-            h_max_nova = c_max.number_input("Horas Máx.", min_value=0, max_value=60, value=39)
+        nome_novo = st.text_input("Nome", key=f"novo_nome_{_nk}")
+        c_cargo, c_contrato = st.columns(2)
+        cargo_novo = c_cargo.selectbox("Cargo", lista_cargos_oficiais, key=f"novo_cargo_{_nk}")
+        contrato_novo = c_contrato.selectbox("Contrato", ["Full-time", "Part-time"], key=f"novo_contrato_{_nk}")
 
-            dias_selecionados = render_availability_selector("novo")
+        c_min, c_max = st.columns(2)
+        h_min_nova = c_min.number_input("Horas Mín.", min_value=0, max_value=60, value=20, key=f"novo_hmin_{_nk}")
+        h_max_nova = c_max.number_input("Horas Máx.", min_value=0, max_value=60, value=39, key=f"novo_hmax_{_nk}")
 
-            if st.form_submit_button("Cadastrar") and nome_novo:
-                adicionar_funcionario(TENANT_ID, nome_novo, cargo_novo, contrato_novo, h_min_nova, h_max_nova, dias_selecionados)
-                st.success(f"{nome_novo} adicionado!")
-                st.rerun()
+        dias_selecionados = render_availability_selector(f"novo_{_nk}")
+
+        if st.button("Cadastrar", key=f"novo_btn_{_nk}") and nome_novo:
+            adicionar_funcionario(TENANT_ID, nome_novo, cargo_novo, contrato_novo, h_min_nova, h_max_nova, dias_selecionados)
+            st.success(f"{nome_novo} adicionado!")
+            st.session_state['novo_k'] += 1
+            st.rerun()
 
     with col2:
         st.subheader("✏️ Editar ou Remover")
@@ -231,6 +235,8 @@ with aba1:
             if col_btn1.button("💾 Salvar", key=f"{_pfx}_salvar"):
                 atualizar_funcionario(TENANT_ID, int(dados_atuais['id_funcionario']), nome_ed, cargo_ed, contrato_ed, h_min_ed, h_max_ed, dias_ed)
                 st.success("Atualizado!")
+                for _sk in [k for k in st.session_state if k.startswith(f"ed_{func_selecionado}")]:
+                    del st.session_state[_sk]
                 st.rerun()
             if col_btn2.button("❌ Desativar", key=f"{_pfx}_desativar"):
                 desativar_funcionario(TENANT_ID, int(dados_atuais['id_funcionario']))
