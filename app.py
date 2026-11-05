@@ -50,7 +50,13 @@ def render_availability_selector(prefix, defaults=None):
             selecao = st.selectbox(dia, opcoes, index=idx_opcao, key=f"{prefix}_sel_{dia}")
 
             if selecao == "Específico":
-                detalhe = st.text_input("Horário:", value=texto_especifico, key=f"{prefix}_txt_{dia}")
+                detalhe = st.text_input(
+                    "Horário:",
+                    value=texto_especifico,
+                    placeholder="ex: 09:00 - 17:00",
+                    help="Use o formato HH:MM - HH:MM. O motor só aceita turnos dentro desse intervalo.",
+                    key=f"{prefix}_txt_{dia}",
+                )
                 resultados.append(f"Específico: {detalhe}")
             else:
                 resultados.append(selecao)
@@ -123,6 +129,25 @@ with st.sidebar:
     st.write(f"👤 {_user['email']}")
     st.write(f"🔖 {_user['role'].capitalize()}")
     st.divider()
+    with st.expander("➕ Registrar Novo Cafe"):
+        with st.form("form_novo_cafe_sidebar"):
+            _nc_nome = st.text_input("Nome do Cafe", key="nc_nome")
+            _nc_email = st.text_input("Email do Admin", key="nc_email")
+            _nc_senha = st.text_input("Senha", type="password", key="nc_senha")
+            _nc_conf = st.text_input("Confirmar Senha", type="password", key="nc_conf")
+            if st.form_submit_button("Cadastrar"):
+                if _nc_senha != _nc_conf:
+                    st.error("As senhas não coincidem.")
+                elif not _nc_nome or not _nc_email or not _nc_senha:
+                    st.error("Preencha todos os campos.")
+                else:
+                    try:
+                        _ntid = criar_cafe(_nc_nome, _nc_email)
+                        create_user(_ntid, _nc_email, _nc_senha, role="admin")
+                        st.success(f"'{_nc_nome}' cadastrado!")
+                    except Exception as _e:
+                        st.error(f"Erro: {_e}")
+    st.divider()
     if st.button("🚪 Logout"):
         st.session_state['user'] = None
         st.session_state['tenant_id'] = None
@@ -153,7 +178,7 @@ with aba1:
 
     with col1:
         st.subheader("➕ Novo Funcionário")
-        with st.form("form_novo_func", clear_on_submit=False):
+        with st.form("form_novo_func", clear_on_submit=True):
             nome_novo = st.text_input("Nome")
             c_cargo, c_contrato = st.columns(2)
             cargo_novo = c_cargo.selectbox("Cargo", lista_cargos_oficiais)
@@ -176,33 +201,33 @@ with aba1:
             func_selecionado = st.selectbox("Selecione um funcionário", df_equipe['nome'].tolist())
             dados_atuais = df_equipe[df_equipe['nome'] == func_selecionado].iloc[0]
 
-            with st.form("form_editar_func"):
-                nome_ed = st.text_input("Nome", value=dados_atuais['nome'])
-                c_cargo_ed, c_contrato_ed = st.columns(2)
-                idx_cargo = lista_cargos_oficiais.index(dados_atuais['cargo']) if dados_atuais['cargo'] in lista_cargos_oficiais else 3
-                cargo_ed = c_cargo_ed.selectbox("Cargo", lista_cargos_oficiais, index=idx_cargo)
-                idx_contrato = 0 if dados_atuais['tipo_contrato'] == "Full-time" else 1
-                contrato_ed = c_contrato_ed.selectbox("Contrato", ["Full-time", "Part-time"], index=idx_contrato)
+            _pfx = f"ed_{func_selecionado}"
+            nome_ed = st.text_input("Nome", value=dados_atuais['nome'], key=f"{_pfx}_nome")
+            c_cargo_ed, c_contrato_ed = st.columns(2)
+            idx_cargo = lista_cargos_oficiais.index(dados_atuais['cargo']) if dados_atuais['cargo'] in lista_cargos_oficiais else 3
+            cargo_ed = c_cargo_ed.selectbox("Cargo", lista_cargos_oficiais, index=idx_cargo, key=f"{_pfx}_cargo")
+            idx_contrato = 0 if dados_atuais['tipo_contrato'] == "Full-time" else 1
+            contrato_ed = c_contrato_ed.selectbox("Contrato", ["Full-time", "Part-time"], index=idx_contrato, key=f"{_pfx}_contrato")
 
-                c_min_ed, c_max_ed = st.columns(2)
-                h_min_ed = c_min_ed.number_input("Horas Mín.", min_value=0, max_value=60, value=int(dados_atuais['horas_min']))
-                h_max_ed = c_max_ed.number_input("Horas Máx.", min_value=0, max_value=60, value=int(dados_atuais['horas_max']))
+            c_min_ed, c_max_ed = st.columns(2)
+            h_min_ed = c_min_ed.number_input("Horas Mín.", min_value=0, max_value=60, value=int(dados_atuais['horas_min']), key=f"{_pfx}_hmin")
+            h_max_ed = c_max_ed.number_input("Horas Máx.", min_value=0, max_value=60, value=int(dados_atuais['horas_max']), key=f"{_pfx}_hmax")
 
-                dias_atuais = [
-                    dados_atuais['d_seg'], dados_atuais['d_ter'], dados_atuais['d_qua'],
-                    dados_atuais['d_qui'], dados_atuais['d_sex'], dados_atuais['d_sab'], dados_atuais['d_dom']
-                ]
-                dias_ed = render_availability_selector("ed", dias_atuais)
+            dias_atuais = [
+                dados_atuais['d_seg'], dados_atuais['d_ter'], dados_atuais['d_qua'],
+                dados_atuais['d_qui'], dados_atuais['d_sex'], dados_atuais['d_sab'], dados_atuais['d_dom']
+            ]
+            dias_ed = render_availability_selector(_pfx, dias_atuais)
 
-                col_btn1, col_btn2 = st.columns(2)
-                if col_btn1.form_submit_button("💾 Salvar"):
-                    atualizar_funcionario(TENANT_ID, int(dados_atuais['id_funcionario']), nome_ed, cargo_ed, contrato_ed, h_min_ed, h_max_ed, dias_ed)
-                    st.success("Atualizado!")
-                    st.rerun()
-                if col_btn2.form_submit_button("❌ Desativar"):
-                    desativar_funcionario(TENANT_ID, int(dados_atuais['id_funcionario']))
-                    st.warning("Removido.")
-                    st.rerun()
+            col_btn1, col_btn2 = st.columns(2)
+            if col_btn1.button("💾 Salvar", key=f"{_pfx}_salvar"):
+                atualizar_funcionario(TENANT_ID, int(dados_atuais['id_funcionario']), nome_ed, cargo_ed, contrato_ed, h_min_ed, h_max_ed, dias_ed)
+                st.success("Atualizado!")
+                st.rerun()
+            if col_btn2.button("❌ Desativar", key=f"{_pfx}_desativar"):
+                desativar_funcionario(TENANT_ID, int(dados_atuais['id_funcionario']))
+                st.warning("Removido.")
+                st.rerun()
 
 # ------------------------------------------
 # ABA 2: SETUP DA SEMANA
@@ -271,13 +296,13 @@ with aba3:
     st.header("📅 Escala da Semana")
 
     turnos_padrao = {
-        "Seg": ["07:00 - 12:00", "07:00 - 14:00", "07:30 - 15:00", "08:00 - 16:00", "09:00 - 18:15 (Fecho)", "12:00 - 18:15 (Fecho)", "14:00 - 18:15 (Fecho)"],
-        "Ter": ["07:00 - 12:00", "07:00 - 14:00", "07:30 - 15:00", "08:00 - 16:00", "09:00 - 18:15 (Fecho)", "12:00 - 18:15 (Fecho)", "14:00 - 18:15 (Fecho)"],
-        "Qua": ["06:30 - 12:00", "07:00 - 14:00", "07:00 - 14:00", "07:30 - 15:00", "09:00 - 18:15 (Fecho)", "12:00 - 18:15 (Fecho)", "14:00 - 18:15 (Fecho)"],
-        "Qui": ["07:00 - 12:00", "07:00 - 14:00", "07:30 - 15:00", "08:00 - 16:00", "09:00 - 18:15 (Fecho)", "12:00 - 18:15 (Fecho)", "14:00 - 18:15 (Fecho)"],
-        "Sex": ["07:00 - 12:00", "07:00 - 14:00", "07:30 - 15:00", "08:00 - 16:00", "09:00 - 18:15 (Fecho)", "12:00 - 18:15 (Fecho)", "14:00 - 18:15 (Fecho)"],
-        "Sáb": ["07:30 - 14:00", "07:30 - 15:00", "09:00 - 18:15 (Fecho)", "12:00 - 18:15 (Fecho)", "14:00 - 18:15 (Fecho)"],
-        "Dom": ["07:30 - 14:00", "07:30 - 15:00", "09:00 - 18:15 (Fecho)", "12:00 - 18:15 (Fecho)", "14:00 - 18:15 (Fecho)"],
+        "Seg": ["07:00 - 12:00", "07:00 - 14:00", "07:30 - 15:00", "08:00 - 16:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
+        "Ter": ["07:00 - 12:00", "07:00 - 14:00", "07:30 - 15:00", "08:00 - 16:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
+        "Qua": ["06:30 - 12:00", "07:00 - 14:00", "07:00 - 14:00", "07:30 - 15:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
+        "Qui": ["07:00 - 12:00", "07:00 - 14:00", "07:30 - 15:00", "08:00 - 16:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
+        "Sex": ["07:00 - 12:00", "07:00 - 14:00", "07:30 - 15:00", "08:00 - 16:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
+        "Sáb": ["07:30 - 14:00", "07:30 - 15:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
+        "Dom": ["07:30 - 14:00", "07:30 - 15:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
     }
 
     df_equipe_atual = get_funcionarios_ativos(TENANT_ID)
@@ -352,7 +377,7 @@ with aba3:
 
         for dia in turnos_padrao.keys():
             turnos_fecho_dia = roster_editado[
-                (roster_editado['Dia'] == dia) & (roster_editado['Horário'].fillna('').str.contains("Fecho"))
+                (roster_editado['Dia'] == dia) & (roster_editado['Horário'].fillna('').str.contains("Fechamento"))
             ]
             nomes_no_fecho = turnos_fecho_dia['Funcionário'].tolist()
             if "A Preencher" in nomes_no_fecho or "Someone (Outra Loja)" in nomes_no_fecho:

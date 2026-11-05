@@ -25,11 +25,8 @@
 
 | File | Last Change |
 |---|---|
-| `logic.py` | Replaced `gerar_escala_automatica` with Codex algorithm; returns `(DataFrame, list[str])`; added clopening, keyholder, and hour-limit checks; added `import pandas as pd` |
-| `app.py` | Unpacks new tuple return; stores `constraints_warnings` in session state; renders `⚠️ Avisos de Regras Trabalhistas` expander after roster; reset button clears warnings |
-| `docs/CURRENT_STATE.md` | This file |
-| `docs/CHANGELOG.md` | New Phase 4 entry appended |
-| `.gitignore` | Created (excludes `*.db`, `__pycache__/`, `.env`, `.maestri/`) |
+| `app.py` | Edit form refactored — removed `st.form` wrapper, added employee-specific widget keys so "Específico" availability field triggers immediately on selectbox change; sidebar cafe registration expander added; `clear_on_submit=True` on new employee form; "Fecho"→"Fechamento" in turnos and str.contains filter; `render_availability_selector` gains `placeholder` and `help` on time input |
+| `logic.py` | "Fecho"→"Fechamento" in `calcular_horas_turno` docstring and `pode_trabalhar` check |
 
 ---
 
@@ -57,6 +54,7 @@ _None currently recorded._
 1. Encode Irish Working Time Act (WTI) rules as a standalone `validar_wti(employee, day, shift, week_log)` function in `logic.py` (max 48 hrs/week, 11 hrs rest between shifts, 15/30 min break thresholds).
 2. Wire `validar_wti` into the new scheduler's candidate-filtering step so violations are blocked at assignment time, not just flagged after.
 3. Extend the `⚠️ Avisos de Regras Trabalhistas` expander to also surface WTI violations from the post-generation check pass.
+4. Consider applying same edit-form pattern (outside `st.form`) to the "Novo Funcionário" form so "Específico" also triggers immediately there.
 
 ---
 

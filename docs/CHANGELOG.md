@@ -4,6 +4,28 @@ Chronological log of major updates. Most recent first.
 
 ---
 
+## 2026-11-05 — Phase 4: UX Fixes & Edit Form Refactor
+
+### Fixed
+- `app.py` Edit form ("Editar ou Remover") refactored to remove `st.form` wrapper — availability selectbox changes now trigger immediate rerun so the "Específico" time input appears/disappears on selection without needing to submit
+- Employee-specific widget keys (`ed_{nome}_*`) prevent state collision when switching between employees in the edit panel
+- `form_submit_button` → regular `st.button` with explicit keys for Salvar and Desativar
+
+### Changed
+- `app.py` "Novo Funcionário" form: `clear_on_submit=False` → `True` so form clears after cadastro
+- `app.py` `render_availability_selector`: added `placeholder="ex: 09:00 - 17:00"` and `help` text to the time `text_input`
+- `app.py` sidebar: "➕ Registrar Novo Cafe" expander added to authenticated sidebar (previously only accessible from the login screen)
+- `app.py` turnos_padrao and str.contains filter: "Fecho" → "Fechamento" across all 21 shift strings and the keyholder filter
+- `logic.py` `calcular_horas_turno` docstring and `pode_trabalhar` check: "Fecho" → "Fechamento"
+
+### Files Modified
+- `app.py`
+- `logic.py`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## 2026-11-05 — Phase 4: Codex Scheduler Integration
 
 ### Changed

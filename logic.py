@@ -6,7 +6,7 @@ import pandas as pd
 
 
 def calcular_horas_turno(turno_str):
-    """Return the duration in hours for a shift string like '07:00 - 14:00 (Fecho)'."""
+    """Return the duration in hours for a shift string like '07:00 - 14:00 (Fechamento)'."""
     matches = re.findall(r'(\d{1,2}:\d{2})', turno_str)
     if len(matches) == 2:
         fmt = '%H:%M'
@@ -26,7 +26,7 @@ def pode_trabalhar(nome, turno_str, dia, config_semana):
         return False
     if disp == "Livre":
         return True
-    if disp == "Só Manhã" and "Fecho" in turno_str:
+    if disp == "Só Manhã" and "Fechamento" in turno_str:
         return False
     if disp == "Só Manhã":
         return True
