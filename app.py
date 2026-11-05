@@ -1,4 +1,5 @@
 """Streamlit UI for Gerador de Escalas — imports all logic from database.py and logic.py."""
+import re
 import streamlit as st
 import pandas as pd
 
@@ -50,14 +51,21 @@ def render_availability_selector(prefix, defaults=None):
             selecao = st.selectbox(dia, opcoes, index=idx_opcao, key=f"{prefix}_sel_{dia}")
 
             if selecao == "Específico":
-                detalhe = st.text_input(
-                    "Horário:",
-                    value=texto_especifico,
-                    placeholder="ex: 09:00 - 17:00",
-                    help="Use o formato HH:MM - HH:MM. O motor só aceita turnos dentro desse intervalo.",
-                    key=f"{prefix}_txt_{dia}",
-                )
-                resultados.append(f"Específico: {detalhe}")
+                sh_def, sm_def, eh_def, em_def = 9, 0, 17, 0
+                if texto_especifico:
+                    _t = re.findall(r'(\d{1,2}):(\d{2})', texto_especifico)
+                    if len(_t) == 2:
+                        sh_def, sm_def = int(_t[0][0]), int(_t[0][1])
+                        eh_def, em_def = int(_t[1][0]), int(_t[1][1])
+                st.caption("De:")
+                _ch, _cm = st.columns(2)
+                sh = _ch.number_input("H", 0, 23, sh_def, 1, format="%02d", key=f"{prefix}_sh_{dia}", label_visibility="collapsed")
+                sm = _cm.number_input("M", 0, 59, sm_def, 5, format="%02d", key=f"{prefix}_sm_{dia}", label_visibility="collapsed")
+                st.caption("Até:")
+                _eh, _em = st.columns(2)
+                eh = _eh.number_input("H", 0, 23, eh_def, 1, format="%02d", key=f"{prefix}_eh_{dia}", label_visibility="collapsed")
+                em = _em.number_input("M", 0, 59, em_def, 5, format="%02d", key=f"{prefix}_em_{dia}", label_visibility="collapsed")
+                resultados.append(f"Específico: {int(sh):02d}:{int(sm):02d} - {int(eh):02d}:{int(em):02d}")
             else:
                 resultados.append(selecao)
 
