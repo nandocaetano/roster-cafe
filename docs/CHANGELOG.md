@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-11-05 — Phase 5: PDF/Excel Export, Warning Severity & Analytics Tab
+
+### Added
+- `logic.py`: `gerar_pdf_escala(roster_df, cafe_nome, semana_label) -> bytes` — landscape A4 PDF with styled header, alternating day shading, Latin-1 encoding for Portuguese characters; uses `fpdf` 1.7.2
+- `app.py` Tab 3: **⬇️ Exportar Escala** collapsible expander with 3 download buttons — 📄 CSV, 📊 Excel (`openpyxl`), 🖨️ PDF — replacing the single CSV button
+- `app.py` Tab 3: Warning categorization — groups `constraints_warnings` into errors / warnings / infos; expander label shows counts; expander auto-expands when errors exist; uses `st.error` / `st.warning` / `st.info` per severity
+- `app.py` Tab 4: **📊 Análise** tab with 4 KPI metrics (Total de Turnos, Preenchidos, Gaps, Cobertura %), Horas por Funcionário vs. Alvo bar chart, and Cobertura por Dia stacked bar chart
+
+### Changed
+- `app.py` Tab 3: 4-column action button row → clean 3-column row (Esqueleto Vazio, Gerar Automática, Resetar Aba); exports moved to dedicated expander
+- `app.py` Tab 3: `_last_semana_label` now saved to `session_state` on roster save so PDF export can include the week label
+
+### Files Modified
+- `app.py`
+- `logic.py`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## 2026-11-05 — Phase 5: Break-time Warnings, Export CSV & Roster History
 
 ### Added

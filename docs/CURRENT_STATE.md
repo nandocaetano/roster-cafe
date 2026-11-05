@@ -25,9 +25,8 @@
 
 | File | Last Change |
 |---|---|
-| `app.py` | Break-time conflict validation in Tab 2 submit; Exportar CSV button in Tab 3; Histórico de Escalas UI (save/load/delete) in Tab 3; `json` + roster CRUD imports added |
-| `database.py` | `Rosters` table added to `init_db`; `salvar_roster`, `get_rosters`, `get_roster_by_id`, `deletar_roster` added |
-| `logic.py` | Break-time warnings: >6h → 30 min obrigatória (WTI), >4.5h → 15 min recomendada |
+| `app.py` | PDF+Excel export expander (3 buttons: CSV/Excel/PDF); warning categorization by severity (error/warning/info); Tab 4 Analytics (4 metrics + 2 bar charts); `gerar_pdf_escala` import; `io` import; `_last_semana_label` saved to session_state |
+| `logic.py` | `gerar_pdf_escala(roster_df, cafe_nome, semana_label) -> bytes` added — landscape A4 PDF with header, alternating row shading, Latin-1 encoding for Portuguese text |
 
 ---
 
@@ -35,9 +34,9 @@
 
 ```
 app_escala/
-├── app.py          # Streamlit UI only — tabs 1/2/3 + auth gate + sidebar
-├── database.py     # SQLite CRUD — Cafes, Users, Funcionarios
-├── logic.py        # Pure Python — shift math, availability checks, auto-scheduler
+├── app.py          # Streamlit UI only — tabs 1/2/3/4 + auth gate + sidebar
+├── database.py     # SQLite CRUD — Cafes, Users, Funcionarios, Rosters
+├── logic.py        # Pure Python — shift math, availability checks, auto-scheduler, PDF export
 ├── roster_cafe.db  # SQLite database (created at runtime)
 └── docs/           # This Second Brain
 ```
@@ -53,9 +52,8 @@ _None currently recorded._
 ## Next Immediate Steps
 
 1. Update `docs/ARCHITECTURE.md` to reflect the weekly overrides schema and Rosters table.
-2. PDF export (formatted, printable) — requires `reportlab` or `fpdf2` dep.
-3. User-facing UX polish: break-time warning badge distinct from WTI errors in Tab 3 expander.
-4. Begin Phase 6 planning: multi-week view / roster analytics dashboard.
+2. User testing: generate a real roster with employees configured in Tab 2 (Folga, Treinamento) and verify PDF/Excel downloads render correctly.
+3. Phase 6 planning: multi-week view / roster comparison across saved rosters.
 
 ---
 

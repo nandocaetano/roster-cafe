@@ -293,3 +293,47 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
     )
 
     return pd.DataFrame(records, columns=output_columns), warnings
+
+
+def gerar_pdf_escala(roster_df, cafe_nome: str = "Café", semana_label: str = "") -> bytes:
+    """Return a printable PDF of the roster as raw bytes (landscape A4)."""
+    from fpdf import FPDF
+
+    def _l(s: str) -> str:
+        return str(s).encode('latin-1', 'replace').decode('latin-1')
+
+    pdf = FPDF(orientation='L', unit='mm', format='A4')
+    pdf.set_margins(10, 10, 10)
+    pdf.set_auto_page_break(auto=True, margin=10)
+    pdf.add_page()
+
+    pdf.set_font("Arial", "B", 15)
+    pdf.cell(0, 9, _l(f"{cafe_nome} — Escala da Semana"), ln=True, align='C')
+    if semana_label:
+        pdf.set_font("Arial", "", 11)
+        pdf.cell(0, 7, _l(semana_label), ln=True, align='C')
+    pdf.ln(4)
+
+    w_dia, w_hora, w_func = 28, 72, 90
+    pdf.set_font("Arial", "B", 10)
+    pdf.set_fill_color(40, 40, 40)
+    pdf.set_text_color(255, 255, 255)
+    for w, h in ((w_dia, "Dia"), (w_hora, "Horario"), (w_func, "Funcionario")):
+        pdf.cell(w, 8, h, border=1, fill=True, align='C')
+    pdf.ln()
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", "", 9)
+
+    last_day, shade = None, False
+    for _, row in roster_df.iterrows():
+        if row['Dia'] != last_day:
+            shade = not shade
+            last_day = row['Dia']
+        pdf.set_fill_color(235, 245, 255) if shade else pdf.set_fill_color(255, 255, 255)
+        pdf.cell(w_dia, 7, _l(row['Dia']), border=1, fill=True)
+        pdf.cell(w_hora, 7, _l(row['Horário']), border=1, fill=True)
+        pdf.cell(w_func, 7, _l(row['Funcionário']), border=1, fill=True)
+        pdf.ln()
+
+    result = pdf.output(dest='S')
+    return result.encode('latin-1') if isinstance(result, str) else bytes(result)

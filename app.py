@@ -1,4 +1,5 @@
 """Streamlit UI for Gerador de Escalas — imports all logic from database.py and logic.py."""
+import io
 import re
 import streamlit as st
 import pandas as pd
@@ -20,7 +21,7 @@ from database import (
     get_roster_by_id,
     deletar_roster,
 )
-from logic import calcular_horas_turno, gerar_escala_automatica
+from logic import calcular_horas_turno, gerar_escala_automatica, gerar_pdf_escala
 
 # ==========================================
 # UI HELPERS
@@ -171,7 +172,7 @@ with st.sidebar:
 
 st.title("☕ Gerenciador de Escalas - Cafe")
 
-aba1, aba2, aba3 = st.tabs(["👥 Gestão do Time", "⚙️ Setup da Semana", "📅 Rascunho e Aprovação"])
+aba1, aba2, aba3, aba4 = st.tabs(["👥 Gestão do Time", "⚙️ Setup da Semana", "📅 Rascunho e Aprovação", "📊 Análise"])
 
 lista_cargos_oficiais = ["Manager", "Assistant Manager", "Head Barista", "Barista"]
 
@@ -363,7 +364,7 @@ with aba3:
     lista_nomes = df_equipe_atual['nome'].tolist() if not df_equipe_atual.empty else []
     lista_nomes.append("Someone (Outra Loja)")
 
-    col_btn_vazio, col_btn_auto, col_btn_reset, col_btn_export = st.columns(4)
+    col_btn_vazio, col_btn_auto, col_btn_reset = st.columns(3)
 
     if col_btn_vazio.button("🗑️ Gerar Esqueleto Vazio"):
         linhas_roster = [
@@ -386,10 +387,15 @@ with aba3:
             st.rerun()
 
     if 'roster_df' in st.session_state:
-        csv_bytes = st.session_state['roster_df'].to_csv(index=False).encode('utf-8')
-        col_btn_export.download_button("⬇️ Exportar CSV", csv_bytes, "escala.csv", "text/csv")
-    else:
-        col_btn_export.button("⬇️ Exportar CSV", disabled=True)
+        with st.expander("⬇️ Exportar Escala"):
+            _rdf = st.session_state['roster_df']
+            _semana_lbl = st.session_state.get('_last_semana_label', '')
+            ec1, ec2, ec3 = st.columns(3)
+            ec1.download_button("📄 CSV", _rdf.to_csv(index=False).encode('utf-8'), "escala.csv", "text/csv")
+            _xls = io.BytesIO()
+            _rdf.to_excel(_xls, index=False, engine='openpyxl')
+            ec2.download_button("📊 Excel", _xls.getvalue(), "escala.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            ec3.download_button("🖨️ PDF", gerar_pdf_escala(_rdf, _cafe_nome, _semana_lbl), "escala.pdf", "application/pdf")
 
     if col_btn_reset.button("🔄 Resetar Aba"):
         for _key in ('roster_df', 'constraints_warnings'):
@@ -462,12 +468,20 @@ with aba3:
 
         constraints_warnings = st.session_state.get('constraints_warnings', [])
         if constraints_warnings:
-            with st.expander("⚠️ Avisos de Regras Trabalhistas", expanded=True):
-                for w in constraints_warnings:
-                    if "clopening" in w or "limite semanal" in w or "keyholder" in w:
-                        st.error(w)
-                    else:
-                        st.warning(w)
+            _erros = [w for w in constraints_warnings if any(k in w for k in (
+                "turno não atribuído", "limite semanal", "mínimo semanal",
+                "clopening inválido", "fechamento sem keyholder"
+            ))]
+            _infos = [w for w in constraints_warnings if "recomendada" in w]
+            _warns = [w for w in constraints_warnings if w not in _erros and w not in _infos]
+            label = f"⚠️ Avisos de Regras Trabalhistas ({len(_erros)} erro(s), {len(_warns)} aviso(s), {len(_infos)} info)"
+            with st.expander(label, expanded=bool(_erros)):
+                for w in _erros:
+                    st.error(w)
+                for w in _warns:
+                    st.warning(w)
+                for w in _infos:
+                    st.info(w)
 
         st.divider()
         st.subheader("💾 Histórico de Escalas")
@@ -482,6 +496,7 @@ with aba3:
                 else:
                     dados_json = roster_editado.to_json(orient="records", force_ascii=False)
                     salvar_roster(TENANT_ID, semana_label.strip(), dados_json)
+                    st.session_state['_last_semana_label'] = semana_label.strip()
                     st.success(f"Escala '{semana_label}' salva!")
                     st.rerun()
 
@@ -505,3 +520,61 @@ with aba3:
                     if btn_del:
                         deletar_roster(TENANT_ID, int(r_row['id']))
                         st.rerun()
+
+# ------------------------------------------
+# ABA 4: ANÁLISE
+# ------------------------------------------
+with aba4:
+    st.header("📊 Análise da Semana")
+
+    if 'roster_df' not in st.session_state:
+        st.info("Gere ou carregue uma escala na Aba 3 primeiro.")
+    else:
+        _df_an = st.session_state['roster_df']
+        _cfg_an = st.session_state.get('config_semana', {})
+
+        total_turnos = len(_df_an)
+        preenchidos = len(_df_an[_df_an['Funcionário'] != 'A Preencher'])
+        gaps = total_turnos - preenchidos
+        cobertura = preenchidos / total_turnos * 100 if total_turnos else 0
+
+        col_m1, col_m2, col_m3, col_m4 = st.columns(4)
+        col_m1.metric("Total de Turnos", total_turnos)
+        col_m2.metric("Preenchidos", preenchidos)
+        col_m3.metric("Gaps", gaps, delta=f"-{gaps}" if gaps else None, delta_color="inverse")
+        col_m4.metric("Cobertura", f"{cobertura:.0f}%")
+
+        st.divider()
+        col_c1, col_c2 = st.columns(2)
+
+        with col_c1:
+            st.write("⏱️ **Horas por Funcionário vs. Alvo**")
+            if _cfg_an:
+                _horas_fn = {}
+                for _, _r in _df_an.iterrows():
+                    _fn = _r['Funcionário']
+                    if _fn != 'A Preencher' and _fn in _cfg_an:
+                        _horas_fn[_fn] = _horas_fn.get(_fn, 0.0) + calcular_horas_turno(str(_r['Horário']))
+                if _horas_fn:
+                    _df_horas = pd.DataFrame([
+                        {"Funcionário": fn,
+                         "Atribuídas": round(h, 1),
+                         "Alvo": _cfg_an[fn]['horas_alvo']}
+                        for fn, h in _horas_fn.items()
+                    ]).set_index("Funcionário")
+                    st.bar_chart(_df_horas)
+                else:
+                    st.info("Nenhuma hora atribuída ainda.")
+            else:
+                st.caption("Configure a semana na Aba 2 para ver comparativo com alvo.")
+
+        with col_c2:
+            st.write("📅 **Cobertura por Dia**")
+            _dias_ordem = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+            _prench_dia = _df_an[_df_an['Funcionário'] != 'A Preencher'].groupby('Dia').size()
+            _gap_dia = _df_an[_df_an['Funcionário'] == 'A Preencher'].groupby('Dia').size()
+            _df_cob = pd.DataFrame({
+                "Preenchidos": _prench_dia,
+                "Gaps": _gap_dia,
+            }).fillna(0).reindex(_dias_ordem).fillna(0)
+            st.bar_chart(_df_cob)
