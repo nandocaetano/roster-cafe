@@ -72,8 +72,8 @@ def render_availability_selector(prefix, defaults=None):
                 sm = _cm.number_input("M", 0, 59, sm_def, 5, format="%02d", key=f"{prefix}_sm_{dia}", label_visibility="collapsed")
                 st.caption("Até:")
                 _eh, _em = st.columns(2)
-                eh = _eh.number_input("H", 0, 23, eh_def, 1, format="%02d", key=f"{prefix}_eh_{dia}", label_visibility="collapsed")
-                em = _em.number_input("M", 0, 59, em_def, 5, format="%02d", key=f"{prefix}_em_{dia}", label_visibility="collapsed")
+                eh = _eh.number_input("H", 0, 23, eh_def if texto_especifico else 18, 1, format="%02d", key=f"{prefix}_eh_{dia}", label_visibility="collapsed")
+                em = _em.number_input("M", 0, 59, em_def if texto_especifico else 15, 5, format="%02d", key=f"{prefix}_em_{dia}", label_visibility="collapsed")
                 resultados.append(f"Específico: {int(sh):02d}:{int(sm):02d} - {int(eh):02d}:{int(em):02d}")
             else:
                 resultados.append(selecao)
@@ -158,12 +158,15 @@ with st.sidebar:
     st.write(f"🔖 {_user['role'].capitalize()}")
     st.divider()
     if _user.get('role') == 'superadmin':
+        if 'nc_k' not in st.session_state:
+            st.session_state['nc_k'] = 0
+        _nck = st.session_state['nc_k']
         with st.expander("➕ Registrar Novo Cafe"):
-            with st.form("form_novo_cafe_sidebar"):
-                _nc_nome = st.text_input("Nome do Cafe", key="nc_nome")
-                _nc_email = st.text_input("Email do Admin", key="nc_email")
-                _nc_senha = st.text_input("Senha", type="password", key="nc_senha")
-                _nc_conf = st.text_input("Confirmar Senha", type="password", key="nc_conf")
+            with st.form(f"form_novo_cafe_{_nck}"):
+                _nc_nome = st.text_input("Nome do Cafe", key=f"nc_nome_{_nck}")
+                _nc_email = st.text_input("Email do Admin", key=f"nc_email_{_nck}")
+                _nc_senha = st.text_input("Senha", type="password", key=f"nc_senha_{_nck}")
+                _nc_conf = st.text_input("Confirmar Senha", type="password", key=f"nc_conf_{_nck}")
                 if st.form_submit_button("Cadastrar"):
                     if _nc_senha != _nc_conf:
                         st.error("As senhas não coincidem.")
@@ -174,6 +177,8 @@ with st.sidebar:
                             _ntid = criar_cafe(_nc_nome, _nc_email)
                             create_user(_ntid, _nc_email, _nc_senha, role="admin")
                             st.success(f"'{_nc_nome}' cadastrado!")
+                            st.session_state['nc_k'] += 1
+                            st.rerun()
                         except Exception as _e:
                             st.error(f"Erro: {_e}")
     st.divider()
@@ -198,7 +203,10 @@ with aba1:
     espaco_esq, col_tabela, espaco_dir = st.columns([1, 6, 1])
     with col_tabela:
         if not df_equipe.empty:
-            st.dataframe(df_equipe[['nome', 'cargo', 'tipo_contrato', 'horas_min', 'horas_max']], use_container_width=True)
+            _cols_tabela = ['nome', 'cargo', 'tipo_contrato', 'horas_min', 'horas_max']
+            if 'nivel' in df_equipe.columns:
+                _cols_tabela.append('nivel')
+            st.dataframe(df_equipe[_cols_tabela], use_container_width=True)
         else:
             st.info("Nenhum funcionário cadastrado ainda.")
 
@@ -220,11 +228,14 @@ with aba1:
         h_min_nova = c_min.number_input("Horas Mín.", min_value=0, max_value=60, value=20, key=f"novo_hmin_{_nk}")
         h_max_nova = c_max.number_input("Horas Máx.", min_value=0, max_value=60, value=39, key=f"novo_hmax_{_nk}")
 
+        nivel_novo = st.selectbox("Nível", ["experiente", "novato"], key=f"novo_nivel_{_nk}",
+                                  help="Novato: não pode partilhar o bloco de abertura ou fecho com outro novato.")
+
         dias_selecionados = render_availability_selector(f"novo_{_nk}")
 
         if st.button("Cadastrar", key=f"novo_btn_{_nk}") and nome_novo:
             try:
-                adicionar_funcionario(TENANT_ID, nome_novo, cargo_novo, contrato_novo, h_min_nova, h_max_nova, dias_selecionados)
+                adicionar_funcionario(TENANT_ID, nome_novo, cargo_novo, contrato_novo, h_min_nova, h_max_nova, dias_selecionados, nivel_novo)
                 st.success(f"{nome_novo} adicionado!")
                 st.session_state['novo_k'] += 1
                 st.rerun()
@@ -252,6 +263,12 @@ with aba1:
             h_min_ed = c_min_ed.number_input("Horas Mín.", min_value=0, max_value=60, value=int(dados_atuais['horas_min']), key=f"{_pfx}_hmin")
             h_max_ed = c_max_ed.number_input("Horas Máx.", min_value=0, max_value=60, value=int(dados_atuais['horas_max']), key=f"{_pfx}_hmax")
 
+            _nivel_atual = str(dados_atuais.get('nivel', 'experiente') or 'experiente')
+            _nivel_opts = ["experiente", "novato"]
+            _nivel_idx = _nivel_opts.index(_nivel_atual) if _nivel_atual in _nivel_opts else 0
+            nivel_ed = st.selectbox("Nível", _nivel_opts, index=_nivel_idx, key=f"{_pfx}_nivel",
+                                    help="Novato: não pode partilhar o bloco de abertura ou fecho com outro novato.")
+
             dias_atuais = [
                 dados_atuais['d_seg'], dados_atuais['d_ter'], dados_atuais['d_qua'],
                 dados_atuais['d_qui'], dados_atuais['d_sex'], dados_atuais['d_sab'], dados_atuais['d_dom']
@@ -260,7 +277,7 @@ with aba1:
 
             col_btn1, col_btn2 = st.columns(2)
             if col_btn1.button("💾 Salvar", key=f"{_pfx}_salvar"):
-                atualizar_funcionario(TENANT_ID, int(dados_atuais['id_funcionario']), nome_ed, cargo_ed, contrato_ed, h_min_ed, h_max_ed, dias_ed)
+                atualizar_funcionario(TENANT_ID, int(dados_atuais['id_funcionario']), nome_ed, cargo_ed, contrato_ed, h_min_ed, h_max_ed, dias_ed, nivel_ed)
                 st.success("Atualizado!")
                 for _sk in [k for k in st.session_state if k.startswith(f"ed_{func_selecionado}")]:
                     del st.session_state[_sk]
@@ -323,6 +340,7 @@ with aba2:
                         "horas_min": float(row['horas_min']),
                         "horas_max": float(row['horas_max']),
                         "cargo": row['cargo'],
+                        "nivel": str(row['nivel']) if 'nivel' in df_equipe.columns else 'experiente',
                         "disponibilidade": disp_dict,
                         "dias_folga": list(dias_folga_sel),
                         "dias_ferias": list(dias_ferias_sel),

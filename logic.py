@@ -154,9 +154,28 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
         normal_shifts = [shift for shift in shifts if shift not in closing_shifts]
         ordered_shifts = closing_shifts + normal_shifts
 
+        # Drop 08:00-16:00 when available staff count < number of shifts (staff shortage)
+        _avail_today = sum(
+            1 for emp in employees
+            if day not in config_semana[emp].get('dias_folga', [])
+            and day not in config_semana[emp].get('dias_ferias', [])
+            and day not in config_semana[emp].get('dias_treinamento', [])
+            and str(config_semana[emp].get('disponibilidade', {}).get(day, 'Indisponível'))
+               not in ('Indisponível', 'Folga', 'Férias')
+        )
+        _MID_SHIFT = "08:00 - 16:00"
+        if _avail_today < len(ordered_shifts) and _MID_SHIFT in shifts:
+            warnings.append(
+                f"{day}: turno 08:00-16:00 eliminado — {_avail_today} funcionários disponíveis "
+                f"para {len(ordered_shifts)} turnos."
+            )
+            ordered_shifts = [s for s in ordered_shifts if s != _MID_SHIFT]
+
         assigned_today: set = set()
         closing_today: set = set()
         today_last_end: dict = {name: None for name in employees}
+        novato_opening_today: bool = False
+        novato_closing_today: bool = False
 
         for shift in ordered_shifts:
             times = parse_times(shift)
@@ -176,11 +195,23 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
                     and prev_day_last_end[employee] is not None
                     and (24 * 60 - prev_day_last_end[employee]) + times[0] < 11 * 60
                 )
+                # Novato constraint: max 1 novato per opening block and per closing block
+                and not (
+                    str(config_semana[employee].get('nivel', 'experiente')).lower() == 'novato'
+                    and is_opening and novato_opening_today
+                )
+                and not (
+                    str(config_semana[employee].get('nivel', 'experiente')).lower() == 'novato'
+                    and is_closing and novato_closing_today
+                )
             ]
 
             if candidates:
                 candidates.sort(
                     key=lambda e: (
+                        # Priority 1: restricted availability employees first (they have fewer slots)
+                        1 if str(config_semana[e].get('disponibilidade', {}).get(day, 'Livre') or '').strip()
+                             not in ('Livre', '') else 0,
                         target_hours[e] - assigned_hours[e],
                         minimum_hours[e] - assigned_hours[e],
                         maximum_hours[e] - assigned_hours[e],
@@ -193,6 +224,12 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
                 assigned_today.add(employee)
                 if is_closing:
                     closing_today.add(employee)
+                # Track novato presence at opening/closing
+                if str(config_semana[employee].get('nivel', 'experiente')).lower() == 'novato':
+                    if is_opening:
+                        novato_opening_today = True
+                    if is_closing:
+                        novato_closing_today = True
                 if times is not None:
                     if today_last_end[employee] is None or times[1] > today_last_end[employee]:
                         today_last_end[employee] = times[1]
