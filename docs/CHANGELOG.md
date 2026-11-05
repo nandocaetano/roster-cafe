@@ -2,6 +2,25 @@
 
 ---
 
+## 2026-11-05 — Phase 5: Break-time Warnings, Export CSV & Roster History
+
+### Added
+- `logic.py` post-gen: break-time warnings per assigned shift — >6h triggers WTI mandatory 30-min pause; >4.5h triggers recommended 15-min pause
+- `app.py` Tab 2: conflict validation on form submit — warns if the same day is marked as both Folga (or Férias) and Treinamento; blocks save until resolved
+- `app.py` Tab 3: **⬇️ Exportar CSV** button — enabled when a roster exists, disabled otherwise; downloads `escala.csv` via `st.download_button`
+- `database.py`: `Rosters` table (`id, tenant_id, semana, dados_json, criado_em`) created in `init_db`
+- `database.py`: `salvar_roster`, `get_rosters`, `get_roster_by_id`, `deletar_roster` CRUD functions
+- `app.py` Tab 3: **💾 Histórico de Escalas** section — save current roster with a week label, list saved rosters, 📂 load or 🗑️ delete each entry
+
+### Files Modified
+- `app.py`
+- `database.py`
+- `logic.py`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## 2026-11-05 — Phase 4: Weekly Overrides, Training Hours & Soft Hour Tolerance
 
 ### Added

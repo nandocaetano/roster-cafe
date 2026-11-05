@@ -25,8 +25,9 @@
 
 | File | Last Change |
 |---|---|
-| `app.py` | Folga/Férias removed from Tab 1 opcoes (backward-compat maps to Indisponível); Tab 2 gains `margem_horas` global field + per-employee Folga/Férias/Treinamento multiselects + H. Treino input; Tab 3 passes margem to scheduler and includes training hours in hours panel |
-| `logic.py` | `gerar_escala_automatica` accepts `margem_horas` param; `available()` blocks days in dias_folga/ferias/treinamento; training hours pre-loaded into `assigned_hours`; soft tolerance warnings added to post-gen checks |
+| `app.py` | Break-time conflict validation in Tab 2 submit; Exportar CSV button in Tab 3; Histórico de Escalas UI (save/load/delete) in Tab 3; `json` + roster CRUD imports added |
+| `database.py` | `Rosters` table added to `init_db`; `salvar_roster`, `get_rosters`, `get_roster_by_id`, `deletar_roster` added |
+| `logic.py` | Break-time warnings: >6h → 30 min obrigatória (WTI), >4.5h → 15 min recomendada |
 
 ---
 
@@ -49,12 +50,12 @@ _None currently recorded._
 
 ---
 
-## Next Immediate Steps (Phase 5)
+## Next Immediate Steps
 
-1. Roster History — `Rosters` table in SQLite, week selector in Tab 3, ability to save/load a generated roster.
-2. PDF/CSV export of the finalized roster.
-3. Break-time informational warnings (15 min after 4.5 hrs, 30 min after 6 hrs) to post-gen checks in `logic.py`.
-4. Update `docs/ARCHITECTURE.md` to reflect the weekly overrides schema (dias_folga, dias_ferias, dias_treinamento) in `config_semana`.
+1. Update `docs/ARCHITECTURE.md` to reflect the weekly overrides schema and Rosters table.
+2. PDF export (formatted, printable) — requires `reportlab` or `fpdf2` dep.
+3. User-facing UX polish: break-time warning badge distinct from WTI errors in Tab 3 expander.
+4. Begin Phase 6 planning: multi-week view / roster analytics dashboard.
 
 ---
 

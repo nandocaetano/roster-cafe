@@ -238,6 +238,24 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
                 f"{employee}: WTI — {len(days)} dias consecutivos sem folga (mín. 1 dia de descanso/semana)."
             )
 
+    for row in records:
+        if row["Funcionário"] == "A Preencher":
+            continue
+        times = parse_times(row["Horário"])
+        if times is None:
+            continue
+        duration_min = times[1] - times[0]
+        if duration_min < 0:
+            duration_min += 24 * 60
+        if duration_min > 6 * 60:
+            warnings.append(
+                f"{row['Funcionário']} ({row['Dia']} {row['Horário']}): turno >6h — pausa de 30 min obrigatória (WTI)."
+            )
+        elif duration_min > 4 * 60 + 30:
+            warnings.append(
+                f"{row['Funcionário']} ({row['Dia']} {row['Horário']}): turno >4.5h — pausa de 15 min recomendada."
+            )
+
     for day, shifts in turnos_padrao.items():
         for shift in shifts:
             times = parse_times(shift)

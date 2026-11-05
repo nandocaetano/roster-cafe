@@ -3,6 +3,8 @@ import re
 import streamlit as st
 import pandas as pd
 
+import json
+
 from database import (
     init_db,
     get_funcionarios_ativos,
@@ -13,6 +15,10 @@ from database import (
     criar_cafe,
     create_user,
     verify_credentials,
+    salvar_roster,
+    get_rosters,
+    get_roster_by_id,
+    deletar_roster,
 )
 from logic import calcular_horas_turno, gerar_escala_automatica
 
@@ -307,9 +313,21 @@ with aba2:
                     st.divider()
 
                 if st.form_submit_button("Confirmar Horas da Semana"):
-                    st.session_state['config_semana'] = inputs_semana
-                    st.session_state['margem_horas'] = margem_horas
-                    st.success("Setup salvo! Vá para a Aba 3 gerar a escala.")
+                    conflitos = []
+                    for nome, cfg in inputs_semana.items():
+                        dias_overlap = set(cfg["dias_folga"]) & set(cfg["dias_treinamento"])
+                        if dias_overlap:
+                            conflitos.append(f"{nome}: {', '.join(sorted(dias_overlap))} marcado como Folga e Treinamento.")
+                        dias_overlap2 = set(cfg["dias_ferias"]) & set(cfg["dias_treinamento"])
+                        if dias_overlap2:
+                            conflitos.append(f"{nome}: {', '.join(sorted(dias_overlap2))} marcado como Férias e Treinamento.")
+                    if conflitos:
+                        for c in conflitos:
+                            st.warning(f"⚠️ Conflito: {c}")
+                    else:
+                        st.session_state['config_semana'] = inputs_semana
+                        st.session_state['margem_horas'] = margem_horas
+                        st.success("Setup salvo! Vá para a Aba 3 gerar a escala.")
 
             st.subheader("📊 Status do Budget")
             progresso = total_horas_planejadas / 305.0 if total_horas_planejadas <= 305 else 1.0
@@ -345,7 +363,7 @@ with aba3:
     lista_nomes = df_equipe_atual['nome'].tolist() if not df_equipe_atual.empty else []
     lista_nomes.append("Someone (Outra Loja)")
 
-    col_btn_vazio, col_btn_auto, col_btn_reset = st.columns(3)
+    col_btn_vazio, col_btn_auto, col_btn_reset, col_btn_export = st.columns(4)
 
     if col_btn_vazio.button("🗑️ Gerar Esqueleto Vazio"):
         linhas_roster = [
@@ -366,6 +384,12 @@ with aba3:
             st.session_state['roster_df'] = df_escala
             st.session_state['constraints_warnings'] = constraints_warnings
             st.rerun()
+
+    if 'roster_df' in st.session_state:
+        csv_bytes = st.session_state['roster_df'].to_csv(index=False).encode('utf-8')
+        col_btn_export.download_button("⬇️ Exportar CSV", csv_bytes, "escala.csv", "text/csv")
+    else:
+        col_btn_export.button("⬇️ Exportar CSV", disabled=True)
 
     if col_btn_reset.button("🔄 Resetar Aba"):
         for _key in ('roster_df', 'constraints_warnings'):
@@ -444,3 +468,40 @@ with aba3:
                         st.error(w)
                     else:
                         st.warning(w)
+
+        st.divider()
+        st.subheader("💾 Histórico de Escalas")
+        col_salvar, col_historico = st.columns([2, 3])
+
+        with col_salvar:
+            st.write("**Salvar escala atual**")
+            semana_label = st.text_input("Rótulo da semana", placeholder="ex: Semana 03/11", key="semana_label_input")
+            if st.button("💾 Salvar Escala", key="btn_salvar_roster"):
+                if not semana_label.strip():
+                    st.warning("Digite um rótulo para identificar a semana.")
+                else:
+                    dados_json = roster_editado.to_json(orient="records", force_ascii=False)
+                    salvar_roster(TENANT_ID, semana_label.strip(), dados_json)
+                    st.success(f"Escala '{semana_label}' salva!")
+                    st.rerun()
+
+        with col_historico:
+            st.write("**Escalas salvas**")
+            df_rosters = get_rosters(TENANT_ID)
+            if df_rosters.empty:
+                st.info("Nenhuma escala salva ainda.")
+            else:
+                for _, r_row in df_rosters.iterrows():
+                    r_col1, r_col2, r_col3 = st.columns([3, 2, 1])
+                    r_col1.write(f"**{r_row['semana']}**")
+                    r_col2.caption(r_row['criado_em'][:16])
+                    btn_load = r_col3.button("📂", key=f"load_{r_row['id']}", help="Carregar")
+                    btn_del = r_col3.button("🗑️", key=f"del_{r_row['id']}", help="Apagar")
+                    if btn_load:
+                        dados = get_roster_by_id(TENANT_ID, int(r_row['id']))
+                        if dados:
+                            st.session_state['roster_df'] = pd.read_json(dados, orient="records")
+                            st.rerun()
+                    if btn_del:
+                        deletar_roster(TENANT_ID, int(r_row['id']))
+                        st.rerun()

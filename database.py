@@ -31,7 +31,7 @@ def _check_password(password: str, stored: str) -> bool:
 
 def init_db():
     """
-    Create Cafes, Users, and Funcionarios tables if they do not exist.
+    Create Cafes, Users, Funcionarios, and Rosters tables if they do not exist.
     Migrates existing Funcionarios rows to include tenant_id.
     Seeds a default tenant and admin user on first run.
     """
@@ -70,6 +70,16 @@ def init_db():
             d_seg TEXT, d_ter TEXT, d_qua TEXT,
             d_qui TEXT, d_sex TEXT, d_sab TEXT, d_dom TEXT,
             status_ativo   BOOLEAN DEFAULT 1
+        )
+    ''')
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS Rosters (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            tenant_id  INTEGER NOT NULL REFERENCES Cafes(id),
+            semana     TEXT    NOT NULL,
+            dados_json TEXT    NOT NULL,
+            criado_em  TEXT    NOT NULL DEFAULT (datetime('now'))
         )
     ''')
 
@@ -222,6 +232,62 @@ def desativar_funcionario(tenant_id, id_func):
     cursor.execute(
         "UPDATE Funcionarios SET status_ativo = 0 WHERE id_funcionario = ? AND tenant_id = ?",
         (id_func, tenant_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+# ------------------------------------------------------------------
+# Roster History CRUD
+# ------------------------------------------------------------------
+
+def salvar_roster(tenant_id: int, semana: str, dados_json: str):
+    """Insert a new saved roster for the given tenant and week label."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO Rosters (tenant_id, semana, dados_json, criado_em) VALUES (?, ?, ?, ?)",
+        (tenant_id, semana, dados_json, datetime.utcnow().isoformat()),
+    )
+    conn.commit()
+    new_id = cursor.lastrowid
+    conn.close()
+    return new_id
+
+
+def get_rosters(tenant_id: int) -> pd.DataFrame:
+    """Return a DataFrame of saved rosters for the tenant, most recent first."""
+    conn = sqlite3.connect(DB_NAME)
+    df = pd.read_sql_query(
+        "SELECT id, semana, criado_em FROM Rosters WHERE tenant_id = ? ORDER BY id DESC",
+        conn,
+        params=(tenant_id,),
+    )
+    conn.close()
+    return df
+
+
+def get_roster_by_id(tenant_id: int, roster_id: int) -> str | None:
+    """Return the JSON string for a saved roster, or None if not found."""
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT dados_json FROM Rosters WHERE id = ? AND tenant_id = ?",
+        (roster_id, tenant_id),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return row["dados_json"] if row else None
+
+
+def deletar_roster(tenant_id: int, roster_id: int):
+    """Permanently delete a saved roster. tenant_id guard prevents cross-tenant deletes."""
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    cursor.execute(
+        "DELETE FROM Rosters WHERE id = ? AND tenant_id = ?",
+        (roster_id, tenant_id),
     )
     conn.commit()
     conn.close()
