@@ -38,7 +38,7 @@ def pode_trabalhar(nome, turno_str, dia, config_semana):
     return True
 
 
-def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict) -> tuple:
+def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_horas: float = 2.0) -> tuple:
     """Generate a constraint-compliant weekly roster and a list of warnings."""
     keyholder_roles = {"Manager", "Assistant Manager", "Head Barista"}
     output_columns = ["Dia", "Horário", "Funcionário"]
@@ -76,6 +76,12 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict) -> tuple:
 
     def available(employee, day, shift):
         data = config_semana[employee]
+        if day in data.get("dias_folga", []):
+            return False
+        if day in data.get("dias_ferias", []):
+            return False
+        if day in data.get("dias_treinamento", []):
+            return False
         availability = data.get("disponibilidade", {})
         if not isinstance(availability, dict):
             return False
@@ -126,6 +132,10 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict) -> tuple:
     }
 
     assigned_hours = {name: 0.0 for name in employees}
+    for name in employees:
+        if config_semana[name].get("dias_treinamento"):
+            assigned_hours[name] += numeric_value(config_semana[name], ("horas_treinamento",), 0.0)
+
     assigned_days: dict = {name: set() for name in employees}
     closing_by_day: dict = {}
     records: list = []
@@ -202,15 +212,26 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict) -> tuple:
         prev_day_last_end = today_last_end
 
     for employee in employees:
-        if assigned_hours[employee] + 1e-9 > maximum_hours[employee]:
+        total = assigned_hours[employee]
+        if total + 1e-9 > maximum_hours[employee]:
             warnings.append(
                 f"{employee}: limite semanal excedido "
-                f"({assigned_hours[employee]:.2f}h > {maximum_hours[employee]:.2f}h)."
+                f"({total:.2f}h > {maximum_hours[employee]:.2f}h)."
             )
-        if assigned_hours[employee] + 1e-9 < minimum_hours[employee]:
+        elif total > target_hours[employee] + margem_horas + 1e-9:
+            warnings.append(
+                f"{employee}: horas acima da margem — {total:.1f}h "
+                f"(Alvo: {target_hours[employee]:.0f}h + margem: {margem_horas:.0f}h)."
+            )
+        if total + 1e-9 < minimum_hours[employee]:
             warnings.append(
                 f"{employee}: mínimo semanal não atingido "
-                f"({assigned_hours[employee]:.2f}h < {minimum_hours[employee]:.2f}h)."
+                f"({total:.2f}h < {minimum_hours[employee]:.2f}h)."
+            )
+        elif total < target_hours[employee] - margem_horas - 1e-9:
+            warnings.append(
+                f"{employee}: horas abaixo da margem — {total:.1f}h "
+                f"(Alvo: {target_hours[employee]:.0f}h - margem: {margem_horas:.0f}h)."
             )
         if len(assigned_days[employee]) == len(days):
             warnings.append(

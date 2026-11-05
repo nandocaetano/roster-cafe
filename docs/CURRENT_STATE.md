@@ -25,8 +25,8 @@
 
 | File | Last Change |
 |---|---|
-| `app.py` | `render_availability_selector` opcoes updated to include "Folga" and "Férias"; index defaults replaced with `opcoes.index(...)` calls to avoid hardcoded offsets |
-| `logic.py` | `available()` treats "Folga"/"Férias" as unavailable; WTI 11-hr rest enforced in candidate filter via `prev_day_last_end` tracking; 7-consecutive-day warning added to post-gen checks |
+| `app.py` | Folga/Férias removed from Tab 1 opcoes (backward-compat maps to Indisponível); Tab 2 gains `margem_horas` global field + per-employee Folga/Férias/Treinamento multiselects + H. Treino input; Tab 3 passes margem to scheduler and includes training hours in hours panel |
+| `logic.py` | `gerar_escala_automatica` accepts `margem_horas` param; `available()` blocks days in dias_folga/ferias/treinamento; training hours pre-loaded into `assigned_hours`; soft tolerance warnings added to post-gen checks |
 
 ---
 
@@ -49,12 +49,12 @@ _None currently recorded._
 
 ---
 
-## Next Immediate Steps (Phase 4 — continued)
+## Next Immediate Steps (Phase 5)
 
-1. Surface WTI violations in Tab 3 `⚠️ Avisos de Regras Trabalhistas` expander — WTI warnings are now generated but need a distinct `st.warning` badge vs labour-rule errors.
-2. Add break-time informational warnings (15 min after 4.5 hrs, 30 min after 6 hrs) to post-gen checks in `logic.py`.
-3. Update `docs/ARCHITECTURE.md` to reflect new availability values (Folga, Férias) in the Funcionarios table description.
-4. Begin Phase 5 planning: Roster History — `Rosters` table, week selector, PDF/CSV export.
+1. Roster History — `Rosters` table in SQLite, week selector in Tab 3, ability to save/load a generated roster.
+2. PDF/CSV export of the finalized roster.
+3. Break-time informational warnings (15 min after 4.5 hrs, 30 min after 6 hrs) to post-gen checks in `logic.py`.
+4. Update `docs/ARCHITECTURE.md` to reflect the weekly overrides schema (dias_folga, dias_ferias, dias_treinamento) in `config_semana`.
 
 ---
 

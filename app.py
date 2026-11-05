@@ -26,7 +26,7 @@ def render_availability_selector(prefix, defaults=None):
         defaults = ["Livre"] * 7
 
     dias = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
-    opcoes = ["Livre", "Só Manhã", "Só Tarde", "Indisponível", "Folga", "Férias", "Específico"]
+    opcoes = ["Livre", "Só Manhã", "Só Tarde", "Indisponível", "Específico"]
     resultados = []
 
     st.write("**Disponibilidade na Semana**")
@@ -45,6 +45,8 @@ def render_availability_selector(prefix, defaults=None):
             elif val_padrao and "Específico" in val_padrao:
                 idx_opcao = opcoes.index("Específico")
                 texto_especifico = val_padrao.replace("Específico: ", "")
+            elif val_padrao in ("Folga", "Férias"):
+                idx_opcao = opcoes.index("Indisponível")
             elif not val_padrao or val_padrao == "0" or val_padrao == "False":
                 idx_opcao = opcoes.index("Indisponível")
 
@@ -253,8 +255,15 @@ with aba2:
     with col_setup:
         if not df_equipe.empty:
             total_horas_planejadas = 0
+            dias_semana_opts = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
             with st.form("form_setup_semana"):
                 st.write("Defina quem entra na escala esta semana e ajuste as metas de horas.")
+                margem_horas = st.number_input(
+                    "Margem de horas tolerada (± alvo)", min_value=0.0, max_value=10.0,
+                    value=2.0, step=0.5, key="margem_horas_input",
+                    help="Alerta se as horas reais saírem desta margem do alvo."
+                )
+                st.divider()
 
                 inputs_semana = {}
                 for index, row in df_equipe.iterrows():
@@ -273,6 +282,12 @@ with aba2:
                     vai_trabalhar = c_check.checkbox("Escalar", key=f"chk_{row['nome']}", value=True)
                     horas_alvo = c_horas.number_input("Horas Alvo", min_value=0, max_value=60, value=int(row['horas_max']), key=f"hrs_{row['nome']}")
 
+                    c_folga, c_ferias, c_treino, c_htreino = st.columns([2, 2, 2, 1])
+                    dias_folga_sel = c_folga.multiselect("🏖️ Folga", dias_semana_opts, default=[], key=f"folga_{row['nome']}")
+                    dias_ferias_sel = c_ferias.multiselect("✈️ Férias", dias_semana_opts, default=[], key=f"ferias_{row['nome']}")
+                    dias_treino_sel = c_treino.multiselect("📚 Treinamento", dias_semana_opts, default=[], key=f"treino_{row['nome']}")
+                    horas_treino = c_htreino.number_input("H. Treino", min_value=0, max_value=40, value=0, key=f"htreino_{row['nome']}", help="Total horas de treinamento esta semana.")
+
                     if vai_trabalhar:
                         total_horas_planejadas += horas_alvo
 
@@ -280,13 +295,20 @@ with aba2:
                     inputs_semana[row['nome']] = {
                         "vai_trabalhar": vai_trabalhar,
                         "horas_alvo": horas_alvo,
+                        "horas_min": float(row['horas_min']),
+                        "horas_max": float(row['horas_max']),
                         "cargo": row['cargo'],
                         "disponibilidade": disp_dict,
+                        "dias_folga": list(dias_folga_sel),
+                        "dias_ferias": list(dias_ferias_sel),
+                        "dias_treinamento": list(dias_treino_sel),
+                        "horas_treinamento": float(horas_treino),
                     }
                     st.divider()
 
                 if st.form_submit_button("Confirmar Horas da Semana"):
                     st.session_state['config_semana'] = inputs_semana
+                    st.session_state['margem_horas'] = margem_horas
                     st.success("Setup salvo! Vá para a Aba 3 gerar a escala.")
 
             st.subheader("📊 Status do Budget")
@@ -339,7 +361,8 @@ with aba3:
         if not config_semana:
             st.error("Erro: Vá na Aba 2 e clique em 'Confirmar Horas da Semana' primeiro.")
         else:
-            df_escala, constraints_warnings = gerar_escala_automatica(config_semana, turnos_padrao)
+            margem = st.session_state.get('margem_horas', 2.0)
+            df_escala, constraints_warnings = gerar_escala_automatica(config_semana, turnos_padrao, margem)
             st.session_state['roster_df'] = df_escala
             st.session_state['constraints_warnings'] = constraints_warnings
             st.rerun()
@@ -370,6 +393,7 @@ with aba3:
         with col_horas:
             st.write("⏱️ **Horas Dinâmicas**")
             config_sem = st.session_state.get('config_semana', {})
+            margem_disp = st.session_state.get('margem_horas', 2.0)
             horas_atuais = {nome: 0.0 for nome in config_sem.keys() if config_sem[nome]['vai_trabalhar']}
 
             for idx, row in roster_editado.iterrows():
@@ -378,13 +402,18 @@ with aba3:
                     horas_atuais[func] += calcular_horas_turno(str(row['Horário']))
 
             for func, horas in horas_atuais.items():
-                alvo = config_sem[func]['horas_alvo']
-                if horas > alvo:
-                    st.error(f"🔴 {func}: {horas}h (Alvo: {alvo}h)")
-                elif horas < alvo - 2:
-                    st.info(f"🔵 {func}: {horas}h (Alvo: {alvo}h)")
+                cfg = config_sem[func]
+                alvo = cfg['horas_alvo']
+                h_treino = cfg.get('horas_treinamento', 0.0) if cfg.get('dias_treinamento') else 0.0
+                total = horas + h_treino
+                treino_note = f" +{h_treino:.0f}h treino" if h_treino else ""
+                label = f"{func}: {total:.1f}h{treino_note} (Alvo: {alvo}h ± {margem_disp:.0f}h)"
+                if total > alvo + margem_disp:
+                    st.error(f"🔴 {label}")
+                elif total < alvo - margem_disp:
+                    st.info(f"🔵 {label}")
                 else:
-                    st.success(f"🟢 {func}: {horas}h (Alvo: {alvo}h)")
+                    st.success(f"🟢 {label}")
 
         st.subheader("🚨 Avisos de Regras")
         tem_erro_fechamento, tem_gaps = False, False
