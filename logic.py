@@ -137,12 +137,24 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
             assigned_hours[name] += numeric_value(config_semana[name], ("horas_treinamento",), 0.0)
 
     assigned_days: dict = {name: set() for name in employees}
+    closing_count: dict = {name: 0 for name in employees}  # tracks closing shifts per employee
     closing_by_day: dict = {}
     records: list = []
 
     days = list(turnos_padrao)
     previous_closing: set = set()
     prev_day_last_end: dict = {name: None for name in employees}
+
+    def _remaining_avail_days(employee, from_day_index):
+        """Count days the employee can still work from from_day_index onwards."""
+        return sum(
+            1 for d in days[from_day_index:]
+            if str(config_semana[employee].get('disponibilidade', {}).get(d, 'Indisponível'))
+               not in ('Indisponível', 'Folga', 'Férias')
+            and d not in config_semana[employee].get('dias_folga', [])
+            and d not in config_semana[employee].get('dias_ferias', [])
+            and d not in config_semana[employee].get('dias_treinamento', [])
+        )
 
     for day in days:
         shifts = list(turnos_padrao[day])
@@ -207,14 +219,19 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
             ]
 
             if candidates:
+                day_index = days.index(day)
                 candidates.sort(
                     key=lambda e: (
-                        # Priority 1: restricted availability employees first (they have fewer slots)
+                        # P1: restricted availability first (fewer shift alternatives)
                         1 if str(config_semana[e].get('disponibilidade', {}).get(day, 'Livre') or '').strip()
                              not in ('Livre', '') else 0,
-                        target_hours[e] - assigned_hours[e],
+                        # P2 (closing only): prefer keyholder with fewest closing shifts assigned
+                        -closing_count[e] if is_closing else 0,
+                        # P3: urgency = hours still needed / remaining available days
+                        # prevents front-loading and reserves capacity for end-of-week
+                        (max(0.0, target_hours[e] - assigned_hours[e]))
+                        / max(1, _remaining_avail_days(e, day_index)),
                         minimum_hours[e] - assigned_hours[e],
-                        maximum_hours[e] - assigned_hours[e],
                     ),
                     reverse=True,
                 )
@@ -224,6 +241,7 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
                 assigned_today.add(employee)
                 if is_closing:
                     closing_today.add(employee)
+                    closing_count[employee] += 1
                 # Track novato presence at opening/closing
                 if str(config_semana[employee].get('nivel', 'experiente')).lower() == 'novato':
                     if is_opening:
