@@ -94,16 +94,46 @@ if 'user' not in st.session_state:
 # AUTH GATE: Login / Register
 # ------------------------------------------
 if st.session_state['user'] is None:
-    st.title("☕ Gerenciador de Escalas - Cafe")
-    st.subheader("Acesso à Plataforma")
+    st.markdown("""
+    <style>
+    [data-testid="stAppViewContainer"] > .main {
+        background: linear-gradient(135deg, #1a0a3e 0%, #3b1278 55%, #6b2fa0 100%);
+        min-height: 100vh;
+    }
+    [data-testid="stHeader"] { background: transparent !important; }
+    [data-testid="stDecoration"] { display: none; }
+    [data-testid="stToolbar"] { display: none; }
+    section[data-testid="stMain"] [data-testid="stForm"] {
+        background: rgba(18, 15, 35, 0.96);
+        border-radius: 18px;
+        padding: 2.5rem 2.2rem 2rem 2.2rem;
+        border: 1px solid rgba(140, 90, 200, 0.25);
+        box-shadow: 0 28px 72px rgba(0, 0, 0, 0.55);
+    }
+    [data-testid="stFormSubmitButton"] > button {
+        background: linear-gradient(90deg, #7c3aed, #9c5cf7) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        letter-spacing: 0.4px;
+        transition: opacity 0.15s;
+    }
+    [data-testid="stFormSubmitButton"] > button:hover {
+        opacity: 0.88;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-    tab_login, tab_register = st.tabs(["🔑 Login", "📝 Cadastrar Novo Cafe"])
-
-    with tab_login:
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    _, col_login, _ = st.columns([3, 2, 3])
+    with col_login:
+        st.markdown("<h2 style='text-align:center;margin-bottom:4px'>☕ Gerenciador de Escalas</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align:center;color:#a78bfa;margin-bottom:1.2rem'>Acesso à Plataforma</p>", unsafe_allow_html=True)
         with st.form("form_login"):
-            email_login = st.text_input("Email")
-            senha_login = st.text_input("Senha", type="password")
-            if st.form_submit_button("Entrar"):
+            email_login = st.text_input("Email", placeholder="voce@cafe.com")
+            senha_login = st.text_input("Senha", type="password", placeholder="••••••••")
+            if st.form_submit_button("Entrar", use_container_width=True):
                 user = verify_credentials(email_login, senha_login)
                 if user:
                     st.session_state['user'] = user
@@ -111,25 +141,6 @@ if st.session_state['user'] is None:
                     st.rerun()
                 else:
                     st.error("Email ou senha incorretos.")
-
-    with tab_register:
-        with st.form("form_register"):
-            nome_cafe_reg = st.text_input("Nome do Cafe")
-            email_reg = st.text_input("Email do Admin")
-            senha_reg = st.text_input("Senha", type="password")
-            senha_conf = st.text_input("Confirmar Senha", type="password")
-            if st.form_submit_button("Cadastrar Cafe"):
-                if senha_reg != senha_conf:
-                    st.error("As senhas não coincidem.")
-                elif not nome_cafe_reg or not email_reg or not senha_reg:
-                    st.error("Preencha todos os campos.")
-                else:
-                    try:
-                        new_tid = criar_cafe(nome_cafe_reg, email_reg)
-                        create_user(new_tid, email_reg, senha_reg, role="admin")
-                        st.success("Cafe cadastrado! Faça login para continuar.")
-                    except Exception as e:
-                        st.error(f"Erro ao cadastrar: {e}")
 
     st.stop()
 
@@ -146,24 +157,25 @@ with st.sidebar:
     st.write(f"👤 {_user['email']}")
     st.write(f"🔖 {_user['role'].capitalize()}")
     st.divider()
-    with st.expander("➕ Registrar Novo Cafe"):
-        with st.form("form_novo_cafe_sidebar"):
-            _nc_nome = st.text_input("Nome do Cafe", key="nc_nome")
-            _nc_email = st.text_input("Email do Admin", key="nc_email")
-            _nc_senha = st.text_input("Senha", type="password", key="nc_senha")
-            _nc_conf = st.text_input("Confirmar Senha", type="password", key="nc_conf")
-            if st.form_submit_button("Cadastrar"):
-                if _nc_senha != _nc_conf:
-                    st.error("As senhas não coincidem.")
-                elif not _nc_nome or not _nc_email or not _nc_senha:
-                    st.error("Preencha todos os campos.")
-                else:
-                    try:
-                        _ntid = criar_cafe(_nc_nome, _nc_email)
-                        create_user(_ntid, _nc_email, _nc_senha, role="admin")
-                        st.success(f"'{_nc_nome}' cadastrado!")
-                    except Exception as _e:
-                        st.error(f"Erro: {_e}")
+    if _user.get('role') == 'superadmin':
+        with st.expander("➕ Registrar Novo Cafe"):
+            with st.form("form_novo_cafe_sidebar"):
+                _nc_nome = st.text_input("Nome do Cafe", key="nc_nome")
+                _nc_email = st.text_input("Email do Admin", key="nc_email")
+                _nc_senha = st.text_input("Senha", type="password", key="nc_senha")
+                _nc_conf = st.text_input("Confirmar Senha", type="password", key="nc_conf")
+                if st.form_submit_button("Cadastrar"):
+                    if _nc_senha != _nc_conf:
+                        st.error("As senhas não coincidem.")
+                    elif not _nc_nome or not _nc_email or not _nc_senha:
+                        st.error("Preencha todos os campos.")
+                    else:
+                        try:
+                            _ntid = criar_cafe(_nc_nome, _nc_email)
+                            create_user(_ntid, _nc_email, _nc_senha, role="admin")
+                            st.success(f"'{_nc_nome}' cadastrado!")
+                        except Exception as _e:
+                            st.error(f"Erro: {_e}")
     st.divider()
     if st.button("🚪 Logout"):
         st.session_state['user'] = None
@@ -172,7 +184,7 @@ with st.sidebar:
 
 st.title("☕ Gerenciador de Escalas - Cafe")
 
-aba1, aba2, aba3, aba4 = st.tabs(["👥 Gestão do Time", "⚙️ Setup da Semana", "📅 Rascunho e Aprovação", "📊 Análise"])
+aba1, aba2, aba3, aba4, aba5 = st.tabs(["👥 Gestão do Time", "⚙️ Setup da Semana", "📅 Rascunho e Aprovação", "📊 Análise", "📖 Ajuda"])
 
 lista_cargos_oficiais = ["Manager", "Assistant Manager", "Head Barista", "Barista"]
 
@@ -211,10 +223,16 @@ with aba1:
         dias_selecionados = render_availability_selector(f"novo_{_nk}")
 
         if st.button("Cadastrar", key=f"novo_btn_{_nk}") and nome_novo:
-            adicionar_funcionario(TENANT_ID, nome_novo, cargo_novo, contrato_novo, h_min_nova, h_max_nova, dias_selecionados)
-            st.success(f"{nome_novo} adicionado!")
-            st.session_state['novo_k'] += 1
-            st.rerun()
+            try:
+                adicionar_funcionario(TENANT_ID, nome_novo, cargo_novo, contrato_novo, h_min_nova, h_max_nova, dias_selecionados)
+                st.success(f"{nome_novo} adicionado!")
+                st.session_state['novo_k'] += 1
+                st.rerun()
+            except ValueError as _ve:
+                if "limite_funcionarios" in str(_ve):
+                    st.error("Limite de 20 funcionários atingido para esta licença. Contacte o suporte para fazer upgrade.")
+                else:
+                    st.error(f"Erro ao cadastrar: {_ve}")
 
     with col2:
         st.subheader("✏️ Editar ou Remover")
@@ -578,3 +596,204 @@ with aba4:
                 "Gaps": _gap_dia,
             }).fillna(0).reindex(_dias_ordem).fillna(0)
             st.bar_chart(_df_cob)
+
+# ------------------------------------------
+# ABA 5: AJUDA
+# ------------------------------------------
+with aba5:
+    # ── Boas-vindas ──
+    st.markdown("""
+    <div style="
+        background: linear-gradient(135deg,#1a0a3e 0%,#3b1278 60%,#6b2fa0 100%);
+        border-radius:14px; padding:2rem 2rem 1.75rem; margin-bottom:1.5rem;
+        color:#f0e6ff;
+    ">
+        <div style="font-size:0.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+                    color:#c4a8f0;margin-bottom:.4rem">Gerenciador de Escalas</div>
+        <div style="font-size:1.6rem;font-weight:700;margin-bottom:.5rem">
+            Bem-vindo! 👋
+        </div>
+        <div style="font-size:.95rem;opacity:.85;max-width:60ch;line-height:1.6">
+            Este app foi pensado para tornar a gestão de escalas do café mais rápida e justa.
+            Aqui encontras tudo o que precisas saber para tirar o máximo partido de cada funcionalidade.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Visão geral das abas ──
+    st.subheader("🗺️ O que faz cada aba")
+    _ov1, _ov2, _ov3, _ov4 = st.columns(4)
+    _ov1.info("**👥 Aba 1 — Equipa**\nCadastra e edita funcionários. Define disponibilidade permanente e horas de contrato.")
+    _ov2.info("**⚙️ Aba 2 — Semana**\nConfigura exceções desta semana: folga, férias, treinamento e margem de horas.")
+    _ov3.info("**📅 Aba 3 — Escala**\nGera, ajusta e exporta a escala. Vê os avisos de regras trabalhistas.")
+    _ov4.info("**📊 Aba 4 — Análise**\nMétricas de cobertura e comparativo de horas por funcionário.")
+
+    st.divider()
+
+    # ── ABA 1 ──
+    with st.expander("👥 Aba 1 — Gestão do Time", expanded=False):
+        st.markdown("#### Cadastrar um novo funcionário")
+        st.markdown("""
+1. Preenche **Nome**, **Cargo** e **Tipo de Contrato**.
+2. Define as **Horas Mín.** e **Horas Máx.** semanais — o robô nunca passa estes limites.
+3. Configura a **disponibilidade permanente** dia a dia (ver tabela abaixo).
+4. Clica **Cadastrar**.
+        """)
+        _d1, _d2 = st.columns(2)
+        with _d1:
+            st.markdown("**Opções de disponibilidade**")
+            st.markdown("""
+| Opção | Significado |
+|---|---|
+| **Livre** | Qualquer turno nesse dia |
+| **Só Manhã** | Turnos que acabam até às 14h |
+| **Só Tarde** | Turnos a partir das 12h |
+| **Indisponível** | Folga fixa — nunca escalado |
+| **Específico** | Intervalo exato de horas |
+            """)
+        with _d2:
+            st.markdown("**Tipos de contrato**")
+            st.markdown("""
+| Contrato | Horas habituais |
+|---|---|
+| Full-time | Mín 35 / Máx 39 h/semana |
+| Part-time | Mín 16 / Máx 25 h/semana |
+            """)
+        st.info("💡 **Dica:** Marca como *Indisponível* os dias que a pessoa nunca trabalha. O robô trata a folga automaticamente sem configurares nada na Aba 2.")
+        st.markdown("#### Editar ou desativar")
+        st.markdown("No painel da direita, seleciona o nome, altera os campos e clica **Salvar**. Para alguém que saiu da equipa, usa **Desativar** — o registo fica guardado mas deixa de aparecer na escala.")
+
+    # ── ABA 2 ──
+    with st.expander("⚙️ Aba 2 — Setup da Semana", expanded=False):
+        st.markdown("#### Antes de gerar a escala, configura sempre a semana atual")
+        st.markdown("""
+1. **Margem de horas tolerada (± alvo)** — quantas horas acima ou abaixo do alvo são aceitáveis antes de gerar aviso. Padrão: 2h.
+2. **Para cada funcionário**, preenche as exceções desta semana:
+        """)
+        _e1, _e2, _e3, _e4 = st.columns(4)
+        _e1.success("🏖️ **Folga**\nDias de folga só esta semana (troca pontual).")
+        _e2.success("✈️ **Férias**\nDias em que a pessoa está de férias.")
+        _e3.success("📚 **Treinamento**\nDias em formação — não entra na escala.")
+        _e4.success("⏱️ **H. Treino**\nTotal de horas de formação — contam no total semanal.")
+        st.markdown("""
+3. Ajusta **Horas Alvo, Mín e Máx** se a semana for atípica (feriado, semana curta…).
+4. Clica **Guardar Configuração da Semana** — só depois disto o robô tem dados para trabalhar.
+        """)
+        st.warning("⚠️ Não podes marcar o mesmo dia em Folga e Treinamento ao mesmo tempo — o sistema bloqueia e explica o conflito.")
+        st.info("💡 As configurações da semana **não ficam guardadas** — começas sempre do zero na Aba 2 a cada semana.")
+
+    # ── ABA 3 ──
+    with st.expander("📅 Aba 3 — Rascunho e Aprovação", expanded=False):
+        st.markdown("#### Os três botões principais")
+        _b1, _b2, _b3 = st.columns(3)
+        _b1.info("🗑️ **Gerar Esqueleto Vazio**\nCria a tabela com todos os turnos a *A Preencher*. Para preencher à mão.")
+        _b2.info("🤖 **Gerar Escala Automática**\nO robô distribui a equipa pelos turnos respeitando disponibilidade, contratos e regras trabalhistas.")
+        _b3.info("🔄 **Resetar Aba**\nApaga o rascunho para começares de novo.")
+
+        st.markdown("#### Ajuste manual")
+        st.markdown("""
+Depois de gerar, podes editar a tabela: clica na célula **Funcionário Atribuído** e altera o nome.
+Turnos com **A Preencher** são os que o robô não conseguiu preencher — trata esses primeiro.
+O painel **Horas Dinâmicas** à direita confirma o total semanal de cada pessoa.
+        """)
+
+        st.markdown("#### Exportar Escala")
+        st.markdown("Clica no painel **⬇️ Exportar Escala** para descarregar em três formatos:")
+        _x1, _x2, _x3 = st.columns(3)
+        _x1.success("📄 **CSV** — para abrir em Excel ou Google Sheets.")
+        _x2.success("📊 **Excel** — ficheiro .xlsx formatado.")
+        _x3.success("🖨️ **PDF** — A4 horizontal, ideal para imprimir ou enviar.")
+
+        st.markdown("#### Histórico de Escalas")
+        st.markdown("""
+1. Dá um nome à semana (ex: *Semana 47 — Nov 2026*) e clica **Guardar Escala Atual**.
+2. Na coluna *Escalas Salvas*, usa 📂 para carregar ou 🗑️ para apagar uma semana anterior.
+        """)
+
+    # ── ABA 4 ──
+    with st.expander("📊 Aba 4 — Análise", expanded=False):
+        st.markdown("""
+A aba de análise atualiza automaticamente sempre que a escala muda na Aba 3.
+
+| Métrica | O que mostra |
+|---|---|
+| **Total de Turnos** | Todos os turnos da semana configurados |
+| **Preenchidos** | Quantos têm uma pessoa atribuída |
+| **Gaps** | Turnos ainda *A Preencher* — o objetivo é zero |
+| **Cobertura %** | Percentagem de turnos preenchidos. Ideal: 100% |
+
+O gráfico **Horas por Funcionário vs. Alvo** só aparece depois de configurares a semana na Aba 2.
+        """)
+
+    st.divider()
+
+    # ── AVISOS E REGRAS ──
+    st.subheader("⚠️ Avisos explicados")
+
+    st.markdown("O app verifica automaticamente as regras trabalhistas depois de gerar a escala. Os avisos têm três níveis:")
+    _av1, _av2, _av3 = st.columns(3)
+    _av1.error("🔴 **Erros** — Situações sérias que deves resolver antes de aprovar a escala (turno sem keyholder, limite de horas ultrapassado).")
+    _av2.warning("🟡 **Avisos** — Situações a rever mas que não bloqueiam (horas fora da margem, clopening).")
+    _av3.info("🔵 **Infos** — Recomendações de boas práticas (pausas em turnos longos).")
+
+    st.markdown("#### Avisos mais comuns")
+    with st.expander("🔴 Turno não atribuído — nenhum keyholder elegível"):
+        st.markdown("""
+**O que significa:** Os turnos de fecho precisam de um **Manager**, **Assistant Manager** ou **Head Barista**.
+Se nenhum destes estiver disponível nesse dia, o turno fica por preencher.
+
+**Como resolver:** Verifica na Aba 1 se a pessoa com o cargo correto tem esse dia como *Livre* ou *Específico*.
+Se não tiver, ajusta manualmente o turno na tabela.
+        """)
+    with st.expander("🔴 Clopening inválido"):
+        st.markdown("""
+**O que significa:** A pessoa fechou num dia (turno termina depois das 17h) e está escalada para abrir
+no dia seguinte com menos de 11h de descanso entre turnos — proibido por lei trabalhista.
+
+**Como resolver:** Troca o turno de abertura por outra pessoa com descanso suficiente.
+        """)
+    with st.expander("🔴 Fechamento sem keyholder"):
+        st.markdown("""
+**O que significa:** Há um turno de fecho que foi atribuído a alguém que não tem autorização
+para fechar (cargo não é Manager nem Head Barista).
+
+**Como resolver:** Atribui manualmente o turno a alguém com cargo adequado.
+        """)
+    with st.expander("🟡 Horas acima/abaixo da margem"):
+        st.markdown("""
+**O que significa:** O total de horas da pessoa saiu da zona de conforto
+(*Alvo ± Margem* definida na Aba 2). Não viola o contrato, mas está fora do ideal.
+
+**Como resolver:** Ajusta manualmente um turno, ou aumenta a margem na Aba 2 se for aceitável.
+        """)
+    with st.expander("🟡 7 dias consecutivos sem folga (WTI)"):
+        st.markdown("""
+**O que significa:** A pessoa foi escalada todos os 7 dias da semana sem nenhum dia de descanso —
+viola o mínimo de 1 dia de descanso semanal por lei.
+
+**Como resolver:** Marca pelo menos 1 dia como *Folga* na Aba 2 ou *Indisponível* na Aba 1.
+        """)
+    with st.expander("🔵 Turno >6h — pausa de 30 min obrigatória (WTI)"):
+        st.markdown("""
+**O que significa:** Turno com mais de 6 horas exige uma pausa de 30 minutos por lei.
+O app avisa mas não pode forçar a pausa — tens de comunicar à pessoa.
+
+**Sugestão:** Considera dividir o turno em dois ou garantir que a pausa está marcada no horário.
+        """)
+    with st.expander("🔵 Turno >4.5h — pausa de 15 min recomendada"):
+        st.markdown("""
+**O que significa:** Recomendação de boas práticas para turnos entre 4.5h e 6h.
+Não é obrigatório por lei mas é boa prática para o bem-estar da equipa.
+        """)
+
+    st.divider()
+
+    # ── FLUXO RECOMENDADO ──
+    st.subheader("✅ Fluxo recomendado a cada semana")
+    _f1, _f2, _f3, _f4 = st.columns(4)
+    _f1.success("**1️⃣ Aba 1**\nAtualiza a equipa se alguém entrou, saiu ou mudou de cargo.")
+    _f2.success("**2️⃣ Aba 2**\nConfigura folgas, férias e treinamentos desta semana. Guarda.")
+    _f3.success("**3️⃣ Aba 3**\nGera a escala automática. Revê os avisos. Ajusta manualmente se necessário. Exporta.")
+    _f4.success("**4️⃣ Aba 4**\nConfirma que a cobertura está a 100% e as horas estão equilibradas.")
+
+    st.info("💡 **Limite de licença:** O plano atual suporta até **20 funcionários ativos** por café. Contacta o suporte se precisares de expandir.")

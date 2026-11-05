@@ -97,13 +97,18 @@ def init_db():
             ("Default Cafe", "admin@cafe.com", datetime.utcnow().isoformat()),
         )
 
-    # Seed default admin user if the Users table is empty.
+    # Seed default superadmin user if the Users table is empty.
     cursor.execute("SELECT COUNT(*) FROM Users")
     if cursor.fetchone()[0] == 0:
         cursor.execute(
             "INSERT INTO Users (tenant_id, email, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?)",
-            (1, "admin@cafe.com", _hash_password("admin123"), "admin", datetime.utcnow().isoformat()),
+            (1, "admin@cafe.com", _hash_password("admin123"), "superadmin", datetime.utcnow().isoformat()),
         )
+
+    # Migration: upgrade existing admin@cafe.com seed to superadmin if still on plain 'admin'.
+    cursor.execute(
+        "UPDATE Users SET role = 'superadmin' WHERE email = 'admin@cafe.com' AND role = 'admin'"
+    )
 
     conn.commit()
     conn.close()
@@ -197,10 +202,21 @@ def get_funcionarios_ativos(tenant_id):
     return df
 
 
+EMPLOYEE_LIMIT = 20
+
+
 def adicionar_funcionario(tenant_id, nome, cargo, contrato, h_min, h_max, dias):
-    """Insert a new employee record for the given tenant. dias is a 7-element list (Seg..Dom)."""
+    """Insert a new employee record for the given tenant. dias is a 7-element list (Seg..Dom).
+    Raises ValueError if the tenant has reached the EMPLOYEE_LIMIT."""
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
+    cursor.execute(
+        "SELECT COUNT(*) FROM Funcionarios WHERE tenant_id = ? AND status_ativo = 1",
+        (tenant_id,),
+    )
+    if cursor.fetchone()[0] >= EMPLOYEE_LIMIT:
+        conn.close()
+        raise ValueError(f"limite_funcionarios:{EMPLOYEE_LIMIT}")
     cursor.execute('''
         INSERT INTO Funcionarios
         (tenant_id, nome, cargo, tipo_contrato, horas_min, horas_max,
