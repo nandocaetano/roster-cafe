@@ -81,7 +81,7 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict) -> tuple:
             return False
         value = availability.get(day, "Indisponível")
         value_text = str(value or "").strip()
-        if value_text == "Indisponível":
+        if value_text in ("Indisponível", "Folga", "Férias"):
             return False
         if value_text == "Livre":
             return True
@@ -132,6 +132,7 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict) -> tuple:
 
     days = list(turnos_padrao)
     previous_closing: set = set()
+    prev_day_last_end: dict = {name: None for name in employees}
 
     for day in days:
         shifts = list(turnos_padrao[day])
@@ -145,6 +146,7 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict) -> tuple:
 
         assigned_today: set = set()
         closing_today: set = set()
+        today_last_end: dict = {name: None for name in employees}
 
         for shift in ordered_shifts:
             times = parse_times(shift)
@@ -159,6 +161,11 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict) -> tuple:
                 and assigned_hours[employee] + duration <= maximum_hours[employee] + 1e-9
                 and not (is_opening and employee in previous_closing)
                 and (not is_closing or str(config_semana[employee].get("cargo", "")) in keyholder_roles)
+                and not (
+                    times is not None
+                    and prev_day_last_end[employee] is not None
+                    and (24 * 60 - prev_day_last_end[employee]) + times[0] < 11 * 60
+                )
             ]
 
             if candidates:
@@ -176,6 +183,9 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict) -> tuple:
                 assigned_today.add(employee)
                 if is_closing:
                     closing_today.add(employee)
+                if times is not None:
+                    if today_last_end[employee] is None or times[1] > today_last_end[employee]:
+                        today_last_end[employee] = times[1]
             else:
                 employee = "A Preencher"
                 reason = "nenhum funcionário elegível"
@@ -189,6 +199,7 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict) -> tuple:
 
         closing_by_day[day] = closing_today
         previous_closing = closing_today
+        prev_day_last_end = today_last_end
 
     for employee in employees:
         if assigned_hours[employee] + 1e-9 > maximum_hours[employee]:
@@ -200,6 +211,10 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict) -> tuple:
             warnings.append(
                 f"{employee}: mínimo semanal não atingido "
                 f"({assigned_hours[employee]:.2f}h < {minimum_hours[employee]:.2f}h)."
+            )
+        if len(assigned_days[employee]) == len(days):
+            warnings.append(
+                f"{employee}: WTI — {len(days)} dias consecutivos sem folga (mín. 1 dia de descanso/semana)."
             )
 
     for day, shifts in turnos_padrao.items():

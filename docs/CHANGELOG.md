@@ -4,6 +4,22 @@ Chronological log of major updates. Most recent first.
 
 ---
 
+## 2026-11-05 — Phase 4: Folga/Férias + WTI Labour Constraints
+
+### Added
+- `app.py` `render_availability_selector`: "Folga" and "Férias" added to `opcoes` list; list reordered to `["Livre", "Só Manhã", "Só Tarde", "Indisponível", "Folga", "Férias", "Específico"]`; index defaults replaced with dynamic `opcoes.index()` calls to avoid brittle hardcoded offsets
+- `logic.py` `available()`: "Folga" and "Férias" now treated as unavailable alongside "Indisponível"
+- `logic.py` `gerar_escala_automatica`: WTI 11-hr rest rule enforced at candidate-filter time — tracks `prev_day_last_end` per employee across days; blocks assignments where gap to previous day's last shift end < 660 min
+- `logic.py` post-gen check: warns if any employee is assigned all 7 days with no rest day (WTI minimum 1 day off per week)
+
+### Files Modified
+- `app.py`
+- `logic.py`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## 2026-11-05 — Phase 4: UX Fixes & Edit Form Refactor
 
 ### Fixed

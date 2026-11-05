@@ -25,8 +25,8 @@
 
 | File | Last Change |
 |---|---|
-| `app.py` | Edit form refactored — removed `st.form` wrapper, added employee-specific widget keys so "Específico" availability field triggers immediately on selectbox change; sidebar cafe registration expander added; `clear_on_submit=True` on new employee form; "Fecho"→"Fechamento" in turnos and str.contains filter; `render_availability_selector` gains `placeholder` and `help` on time input |
-| `logic.py` | "Fecho"→"Fechamento" in `calcular_horas_turno` docstring and `pode_trabalhar` check |
+| `app.py` | `render_availability_selector` opcoes updated to include "Folga" and "Férias"; index defaults replaced with `opcoes.index(...)` calls to avoid hardcoded offsets |
+| `logic.py` | `available()` treats "Folga"/"Férias" as unavailable; WTI 11-hr rest enforced in candidate filter via `prev_day_last_end` tracking; 7-consecutive-day warning added to post-gen checks |
 
 ---
 
@@ -51,10 +51,10 @@ _None currently recorded._
 
 ## Next Immediate Steps (Phase 4 — continued)
 
-1. Encode Irish Working Time Act (WTI) rules as a standalone `validar_wti(employee, day, shift, week_log)` function in `logic.py` (max 48 hrs/week, 11 hrs rest between shifts, 15/30 min break thresholds).
-2. Wire `validar_wti` into the new scheduler's candidate-filtering step so violations are blocked at assignment time, not just flagged after.
-3. Extend the `⚠️ Avisos de Regras Trabalhistas` expander to also surface WTI violations from the post-generation check pass.
-4. Consider applying same edit-form pattern (outside `st.form`) to the "Novo Funcionário" form so "Específico" also triggers immediately there.
+1. Surface WTI violations in Tab 3 `⚠️ Avisos de Regras Trabalhistas` expander — WTI warnings are now generated but need a distinct `st.warning` badge vs labour-rule errors.
+2. Add break-time informational warnings (15 min after 4.5 hrs, 30 min after 6 hrs) to post-gen checks in `logic.py`.
+3. Update `docs/ARCHITECTURE.md` to reflect new availability values (Folga, Férias) in the Funcionarios table description.
+4. Begin Phase 5 planning: Roster History — `Rosters` table, week selector, PDF/CSV export.
 
 ---
 

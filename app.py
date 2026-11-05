@@ -26,7 +26,7 @@ def render_availability_selector(prefix, defaults=None):
         defaults = ["Livre"] * 7
 
     dias = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
-    opcoes = ["Indisponível", "Livre", "Só Manhã", "Só Tarde", "Específico"]
+    opcoes = ["Livre", "Só Manhã", "Só Tarde", "Indisponível", "Folga", "Férias", "Específico"]
     resultados = []
 
     st.write("**Disponibilidade na Semana**")
@@ -37,16 +37,16 @@ def render_availability_selector(prefix, defaults=None):
     for i, dia in enumerate(dias):
         with todas_cols[i]:
             val_padrao = defaults[i]
-            idx_opcao = 1
+            idx_opcao = opcoes.index("Livre")
             texto_especifico = ""
 
             if val_padrao in opcoes:
                 idx_opcao = opcoes.index(val_padrao)
             elif val_padrao and "Específico" in val_padrao:
-                idx_opcao = 4
+                idx_opcao = opcoes.index("Específico")
                 texto_especifico = val_padrao.replace("Específico: ", "")
             elif not val_padrao or val_padrao == "0" or val_padrao == "False":
-                idx_opcao = 0
+                idx_opcao = opcoes.index("Indisponível")
 
             selecao = st.selectbox(dia, opcoes, index=idx_opcao, key=f"{prefix}_sel_{dia}")
 
