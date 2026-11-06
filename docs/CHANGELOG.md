@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-11-06 — Phase 8: Billing Logic + GTM Strategy + Subscriptions Table
+
+### Added
+- `billing_logic.py` (CODEX): `get_subscription()`, `is_pro()`, `get_employee_limit()`, `check_feature_gate()`, `create_stripe_checkout_session()` — full Phase 8 billing layer; dual-backend psycopg2/sqlite; Stripe Checkout €20/mês inline price_data
+- `docs/GTM_STRATEGY.md` (GROK): Full Dublin GTM — acquisition channels (Google Maps, Instagram DMs, walk-ins, RAI, LinkedIn), landing page copy (headline + 3 bullets + CTA), cold email script, WTI vs Excel sales argument + objection table, month-1 metrics funnel, 14-day execution playbook
+- `requirements.txt`: `stripe>=7.0.0`
+- **Supabase DB**: `Subscriptions` table created (tenant_id FK, plano, validade, stripe_customer_id, stripe_subscription_id, criado_em); seed row tenant_id=1 plano='free'
+
+### Decision log
+- Learned correct Maestri agent dispatch mechanics: `maestri list` → `maestri ask --batch` to ALL agents simultaneously; never give user prompts to copy manually
+- Always confirm Codex file write approvals immediately with `maestri ask "Codex" "a"`
+- Subscriptions table must run as 2 separate queries in Supabase SQL Editor (CREATE TABLE then INSERT) due to PostgreSQL planning order
+
+### Files Modified
+- `billing_logic.py` (new)
+- `requirements.txt`
+- `docs/GTM_STRATEGY.md` (new)
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## 2026-11-06 — Feat: Password Reset UI + Architecture Docs + Phase 8 Scope
 
 ### Added

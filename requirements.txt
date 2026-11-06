@@ -4,3 +4,4 @@ fpdf>=1.7.2
 openpyxl>=3.1.0
 psycopg2-binary>=2.9.0
 ortools>=9.8.0
+stripe>=7.0.0

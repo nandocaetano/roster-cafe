@@ -28,11 +28,10 @@
 
 | File | Last Change |
 |---|---|
-| `database.py` | Added `get_all_users()` (all users joined with cafe name) and `reset_password(email, new_password)` — superadmin password reset backend |
-| `app.py` | Added `get_all_users` + `reset_password` imports; added "🔑 Reset de Password" expander in superadmin sidebar with user selectbox, new password + confirm inputs, 6-char minimum validation |
-| `docs/ARCHITECTURE.md` | Full rewrite — dual-backend strategy, all 4 DB tables with schema, CP-SAT solver diagram, password reset flow, updated session state keys table, deployment section |
-| `docs/ROADMAP.md` | Phase 8 scope clarified: Stripe Checkout + Subscriptions table + feature gating; out-of-scope items (License Keys, Stock/Clock-in add-ons) explicitly noted |
-| `.env.example` | New file — documents `DATABASE_URL` env var for local dev |
+| `billing_logic.py` | New file (CODEX) — get_subscription, is_pro, get_employee_limit, check_feature_gate, create_stripe_checkout_session for Phase 8 billing |
+| `requirements.txt` | Added `stripe>=7.0.0` |
+| `docs/GTM_STRATEGY.md` | New file (GROK) — full Dublin GTM: acquisition channels, landing copy, cold email script, WTI sales argument, month-1 metrics, 14-day playbook |
+| **Supabase DB** | `Subscriptions` table created + seed row tenant_id=1 plano='free' |
 
 ---
 
@@ -54,16 +53,19 @@ app_escala/
 
 ## Blockers
 
-- **Credentials rotation (manual action required)** — Supabase DB password and admin@cafe.com password need to be rotated by the user in the Supabase dashboard + Streamlit Cloud Secrets. Code is ready (.env.example + Password Reset UI), but rotation itself is a manual step.
+- **Stripe secret key not configured** — `STRIPE_SECRET_KEY` needs to be added to Streamlit Cloud Secrets before `create_stripe_checkout_session()` works in production.
+- **Credentials rotation (manual action required)** — Supabase DB password and admin@cafe.com password need to be rotated by the user in the Supabase dashboard + Streamlit Cloud Secrets.
 - **Budget thresholds (290/300/305h) hardcoded** — these are Balsbridge-specific numbers global to all tenants. Multi-tenancy design gap, not critical yet.
 
 ---
 
 ## Next Immediate Steps
 
-1. **Phase 8 — Stripe Billing:** Add `Subscriptions` table → Stripe Checkout (20/mes) → feature gating (PDF/Analytics/history) → Stripe webhook.
-2. **GTM prompt for GROK (CMO):** Pricing confirmed 39.90 setup + 20/mes. Dispatch GTM strategy + landing page copy + Dublin outreach brief. WTI compliance as main differentiator.
-3. **Credentials rotation (manual):** User to rotate Supabase DB password in dashboard and update Streamlit Cloud Secrets; then use Password Reset UI (now live) to change admin@cafe.com password.
+1. **Wire billing_logic.py into app.py** — import check_feature_gate + get_employee_limit; gate PDF export (Tab 3), Analytics (Tab 4), Roster History (Tab 3) behind feature check; replace hardcoded EMPLOYEE_LIMIT with get_employee_limit().
+2. **Stripe Checkout UI** — add "Upgrade to Pro" button in sidebar for non-superadmin users, calling create_stripe_checkout_session(); add STRIPE_SECRET_KEY to Streamlit Cloud Secrets.
+3. **Stripe webhook** — POST /webhook endpoint to update Subscriptions.plano on paid/cancelled events.
+4. **Landing page** — use docs/GTM_STRATEGY.md copy to build public landing page.
+5. **Credentials rotation (manual):** rotate Supabase DB password + admin@cafe.com via Password Reset UI.
 
 ---
 
