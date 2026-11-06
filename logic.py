@@ -1,4 +1,4 @@
-"""Business logic: shift-hour calculations, availability checks, and auto-scheduling."""
+"""Business logic: shift-hour calculations, availability checks, CP-SAT scheduler, PDF export."""
 import re
 from datetime import datetime
 
@@ -34,33 +34,31 @@ def pode_trabalhar(nome, turno_str, dia, config_semana):
         return False
     if disp == "Só Tarde":
         return True
-    # "Específico" availability: treat as available (manual override expected)
     return True
 
 
 def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_horas: float = 2.0) -> tuple:
-    """Generate a constraint-compliant weekly roster and a list of warnings."""
+    """Generate a constraint-compliant weekly roster via OR-Tools CP-SAT solver."""
+    from ortools.sat.python import cp_model
+
     keyholder_roles = {"Manager", "Assistant Manager", "Head Barista"}
     output_columns = ["Dia", "Horário", "Funcionário"]
     warnings: list = []
 
-    def parse_times(shift):
-        matches = re.findall(r"(\d{1,2}):(\d{2})", str(shift))
-        if len(matches) != 2:
-            return None
-        return (
-            int(matches[0][0]) * 60 + int(matches[0][1]),
-            int(matches[1][0]) * 60 + int(matches[1][1]),
-        )
+    # ── helpers ──────────────────────────────────────────────────────────────
 
-    def shift_hours(shift):
-        times = parse_times(shift)
-        if times is None:
-            return 0.0
-        start, end = times
-        if end < start:
-            end += 24 * 60
-        return (end - start) / 60.0
+    def parse_times(shift):
+        m = re.findall(r"(\d{1,2}):(\d{2})", str(shift))
+        if len(m) != 2:
+            return None
+        return (int(m[0][0]) * 60 + int(m[0][1]), int(m[1][0]) * 60 + int(m[1][1]))
+
+    def duration_min(shift):
+        t = parse_times(shift)
+        if t is None:
+            return 0
+        d = t[1] - t[0]
+        return d + 24 * 60 if d < 0 else d
 
     def numeric_value(data, keys, default):
         for key in keys:
@@ -74,7 +72,8 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
                 continue
         return default
 
-    def available(employee, day, shift):
+    def is_available(employee, day, shift):
+        """Return True if employee can work shift on day (respects all override flags)."""
         data = config_semana[employee]
         if day in data.get("dias_folga", []):
             return False
@@ -85,267 +84,307 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
         availability = data.get("disponibilidade", {})
         if not isinstance(availability, dict):
             return False
-        value = availability.get(day, "Indisponível")
-        value_text = str(value or "").strip()
+        value_text = str(availability.get(day, "Indisponível") or "").strip()
         if value_text in ("Indisponível", "Folga", "Férias"):
             return False
         if value_text == "Livre":
             return True
-        times = parse_times(shift)
-        if times is None:
+        t = parse_times(shift)
+        if t is None:
             return False
-        start, end = times
-        if end < start:
-            end += 24 * 60
+        start, end = t
         if value_text == "Só Manhã":
             return start < 12 * 60 and end <= 14 * 60
         if value_text == "Só Tarde":
             return start >= 12 * 60
         specific = re.search(r"(\d{1,2}):(\d{2}).*?(\d{1,2}):(\d{2})", value_text)
         if specific:
-            available_start = int(specific.group(1)) * 60 + int(specific.group(2))
-            available_end = int(specific.group(3)) * 60 + int(specific.group(4))
-            if available_end < available_start:
-                available_end += 24 * 60
-            return start >= available_start and end <= available_end
+            av_start = int(specific.group(1)) * 60 + int(specific.group(2))
+            av_end   = int(specific.group(3)) * 60 + int(specific.group(4))
+            if av_end < av_start:
+                av_end += 24 * 60
+            return start >= av_start and end <= av_end
         return "Específico" in value_text
 
-    employees = [
-        name for name, data in config_semana.items()
-        if bool(data.get("vai_trabalhar", True))
-    ]
+    # ── employee pools ────────────────────────────────────────────────────────
 
-    minimum_hours = {
-        name: max(0.0, numeric_value(config_semana[name],
-            ("horas_min", "min_horas", "min_hours", "contract_min_hours"), 0.0))
-        for name in employees
-    }
-    maximum_hours = {
-        name: min(39.0, max(0.0, numeric_value(config_semana[name],
-            ("horas_max", "max_horas", "max_hours", "contract_max_hours"), 39.0)))
-        for name in employees
-    }
-    target_hours = {
-        name: min(maximum_hours[name], max(minimum_hours[name],
-            numeric_value(config_semana[name], ("horas_alvo", "target_hours"), 0.0)))
-        for name in employees
-    }
-
-    assigned_hours = {name: 0.0 for name in employees}
-    for name in employees:
-        if config_semana[name].get("dias_treinamento"):
-            assigned_hours[name] += numeric_value(config_semana[name], ("horas_treinamento",), 0.0)
-
-    assigned_days: dict = {name: set() for name in employees}
-    closing_count: dict = {name: 0 for name in employees}  # tracks closing shifts per employee
-    closing_by_day: dict = {}
-    records: list = []
-
+    employees = [n for n, d in config_semana.items() if bool(d.get("vai_trabalhar", True))]
     days = list(turnos_padrao)
-    previous_closing: set = set()
-    prev_day_last_end: dict = {name: None for name in employees}
 
-    def _remaining_avail_days(employee, from_day_index):
-        """Count days the employee can still work from from_day_index onwards."""
-        return sum(
-            1 for d in days[from_day_index:]
-            if str(config_semana[employee].get('disponibilidade', {}).get(d, 'Indisponível'))
-               not in ('Indisponível', 'Folga', 'Férias')
-            and d not in config_semana[employee].get('dias_folga', [])
-            and d not in config_semana[employee].get('dias_ferias', [])
-            and d not in config_semana[employee].get('dias_treinamento', [])
+    if not employees:
+        records = [{"Dia": d, "Horário": s, "Funcionário": "A Preencher"}
+                   for d in days for s in turnos_padrao[d]]
+        warnings.append("Nenhum funcionário escalado para esta semana.")
+        return pd.DataFrame(records, columns=output_columns), warnings
+
+    def _fval(e, keys, default):
+        return numeric_value(config_semana[e], keys, default)
+
+    minimum_hours  = {e: max(0.0, _fval(e, ("horas_min",), 0.0)) for e in employees}
+    maximum_hours  = {e: min(60.0, max(0.0, _fval(e, ("horas_max",), 39.0))) for e in employees}
+    target_hours   = {
+        e: min(maximum_hours[e], max(minimum_hours[e], _fval(e, ("horas_alvo",), 0.0)))
+        for e in employees
+    }
+    training_min   = {
+        e: int(_fval(e, ("horas_treinamento",), 0.0) * 60)
+        if config_semana[e].get("dias_treinamento") else 0
+        for e in employees
+    }
+    novato_emps    = [e for e in employees
+                      if str(config_semana[e].get("nivel", "experiente")).lower() == "novato"]
+
+    # Classify shifts once
+    closing_shifts_by_day = {}
+    opening_shifts_by_day = {}
+    for d in days:
+        closing_shifts_by_day[d] = [s for s in turnos_padrao[d]
+                                     if (lambda t: t and t[1] > 17 * 60)(parse_times(s))]
+        opening_shifts_by_day[d] = [s for s in turnos_padrao[d]
+                                     if (lambda t: t and t[0] < 9 * 60)(parse_times(s))]
+
+    # ── CP-SAT model ──────────────────────────────────────────────────────────
+
+    model  = cp_model.CpModel()
+    solver = cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds = 10.0
+
+    # Decision variables
+    x          = {}   # x[e, d, s] = 1 iff employee e works shift s on day d
+    unassigned = {}   # unassigned[d, s] = 1 iff no employee covers (d, s)
+
+    for e in employees:
+        for d in days:
+            for s in turnos_padrao[d]:
+                x[e, d, s] = model.NewBoolVar(f"x|{e}|{d}|{s}")
+
+    for d in days:
+        for s in turnos_padrao[d]:
+            unassigned[d, s] = model.NewBoolVar(f"unassigned|{d}|{s}")
+
+    # ── HARD CONSTRAINTS ─────────────────────────────────────────────────────
+
+    # C1: Coverage — exactly 1 employee OR explicitly unassigned
+    for d in days:
+        for s in turnos_padrao[d]:
+            model.Add(
+                sum(x[e, d, s] for e in employees) + unassigned[d, s] == 1
+            )
+
+    # C2: Availability — forbid unavailable assignments
+    for e in employees:
+        for d in days:
+            for s in turnos_padrao[d]:
+                if not is_available(e, d, s):
+                    model.Add(x[e, d, s] == 0)
+
+    # C3: One shift per employee per day
+    for e in employees:
+        for d in days:
+            model.Add(sum(x[e, d, s] for s in turnos_padrao[d]) <= 1)
+
+    # C4: Contract max hours (minutes arithmetic to stay integer)
+    for e in employees:
+        assigned_min_expr = sum(
+            duration_min(s) * x[e, d, s]
+            for d in days
+            for s in turnos_padrao[d]
         )
+        model.Add(assigned_min_expr + training_min[e] <= int(maximum_hours[e] * 60))
 
-    for day in days:
-        shifts = list(turnos_padrao[day])
-        parsed_shifts = [(shift, parse_times(shift)) for shift in shifts]
-        closing_shifts = [
-            shift for shift, times in parsed_shifts
-            if times is not None and times[1] > 17 * 60
-        ]
-        normal_shifts = [shift for shift in shifts if shift not in closing_shifts]
-        ordered_shifts = closing_shifts + normal_shifts
+    # C5: Keyholder on closing shifts
+    for d in days:
+        for s in closing_shifts_by_day[d]:
+            for e in employees:
+                if str(config_semana[e].get("cargo", "")) not in keyholder_roles:
+                    model.Add(x[e, d, s] == 0)
 
-        # Drop 08:00-16:00 when available staff count < number of shifts (staff shortage)
-        _avail_today = sum(
-            1 for emp in employees
-            if day not in config_semana[emp].get('dias_folga', [])
-            and day not in config_semana[emp].get('dias_ferias', [])
-            and day not in config_semana[emp].get('dias_treinamento', [])
-            and str(config_semana[emp].get('disponibilidade', {}).get(day, 'Indisponível'))
-               not in ('Indisponível', 'Folga', 'Férias')
+    # C6: WTI clopening — 11h rest between close and next-day open
+    for i, d in enumerate(days[:-1]):
+        next_d = days[i + 1]
+        for e in employees:
+            for s_close in closing_shifts_by_day[d]:
+                t_close = parse_times(s_close)
+                for s_open in opening_shifts_by_day[next_d]:
+                    t_open = parse_times(s_open)
+                    if t_close and t_open:
+                        gap = (24 * 60 - t_close[1]) + t_open[0]
+                        if gap < 11 * 60:
+                            model.Add(x[e, d, s_close] + x[e, next_d, s_open] <= 1)
+
+    # C7: Novato constraint — max 1 novato per opening block and per closing block per day
+    if novato_emps:
+        for d in days:
+            if opening_shifts_by_day[d]:
+                model.Add(
+                    sum(x[e, d, s]
+                        for e in novato_emps
+                        for s in opening_shifts_by_day[d]) <= 1
+                )
+            if closing_shifts_by_day[d]:
+                model.Add(
+                    sum(x[e, d, s]
+                        for e in novato_emps
+                        for s in closing_shifts_by_day[d]) <= 1
+                )
+
+    # ── OBJECTIVE ────────────────────────────────────────────────────────────
+
+    BIG_PENALTY = 100_000  # strongly prefer filling every shift
+
+    unassigned_cost = sum(BIG_PENALTY * unassigned[d, s]
+                          for d in days for s in turnos_padrao[d])
+
+    # Deviation from target hours (absolute value via over/under split)
+    over_vars  = {}
+    under_vars = {}
+    for e in employees:
+        target_m = int(target_hours[e] * 60)
+        max_dev  = int(maximum_hours[e] * 60) + 10  # generous upper bound
+        over_vars[e]  = model.NewIntVar(0, max_dev, f"over|{e}")
+        under_vars[e] = model.NewIntVar(0, max_dev, f"under|{e}")
+        assigned_expr = sum(
+            duration_min(s) * x[e, d, s]
+            for d in days
+            for s in turnos_padrao[d]
         )
-        _MID_SHIFT = "08:00 - 16:00"
-        if _avail_today < len(ordered_shifts) and _MID_SHIFT in shifts:
+        # assigned + training - target = over - under
+        model.Add(assigned_expr + training_min[e] - target_m == over_vars[e] - under_vars[e])
+
+    hour_deviation_cost = sum(over_vars[e] + under_vars[e] for e in employees)
+
+    model.Minimize(unassigned_cost + hour_deviation_cost)
+
+    # ── SOLVE ────────────────────────────────────────────────────────────────
+
+    status = solver.Solve(model)
+
+    # ── EXTRACT SOLUTION ─────────────────────────────────────────────────────
+
+    records = []
+    if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+        for d in days:
+            for s in turnos_padrao[d]:
+                assigned = "A Preencher"
+                for e in employees:
+                    if solver.Value(x[e, d, s]) == 1:
+                        assigned = e
+                        break
+                records.append({"Dia": d, "Horário": s, "Funcionário": assigned})
+    else:
+        warnings.append(
+            "CP-SAT: modelo infeasível com as constraints actuais — "
+            "verifique disponibilidades, keyholder coverage e limites de horas."
+        )
+        for d in days:
+            for s in turnos_padrao[d]:
+                records.append({"Dia": d, "Horário": s, "Funcionário": "A Preencher"})
+
+    # ── POST-SOLVE WARNINGS ──────────────────────────────────────────────────
+
+    # Unassigned shifts
+    for row in records:
+        if row["Funcionário"] == "A Preencher":
+            d, s = row["Dia"], row["Horário"]
+            reason = "nenhum keyholder elegível" if s in closing_shifts_by_day[d] else "nenhum funcionário elegível"
+            warnings.append(f"{d} - {s}: turno não atribuído ({reason}).")
+
+    if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+        return pd.DataFrame(records, columns=output_columns), warnings
+
+    # Compute final assigned hours per employee for downstream warnings
+    assigned_hours = {e: 0.0 for e in employees}
+    for row in records:
+        e = row["Funcionário"]
+        if e in assigned_hours:
+            assigned_hours[e] += duration_min(row["Horário"]) / 60.0
+
+    for e in employees:
+        total = assigned_hours[e] + training_min[e] / 60.0
+        if total + 1e-9 > maximum_hours[e]:
             warnings.append(
-                f"{day}: turno 08:00-16:00 eliminado — {_avail_today} funcionários disponíveis "
-                f"para {len(ordered_shifts)} turnos."
+                f"{e}: limite semanal excedido ({total:.2f}h > {maximum_hours[e]:.2f}h)."
             )
-            ordered_shifts = [s for s in ordered_shifts if s != _MID_SHIFT]
-
-        assigned_today: set = set()
-        closing_today: set = set()
-        today_last_end: dict = {name: None for name in employees}
-        novato_opening_today: bool = False
-        novato_closing_today: bool = False
-
-        for shift in ordered_shifts:
-            times = parse_times(shift)
-            duration = shift_hours(shift)
-            is_closing = shift in closing_shifts
-            is_opening = times is not None and times[0] < 9 * 60
-
-            candidates = [
-                employee for employee in employees
-                if employee not in assigned_today
-                and available(employee, day, shift)
-                and assigned_hours[employee] + duration <= maximum_hours[employee] + 1e-9
-                and not (is_opening and employee in previous_closing)
-                and (not is_closing or str(config_semana[employee].get("cargo", "")) in keyholder_roles)
-                and not (
-                    times is not None
-                    and prev_day_last_end[employee] is not None
-                    and (24 * 60 - prev_day_last_end[employee]) + times[0] < 11 * 60
-                )
-                # Novato constraint: max 1 novato per opening block and per closing block
-                and not (
-                    str(config_semana[employee].get('nivel', 'experiente')).lower() == 'novato'
-                    and is_opening and novato_opening_today
-                )
-                and not (
-                    str(config_semana[employee].get('nivel', 'experiente')).lower() == 'novato'
-                    and is_closing and novato_closing_today
-                )
-            ]
-
-            if candidates:
-                day_index = days.index(day)
-                candidates.sort(
-                    key=lambda e: (
-                        # P1: restricted availability first (fewer shift alternatives)
-                        1 if str(config_semana[e].get('disponibilidade', {}).get(day, 'Livre') or '').strip()
-                             not in ('Livre', '') else 0,
-                        # P2 (closing only): prefer keyholder with fewest closing shifts assigned
-                        -closing_count[e] if is_closing else 0,
-                        # P3: urgency = hours still needed / remaining available days
-                        # prevents front-loading and reserves capacity for end-of-week
-                        (max(0.0, target_hours[e] - assigned_hours[e]))
-                        / max(1, _remaining_avail_days(e, day_index)),
-                        minimum_hours[e] - assigned_hours[e],
-                    ),
-                    reverse=True,
-                )
-                employee = candidates[0]
-                assigned_hours[employee] += duration
-                assigned_days[employee].add(day)
-                assigned_today.add(employee)
-                if is_closing:
-                    closing_today.add(employee)
-                    closing_count[employee] += 1
-                # Track novato presence at opening/closing
-                if str(config_semana[employee].get('nivel', 'experiente')).lower() == 'novato':
-                    if is_opening:
-                        novato_opening_today = True
-                    if is_closing:
-                        novato_closing_today = True
-                if times is not None:
-                    if today_last_end[employee] is None or times[1] > today_last_end[employee]:
-                        today_last_end[employee] = times[1]
-            else:
-                employee = "A Preencher"
-                reason = "nenhum funcionário elegível"
-                if is_closing:
-                    reason = "nenhum keyholder elegível"
-                elif is_opening and previous_closing:
-                    reason = "restrição de descanso/clopening"
-                warnings.append(f"{day} - {shift}: turno não atribuído ({reason}).")
-
-            records.append({"Dia": day, "Horário": shift, "Funcionário": employee})
-
-        closing_by_day[day] = closing_today
-        previous_closing = closing_today
-        prev_day_last_end = today_last_end
-
-    for employee in employees:
-        total = assigned_hours[employee]
-        if total + 1e-9 > maximum_hours[employee]:
+        elif total > target_hours[e] + margem_horas + 1e-9:
             warnings.append(
-                f"{employee}: limite semanal excedido "
-                f"({total:.2f}h > {maximum_hours[employee]:.2f}h)."
+                f"{e}: horas acima da margem — {total:.1f}h "
+                f"(Alvo: {target_hours[e]:.0f}h + margem: {margem_horas:.0f}h)."
             )
-        elif total > target_hours[employee] + margem_horas + 1e-9:
+        if total + 1e-9 < minimum_hours[e]:
             warnings.append(
-                f"{employee}: horas acima da margem — {total:.1f}h "
-                f"(Alvo: {target_hours[employee]:.0f}h + margem: {margem_horas:.0f}h)."
+                f"{e}: mínimo semanal não atingido ({total:.2f}h < {minimum_hours[e]:.2f}h)."
             )
-        if total + 1e-9 < minimum_hours[employee]:
+        elif total < target_hours[e] - margem_horas - 1e-9:
             warnings.append(
-                f"{employee}: mínimo semanal não atingido "
-                f"({total:.2f}h < {minimum_hours[employee]:.2f}h)."
-            )
-        elif total < target_hours[employee] - margem_horas - 1e-9:
-            warnings.append(
-                f"{employee}: horas abaixo da margem — {total:.1f}h "
-                f"(Alvo: {target_hours[employee]:.0f}h - margem: {margem_horas:.0f}h)."
-            )
-        if len(assigned_days[employee]) == len(days):
-            warnings.append(
-                f"{employee}: WTI — {len(days)} dias consecutivos sem folga (mín. 1 dia de descanso/semana)."
+                f"{e}: horas abaixo da margem — {total:.1f}h "
+                f"(Alvo: {target_hours[e]:.0f}h - margem: {margem_horas:.0f}h)."
             )
 
+    # WTI: 7 consecutive days
+    assigned_days = {e: set() for e in employees}
+    for row in records:
+        if row["Funcionário"] in assigned_days:
+            assigned_days[row["Funcionário"]].add(row["Dia"])
+    for e in employees:
+        if len(assigned_days[e]) == len(days):
+            warnings.append(
+                f"{e}: WTI — {len(days)} dias consecutivos sem folga (mín. 1 dia de descanso/semana)."
+            )
+
+    # WTI break warnings
     for row in records:
         if row["Funcionário"] == "A Preencher":
             continue
-        times = parse_times(row["Horário"])
-        if times is None:
-            continue
-        duration_min = times[1] - times[0]
-        if duration_min < 0:
-            duration_min += 24 * 60
-        if duration_min > 6 * 60:
+        dur = duration_min(row["Horário"])
+        if dur > 6 * 60:
             warnings.append(
-                f"{row['Funcionário']} ({row['Dia']} {row['Horário']}): turno >6h — pausa de 30 min obrigatória (WTI)."
+                f"{row['Funcionário']} ({row['Dia']} {row['Horário']}): "
+                f"turno >6h — pausa de 30 min obrigatória (WTI)."
             )
-        elif duration_min > 4 * 60 + 30:
+        elif dur > 4 * 60 + 30:
             warnings.append(
-                f"{row['Funcionário']} ({row['Dia']} {row['Horário']}): turno >4.5h — pausa de 15 min recomendada."
+                f"{row['Funcionário']} ({row['Dia']} {row['Horário']}): "
+                f"turno >4.5h — pausa de 15 min recomendada."
             )
 
-    for day, shifts in turnos_padrao.items():
-        for shift in shifts:
-            times = parse_times(shift)
-            if times is None or times[1] <= 17 * 60:
-                continue
-            assigned = next(
-                (row["Funcionário"] for row in records
-                 if row["Dia"] == day and row["Horário"] == shift),
-                "A Preencher",
-            )
-            if (assigned == "A Preencher"
-                    or str(config_semana.get(assigned, {}).get("cargo", "")) not in keyholder_roles):
-                warnings.append(f"{day} - {shift}: regra de fechamento sem keyholder.")
-
-    for index, day in enumerate(days[:-1]):
-        next_day = days[index + 1]
-        closing_employees = closing_by_day.get(day, set())
-        if not closing_employees:
+    # Keyholder on closing check (post-solve verification)
+    for row in records:
+        d, s = row["Dia"], row["Horário"]
+        if s not in closing_shifts_by_day[d]:
             continue
-        for row in records:
-            if row["Dia"] != next_day:
-                continue
-            times = parse_times(row["Horário"])
-            if (times is not None and times[0] < 9 * 60
-                    and row["Funcionário"] in closing_employees):
-                warnings.append(
-                    f"{row['Funcionário']}: clopening inválido entre {day} e {next_day}."
-                )
+        assigned = row["Funcionário"]
+        if assigned == "A Preencher":
+            continue
+        if str(config_semana.get(assigned, {}).get("cargo", "")) not in keyholder_roles:
+            warnings.append(f"{d} - {s}: regra de fechamento sem keyholder.")
 
-    records.sort(
-        key=lambda row: (
-            days.index(row["Dia"]),
-            turnos_padrao[row["Dia"]].index(row["Horário"]),
-        )
-    )
+    # Clopening cross-day post-solve verification
+    schedule_map = {(r["Dia"], r["Horário"]): r["Funcionário"] for r in records}
+    for i, d in enumerate(days[:-1]):
+        next_d = days[i + 1]
+        for s_close in closing_shifts_by_day[d]:
+            worker = schedule_map.get((d, s_close), "A Preencher")
+            if worker == "A Preencher":
+                continue
+            for s_open in opening_shifts_by_day[next_d]:
+                if schedule_map.get((next_d, s_open)) == worker:
+                    t_close = parse_times(s_close)
+                    t_open  = parse_times(s_open)
+                    if t_close and t_open:
+                        gap = (24 * 60 - t_close[1]) + t_open[0]
+                        if gap < 11 * 60:
+                            warnings.append(
+                                f"{worker}: clopening inválido entre {d} e {next_d}."
+                            )
+
+    # Solver status note
+    if status == cp_model.OPTIMAL:
+        warnings.append(f"CP-SAT: solução ÓPTIMA encontrada em {solver.WallTime():.2f}s.")
+    elif status == cp_model.FEASIBLE:
+        warnings.append(f"CP-SAT: solução VIÁVEL (não óptima) encontrada em {solver.WallTime():.2f}s.")
+
+    # Sort to match turnos_padrao order
+    records.sort(key=lambda r: (days.index(r["Dia"]), turnos_padrao[r["Dia"]].index(r["Horário"])))
 
     return pd.DataFrame(records, columns=output_columns), warnings
 
