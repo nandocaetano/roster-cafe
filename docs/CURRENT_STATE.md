@@ -68,7 +68,7 @@ app_escala/
 
 ## Next Immediate Steps
 
-1. **Choose final landing page** — user comparing `landing-manifesto.html` vs `landing-serif.html`; copy chosen file to `public/index.html` for hosting on Cloudflare Pages.
+1. **Deploy landing page** — `public/index.html` (serif) is ready; connect repo to Cloudflare Pages, set `public/` as root, point `madfrog.ie` DNS to it.
 2. **Set up Zoho Mail free** — custom domain email `@madfrog.ie`; add MX records in Cloudflare DNS; use webmail only (free tier, no IMAP).
 3. **Deploy Edge Function** — `supabase functions deploy stripe-webhook` (requires Supabase CLI + `supabase link`).
 4. **Add Stripe secrets** — Streamlit Cloud: `STRIPE_SECRET_KEY` + `APP_URL`. Supabase Edge Functions: `STRIPE_WEBHOOK_SECRET` + `STRIPE_SECRET_KEY`.

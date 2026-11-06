@@ -1,0 +1,591 @@
+<title>Roster Café</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Build your Irish café roster in minutes — not hours. Set shifts, manage preferences, export to Excel. 7-day free trial.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=DM+Sans:wght@400;500&display=swap">
+
+<style>
+/* Roster Café · Night Serif · v1
+   layout: question headline (roman + italic serif), editorial dark, violet accent
+   shape: Manifesto-serif — large question opens the page; facts build below
+   sections: Hero · Problem · Steps · Product · Pricing · FAQ · Close · Footer
+   tone: confident, direct, operator-to-operator */
+
+/* ═══ TOKENS ═══ */
+:root {
+  color-scheme: dark;
+  /* Palette */
+  --c-bg:       oklch(8%   0.015 282);
+  --c-surf:     oklch(12%  0.020 285);
+  --c-surf-2:   oklch(16%  0.025 287);
+  --c-ink:      oklch(93%  0.025 300);
+  --c-ink-2:    oklch(79%  0.035 300);
+  --c-muted:    oklch(58%  0.040 298);
+  --c-rule:     oklch(21%  0.028 285);
+  --c-rule-2:   oklch(38%  0.060 290);
+  --c-accent:   oklch(55%  0.250 290);  /* CTA, buttons */
+  --c-accent-em: oklch(68% 0.210 290); /* headline italic — brighter for legibility */
+  --c-accent-d: oklch(48%  0.240 290);
+  --c-accent-soft: oklch(28% 0.080 290);
+  --c-accent-ink: oklch(97% 0.010 300);
+  --c-focus:    oklch(62%  0.220 290);
+  --c-ok:       oklch(68%  0.14  150);
+  --c-ok-soft:  oklch(20%  0.04  150);
+  --c-white-h:  oklch(90%  0.015 300);
+  /* Type */
+  --ff-serif: "Playfair Display", "Georgia", ui-serif, serif;
+  --ff-sans:  "DM Sans", ui-sans-serif, sans-serif;
+  /* Scale */
+  --sp-xs: 8px; --sp-sm: 12px; --sp-md: 16px; --sp-lg: 24px;
+  --sp-xl: 40px; --sp-2xl: 64px; --sp-3xl: 96px;
+  --t-xs: 0.75rem; --t-sm: 0.875rem; --t-md: 1rem;
+  --t-lead: clamp(1rem, 0.4vw + 0.875rem, 1.25rem);
+  --t-title: clamp(1.25rem, 0.5vw + 1rem, 1.625rem);
+  --t-section: clamp(2rem, 3vw + 0.75rem, 3.75rem);
+  --t-display: clamp(3.25rem, 8vw + 0.5rem, 8rem);
+  /* Layout */
+  --radius: 14px; --radius-pill: 999px;
+  --shadow: 0 2px 6px oklch(3% 0.01 285 / 0.5);
+  --container: 1200px; --gutter: 56px;
+  --gap: 120px; --gap-s: 88px;
+  /* Motion */
+  --ease: cubic-bezier(0.16, 1, 0.3, 1); --dur: 220ms;
+}
+@media (max-width: 1100px) { :root { --gutter: 32px; } }
+@media (max-width: 600px)  { :root { --gutter: 20px; --gap: 72px; --gap-s: 56px; } }
+
+/* ═══ BASE ═══ */
+*, *::before, *::after { box-sizing: border-box; }
+html { overflow-x: clip; scrollbar-color: var(--c-muted) var(--c-bg); -webkit-text-size-adjust: 100%; }
+body {
+  overflow-x: clip; margin: 0;
+  background: var(--c-bg); color: var(--c-ink);
+  font-family: var(--ff-sans); font-size: var(--t-md); line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--c-surf);
+}
+p { margin: 0; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 0.16em; }
+h1, h2, h3 { margin: 0; overflow-wrap: break-word; min-width: 0; text-wrap: balance; }
+::selection { background: color-mix(in oklab, var(--c-accent) 30%, transparent); }
+:focus-visible { outline: 2px solid var(--c-focus); outline-offset: 3px; border-radius: 4px; }
+::-webkit-scrollbar { width: 6px; background: var(--c-surf); }
+::-webkit-scrollbar-thumb { background: var(--c-rule-2); border-radius: 3px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; } }
+
+/* ═══ LAYOUT ═══ */
+.gutter {
+  padding-left:  max(var(--gutter), env(safe-area-inset-left, 0px));
+  padding-right: max(var(--gutter), env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: var(--container); margin-inline: auto; }
+.section   { padding-block: var(--gap); }
+.section-s { padding-block: var(--gap-s); }
+.band { background: var(--c-surf); }
+.band-2 { background: var(--c-surf-2); }
+
+/* ═══ EYEBROW ═══ */
+.eyebrow {
+  font-family: var(--ff-sans); font-size: var(--t-xs); font-weight: 500;
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--c-accent-em);
+  margin-bottom: var(--sp-lg); display: block;
+}
+
+/* ═══ BUTTONS ═══ */
+.btn {
+  display: inline-flex; align-items: center; gap: var(--sp-xs);
+  border-radius: var(--radius-pill); padding: var(--sp-sm) var(--sp-xl); min-height: 48px;
+  font-family: var(--ff-sans); font-size: var(--t-sm); font-weight: 500;
+  text-decoration: none; cursor: pointer; white-space: nowrap;
+  transition: background-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.btn--primary { background: var(--c-accent); color: var(--c-accent-ink); }
+.btn--primary:hover { background: var(--c-accent-d); }
+.btn--outline  { background: transparent; color: var(--c-ink-2); box-shadow: inset 0 0 0 1.5px var(--c-rule-2); }
+.btn--outline:hover { color: var(--c-ink); box-shadow: inset 0 0 0 1.5px var(--c-muted); }
+.btn:active { opacity: 0.84; transform: translateY(1px); }
+/* Close band: white pill on violet */
+.band-accent .btn--primary { background: var(--c-accent-ink); color: var(--c-accent); }
+.band-accent .btn--primary:hover { background: var(--c-white-h); }
+
+/* ═══ NAV ═══ */
+.nav {
+  position: sticky; top: env(safe-area-inset-top, 0px);
+  background: var(--c-surf); border-bottom: 1px solid var(--c-rule); z-index: 200;
+  padding-block: var(--sp-md);
+}
+.nav__inner {
+  max-width: var(--container); margin-inline: auto;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nav__logo {
+  font-family: var(--ff-serif); font-size: 1.25rem; font-weight: 700; font-style: italic;
+  text-decoration: none; color: var(--c-ink); line-height: 1; letter-spacing: -0.01em;
+}
+.nav__logo span { color: var(--c-accent-em); font-style: normal; }
+
+/* ═══ HERO ═══ */
+.hero {
+  padding-block: var(--gap);
+  min-height: calc(100svh - 57px);
+  display: flex; flex-direction: column; justify-content: center;
+}
+.hero__inner { max-width: var(--container); margin-inline: auto; }
+.hero__h1 {
+  font-family: var(--ff-serif); font-weight: 700; font-size: var(--t-display);
+  line-height: 0.98; letter-spacing: -0.02em; color: var(--c-ink);
+  margin-bottom: var(--sp-2xl); max-width: 16ch;
+}
+.hero__h1 em {
+  font-style: italic; color: var(--c-accent-em); display: block;
+}
+.hero__sub {
+  font-family: var(--ff-sans); font-size: var(--t-lead);
+  color: var(--c-ink-2); line-height: 1.6; max-width: 46ch;
+  margin-bottom: var(--sp-xl);
+}
+.hero__actions { display: flex; flex-wrap: wrap; gap: var(--sp-sm); align-items: center; margin-bottom: var(--sp-md); }
+.hero__fine {
+  font-size: var(--t-xs); color: var(--c-muted);
+  display: flex; gap: var(--sp-md); flex-wrap: wrap;
+}
+.hero__fine-dot::before { content: "·"; margin-right: var(--sp-md); }
+.hero__fine-dot:first-child::before { content: none; }
+
+/* Trust bar */
+.trust-bar {
+  border-top: 1px solid var(--c-rule); border-bottom: 1px solid var(--c-rule);
+  margin-top: var(--sp-2xl); padding-block: var(--sp-lg);
+  display: flex; gap: var(--sp-2xl); flex-wrap: wrap;
+}
+.trust-item {
+  display: flex; align-items: center; gap: var(--sp-xs);
+  font-size: var(--t-xs); color: var(--c-muted);
+}
+.trust-item::before { content: "●"; font-size: 7px; color: var(--c-accent); }
+
+@media (max-width: 600px) { .hero { min-height: auto; padding-block: var(--gap-s); } }
+
+/* ═══ PROBLEM SECTION ═══ */
+.problem-grid {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-3xl); align-items: start;
+}
+.problem-h {
+  font-family: var(--ff-serif); font-weight: 700; font-size: var(--t-section);
+  letter-spacing: -0.02em; line-height: 1.08; color: var(--c-ink); margin-bottom: var(--sp-lg);
+}
+.problem-h em { font-style: italic; color: var(--c-accent-em); }
+.problem-body p { font-size: var(--t-sm); color: var(--c-ink-2); line-height: 1.7; }
+.problem-body p + p { margin-top: var(--sp-md); }
+.problem-quote {
+  margin-top: var(--sp-2xl); padding: var(--sp-xl);
+  background: var(--c-surf-2); border-radius: var(--radius);
+  border-left: 3px solid var(--c-accent);
+}
+.problem-quote p { font-family: var(--ff-serif); font-style: italic; font-size: var(--t-title); color: var(--c-ink-2); line-height: 1.4; }
+.problem-quote cite { display: block; margin-top: var(--sp-md); font-family: var(--ff-sans); font-size: var(--t-xs); font-style: normal; color: var(--c-muted); letter-spacing: 0.05em; text-transform: uppercase; }
+@media (max-width: 800px) { .problem-grid { grid-template-columns: 1fr; gap: var(--sp-2xl); } }
+
+/* ═══ STEPS ═══ */
+ol.steps { counter-reset: step; }
+.steps {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px; background: var(--c-rule);
+  border-radius: var(--radius); overflow: hidden;
+}
+.step {
+  counter-increment: step;
+  padding: var(--sp-2xl) var(--sp-xl); background: var(--c-surf);
+}
+.step::before {
+  content: "0" counter(step);
+  font-family: var(--ff-serif); font-style: italic; font-weight: 700;
+  font-size: clamp(2.5rem, 4vw, 3.75rem); color: var(--c-accent-em); line-height: 1;
+  display: block; margin-bottom: var(--sp-lg); letter-spacing: -0.03em;
+}
+.step h3 {
+  font-family: var(--ff-serif); font-weight: 700; font-size: var(--t-title);
+  color: var(--c-ink); margin-bottom: var(--sp-xs); letter-spacing: -0.01em;
+}
+.step p { font-size: var(--t-sm); color: var(--c-muted); line-height: 1.65; }
+@media (max-width: 800px) {
+  .steps { grid-template-columns: 1fr; }
+  .step + .step { border-top: 1px solid var(--c-rule); }
+}
+
+/* ═══ PRODUCT PANEL ═══ */
+.roster-panel {
+  background: var(--c-surf); border-radius: var(--radius);
+  overflow: hidden; box-shadow: var(--shadow);
+}
+.panel__head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--sp-sm) var(--sp-lg); border-bottom: 1px solid var(--c-rule);
+  background: var(--c-surf-2);
+}
+.panel__title { font-family: monospace; font-size: 11px; color: var(--c-muted); }
+.panel__badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--ff-sans); font-size: 11px; font-weight: 500;
+  color: var(--c-ink); background: var(--c-accent-soft);
+  padding: 4px var(--sp-sm); border-radius: var(--radius-pill);
+}
+.panel__badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--c-accent); flex-shrink: 0; }
+.roster-table { width: 100%; border-collapse: collapse; font-size: var(--t-sm); }
+.roster-table thead th {
+  font-family: monospace; font-size: 11px; font-weight: 400; color: var(--c-muted);
+  padding: var(--sp-sm) var(--sp-md); border-bottom: 1px solid var(--c-rule); text-align: left;
+  background: var(--c-surf-2);
+}
+.roster-table tbody td { padding: var(--sp-sm) var(--sp-md); border-bottom: 1px solid var(--c-rule); font-size: var(--t-sm); }
+.roster-table tbody tr:last-child td { border-bottom: none; }
+.roster-table tbody tr:hover { background: color-mix(in oklab, var(--c-rule) 50%, transparent); }
+.cell-day   { font-family: monospace; font-size: 11px; color: var(--c-muted); white-space: nowrap; }
+.cell-name  { font-weight: 500; color: var(--c-ink); }
+.cell-shift { font-family: monospace; font-size: 12px; color: var(--c-accent-em); white-space: nowrap; }
+.cell-role  { font-size: 12px; color: var(--c-muted); }
+.cell-pref  { font-family: monospace; font-size: 11px; white-space: nowrap; }
+.pref-ok  { color: var(--c-ok); }
+.pref-key { color: var(--c-accent-em); }
+.panel__foot { padding: var(--sp-sm) var(--sp-lg); border-top: 1px solid var(--c-rule); background: var(--c-surf-2); }
+.panel-legend { font-family: monospace; font-size: 11px; color: var(--c-muted); display: flex; gap: var(--sp-lg); flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+@media (max-width: 600px) { .cell-role { display: none; } }
+
+/* ═══ PRICING ═══ */
+.pricing-layout {
+  display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: var(--sp-3xl); align-items: start;
+}
+.pricing-card {
+  background: var(--c-surf); border-radius: var(--radius);
+  box-shadow: inset 0 0 0 1.5px var(--c-accent), var(--shadow);
+  overflow: hidden;
+}
+.pricing-card__head { padding: var(--sp-2xl) var(--sp-xl) var(--sp-xl); border-bottom: 1px solid var(--c-rule); }
+.pricing-trial {
+  font-family: var(--ff-sans); font-size: 11px; font-weight: 500;
+  color: var(--c-ok); background: var(--c-ok-soft);
+  padding: 4px var(--sp-sm); border-radius: var(--radius-pill); display: inline-block; margin-bottom: var(--sp-lg);
+}
+.pricing-price {
+  font-family: var(--ff-serif); font-weight: 700;
+  font-size: clamp(3rem, 5vw, 4.5rem); letter-spacing: -0.03em; line-height: 1;
+  color: var(--c-ink); font-variant-numeric: tabular-nums; margin-bottom: var(--sp-xs);
+}
+.pricing-price-note { font-size: var(--t-sm); color: var(--c-muted); }
+.pricing-price-note strong { color: var(--c-ink-2); font-weight: 500; }
+.pricing-card__features { padding: var(--sp-xl); }
+.feature-row {
+  display: flex; align-items: center; gap: var(--sp-md);
+  padding: var(--sp-sm) 0; font-size: var(--t-sm); color: var(--c-ink-2);
+  border-bottom: 1px solid var(--c-rule);
+}
+.feature-row:last-child { border-bottom: none; }
+.feature-tick { font-size: 12px; color: var(--c-ok); flex-shrink: 0; width: 16px; }
+.pricing-card__cta { padding: var(--sp-lg) var(--sp-xl) var(--sp-xl); }
+.pricing-card__cta .btn { width: 100%; }
+.pricing-card__cta-note { font-size: 11px; color: var(--c-muted); text-align: center; margin-top: var(--sp-sm); }
+.pricing-side h3 {
+  font-family: var(--ff-serif); font-weight: 700; font-size: var(--t-section);
+  letter-spacing: -0.02em; line-height: 1.1; color: var(--c-ink); margin-bottom: var(--sp-xl); max-width: 20ch;
+}
+.pricing-side p  { font-size: var(--t-sm); color: var(--c-muted); line-height: 1.65; margin-bottom: var(--sp-2xl); }
+.objections { background: var(--c-surf); border-radius: var(--radius); overflow: hidden; }
+.obj { display: grid; grid-template-columns: auto 1fr; gap: var(--sp-lg); padding: var(--sp-lg) var(--sp-xl); border-bottom: 1px solid var(--c-rule); align-items: start; }
+.obj:last-child { border-bottom: none; }
+.obj__q { font-family: var(--ff-sans); font-size: 11px; color: var(--c-muted); font-weight: 500; white-space: nowrap; padding-top: 2px; letter-spacing: 0.03em; text-transform: uppercase; }
+.obj__a { font-size: var(--t-sm); color: var(--c-ink-2); line-height: 1.55; }
+@media (max-width: 900px) { .pricing-layout { grid-template-columns: 1fr; gap: var(--sp-2xl); } }
+
+/* ═══ FAQ ═══ */
+.faq-layout { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: var(--sp-3xl); align-items: start; }
+.faq-h { font-family: var(--ff-serif); font-weight: 700; font-size: var(--t-section); letter-spacing: -0.02em; color: var(--c-ink); line-height: 1.1; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 57px + 24px); }
+.faq-rows { border-top: 1px solid var(--c-rule); }
+.faq-row { padding-block: var(--sp-xl); border-bottom: 1px solid var(--c-rule); }
+.faq-q { font-family: var(--ff-serif); font-weight: 700; font-size: var(--t-title); letter-spacing: -0.01em; color: var(--c-ink); line-height: 1.2; margin-bottom: var(--sp-sm); }
+.faq-a { font-size: var(--t-sm); color: var(--c-muted); line-height: 1.65; }
+@media (max-width: 800px) { .faq-layout { grid-template-columns: 1fr; gap: var(--sp-2xl); } .faq-h { position: static; } }
+
+/* ═══ CLOSE BAND (violet) ═══ */
+.band-accent {
+  background: var(--c-accent); color: var(--c-accent-ink);
+  padding-block: var(--gap-s);
+}
+.band-accent h2 { font-family: var(--ff-serif); font-weight: 700; font-size: var(--t-section); letter-spacing: -0.02em; line-height: 1.08; color: inherit; margin-bottom: var(--sp-md); max-width: 20ch; }
+.close-inner {
+  max-width: var(--container); margin-inline: auto;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-3xl); align-items: center;
+}
+.close-text p { font-size: var(--t-sm); color: color-mix(in oklab, var(--c-accent-ink) 70%, var(--c-accent)); }
+.close-text a { color: var(--c-accent-ink); }
+.close-actions { display: flex; flex-direction: column; align-items: flex-end; gap: var(--sp-sm); }
+.close-note { font-size: 11px; color: color-mix(in oklab, var(--c-accent-ink) 65%, var(--c-accent)); text-align: right; }
+@media (max-width: 700px) { .close-inner { grid-template-columns: 1fr; } .close-actions { align-items: flex-start; } .close-note { text-align: left; } }
+
+/* ═══ FOOTER ═══ */
+.footer { border-top: 1px solid var(--c-rule); padding-block: var(--sp-xl); }
+.footer__inner {
+  max-width: var(--container); margin-inline: auto;
+  display: flex; flex-wrap: wrap; gap: var(--sp-lg); align-items: center; justify-content: space-between;
+}
+.footer__brand { font-family: var(--ff-serif); font-style: italic; font-weight: 700; font-size: 1.1rem; color: var(--c-muted); }
+.footer__brand em { font-style: normal; color: var(--c-accent-em); }
+.footer__legal { font-size: 12px; color: var(--c-muted); }
+</style>
+
+<!-- NAV -->
+<nav class="nav gutter" role="navigation" aria-label="Main">
+  <div class="nav__inner">
+    <a href="#" class="nav__logo" aria-label="Roster Café home">Roster<span>.</span>Café</a>
+    <a href="https://roster-cafe.streamlit.app" target="_blank" rel="noopener noreferrer" class="btn btn--primary">Start free trial →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero gutter" aria-label="Hero">
+  <div class="hero__inner">
+    <span class="eyebrow" aria-label="Category">Roster Software · Ireland</span>
+    <h1 class="hero__h1">
+      Is your roster still
+      <em>eating your Sunday?</em>
+    </h1>
+    <p class="hero__sub">Build your Irish café roster in minutes. Set shifts, manage preferences, and export to Excel — all in one place.</p>
+    <div class="hero__actions">
+      <a href="https://roster-cafe.streamlit.app" target="_blank" rel="noopener noreferrer" class="btn btn--primary">Start 7-day free trial →</a>
+      <a href="#product" class="btn btn--outline">See a sample roster</a>
+    </div>
+    <div class="hero__fine" role="list">
+      <span class="hero__fine-dot" role="listitem">No card required</span>
+      <span class="hero__fine-dot" role="listitem">Setup in one afternoon</span>
+      <span class="hero__fine-dot" role="listitem">Cancel anytime</span>
+    </div>
+    <div class="trust-bar" role="list" aria-label="Quick facts">
+      <span class="trust-item" role="listitem">Ireland-wide</span>
+      <span class="trust-item" role="listitem">From €19.90/month</span>
+      <span class="trust-item" role="listitem">7-day free trial</span>
+      <span class="trust-item" role="listitem">Exports to Excel</span>
+    </div>
+  </div>
+</section>
+
+<!-- THE COST -->
+<section class="section gutter band" aria-label="The problem">
+  <div class="wrap">
+    <div class="problem-grid">
+      <div>
+        <span class="eyebrow">The cost</span>
+        <h2 class="problem-h">Spreadsheets don't <em>know your team.</em></h2>
+      </div>
+      <div class="problem-body">
+        <p>Every Sunday, the same hour. Who's available. Who prefers mornings. Who said they can't do Wednesdays. You remember it all, or you get it wrong.</p>
+        <p>Roster Café remembers it for you. Preferences, contracted hours, rest days — the roster builds around your people, not around what you can recall at 10 p.m.</p>
+        <div class="problem-quote">
+          <p>"The same five minutes I spend every Sunday, times 52 weeks."</p>
+          <cite>— Every café manager, every year</cite>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section-s gutter" aria-label="How it works">
+  <div class="wrap">
+    <span class="eyebrow" style="margin-bottom:var(--sp-2xl)">How it works</span>
+    <ol class="steps">
+      <li class="step">
+        <h3>Add your team</h3>
+        <p>Roles, contracted hours, preferred days, unavailable times. Set once, adjust anytime.</p>
+      </li>
+      <li class="step">
+        <h3>Build the week</h3>
+        <p>Click generate. A full roster in minutes. Change any shift by dragging. Done.</p>
+      </li>
+      <li class="step">
+        <h3>Export and post</h3>
+        <p>Download to Excel, CSV or PDF. Post it. Sunday evening belongs to you again.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- PRODUCT AT WORK -->
+<section class="section gutter band" id="product" aria-label="Sample roster">
+  <div class="wrap">
+    <span class="eyebrow">The product</span>
+    <h2 style="font-family:var(--ff-serif);font-weight:700;letter-spacing:-0.02em;font-size:var(--t-section);color:var(--c-ink);margin-bottom:var(--sp-2xl);max-width:18ch">Your roster, exactly the way you need it.</h2>
+    <figure class="roster-panel" role="img" aria-label="Sample weekly roster" data-slot="product-panel">
+      <div class="panel__head">
+        <span class="panel__title">Week 47, Nov 2026 — Ireland</span>
+        <span class="panel__badge">preferences applied</span>
+      </div>
+      <table class="roster-table" aria-label="Sample roster">
+        <thead>
+          <tr>
+            <th scope="col">day</th>
+            <th scope="col">employee</th>
+            <th scope="col">shift</th>
+            <th scope="col">role</th>
+            <th scope="col">note</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="cell-day">Mon</td>
+            <td class="cell-name">Sarah M.</td>
+            <td class="cell-shift">08:00 – 17:00</td>
+            <td class="cell-role">Head Barista</td>
+            <td class="cell-pref pref-pref">✓ preferred</td>
+          </tr>
+          <tr>
+            <td class="cell-day">Mon</td>
+            <td class="cell-name">Tom K.</td>
+            <td class="cell-shift">12:00 – 21:00</td>
+            <td class="cell-role">Asst. Manager</td>
+            <td class="cell-pref pref-key">opener / closer</td>
+          </tr>
+          <tr>
+            <td class="cell-day">Tue</td>
+            <td class="cell-name">Lisa P.</td>
+            <td class="cell-shift">08:00 – 17:00</td>
+            <td class="cell-role">Barista</td>
+            <td class="cell-pref pref-ok">✓ available</td>
+          </tr>
+          <tr>
+            <td class="cell-day">Tue</td>
+            <td class="cell-name">Marco A.</td>
+            <td class="cell-shift">09:00 – 18:00</td>
+            <td class="cell-role">Barista</td>
+            <td class="cell-pref pref-pref">✓ preferred</td>
+          </tr>
+          <tr>
+            <td class="cell-day">Wed</td>
+            <td class="cell-name">Sarah M.</td>
+            <td class="cell-shift">07:00 – 16:00</td>
+            <td class="cell-role">Head Barista</td>
+            <td class="cell-pref pref-ok">✓ available</td>
+          </tr>
+          <tr>
+            <td class="cell-day">Thu</td>
+            <td class="cell-name">Tom K.</td>
+            <td class="cell-shift">12:00 – 21:00</td>
+            <td class="cell-role">Asst. Manager</td>
+            <td class="cell-pref pref-key">closer</td>
+          </tr>
+          <tr>
+            <td class="cell-day">Fri</td>
+            <td class="cell-name">Lisa P.</td>
+            <td class="cell-shift">12:00 – 21:00</td>
+            <td class="cell-role">Barista</td>
+            <td class="cell-pref pref-ok">✓ available</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="panel__foot">
+        <div class="panel-legend">
+          <span class="legend-item"><span class="legend-dot" style="background:var(--c-accent-em)"></span>keyholder</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--c-ok)"></span>preferred / available</span>
+        </div>
+      </div>
+      <figcaption style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap">Sample weekly roster generated by Roster Café with preferences applied.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="section gutter" id="pricing" aria-label="Pricing">
+  <div class="wrap">
+    <div class="pricing-layout">
+      <div class="pricing-card">
+        <div class="pricing-card__head">
+          <span class="pricing-trial">7-day free trial</span>
+          <div class="pricing-price">€19.90<span style="font-size:0.45em;vertical-align:0.3em;color:var(--c-muted)">/mth</span></div>
+          <p class="pricing-price-note"><strong>€39.90</strong> one-time setup &nbsp;·&nbsp; 1 café, up to 10 staff</p>
+        </div>
+        <div class="pricing-card__features">
+          <div class="feature-row"><span class="feature-tick">✓</span><span>Unlimited weekly rosters</span></div>
+          <div class="feature-row"><span class="feature-tick">✓</span><span>Shift preferences per employee</span></div>
+          <div class="feature-row"><span class="feature-tick">✓</span><span>CSV, Excel and PDF export</span></div>
+          <div class="feature-row"><span class="feature-tick">✓</span><span>Roster history</span></div>
+          <div class="feature-row"><span class="feature-tick">✓</span><span>WTI rules included automatically</span></div>
+        </div>
+        <div class="pricing-card__cta">
+          <a href="https://roster-cafe.streamlit.app" target="_blank" rel="noopener noreferrer" class="btn btn--primary">Start 7-day free trial →</a>
+          <p class="pricing-card__cta-note">No card, cancel anytime</p>
+        </div>
+      </div>
+      <div class="pricing-side">
+        <h3>Less than one hour of roster work, every week.</h3>
+        <p>Setup covers getting your team configured. Monthly keeps everything running.</p>
+        <div class="objections">
+          <div class="obj">
+            <span class="obj__q">Small café?</span>
+            <p class="obj__a">Built for 5 to 20 staff anywhere in Ireland. Scales as you grow.</p>
+          </div>
+          <div class="obj">
+            <span class="obj__q">Already on Excel?</span>
+            <p class="obj__a">We export to Excel. Your team never needs to change how they read the roster.</p>
+          </div>
+          <div class="obj">
+            <span class="obj__q">Monthly forever?</span>
+            <p class="obj__a">Stop anytime. Most owners find it pays for itself after the first week saved.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section gutter band" aria-label="Common questions">
+  <div class="wrap">
+    <div class="faq-layout">
+      <h2 class="faq-h">Common questions</h2>
+      <div class="faq-rows">
+        <div class="faq-row">
+          <p class="faq-q">How long does building a roster actually take?</p>
+          <p class="faq-a">About five minutes once your team is configured. The first week takes a bit longer while you set up roles and preferences — typically one afternoon.</p>
+        </div>
+        <div class="faq-row">
+          <p class="faq-q">Can I set preferences for each person?</p>
+          <p class="faq-a">Yes. Preferred days, hours they can't do, contracted weekly hours, role restrictions. The roster respects all of it every time you generate.</p>
+        </div>
+        <div class="faq-row">
+          <p class="faq-q">What does the setup fee cover?</p>
+          <p class="faq-a">Getting your team configured and your first roster built together. €39.90 once, then €19.90 per month.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CLOSE BAND -->
+<section class="band-accent gutter" id="contact" aria-label="Start your trial">
+  <div class="close-inner">
+    <div class="close-text">
+      <h2>Start your roster this week.</h2>
+      <p>7-day free trial. No card needed. Email for a 15-minute setup call.</p>
+      <p style="margin-top:var(--sp-md)">
+        <a href="mailto:caetanolaska@gmail.com">caetanolaska@gmail.com</a>
+        <span style="opacity:0.6"> · Mad Frog, Ireland</span>
+      </p>
+    </div>
+    <div class="close-actions">
+      <a href="https://roster-cafe.streamlit.app" target="_blank" rel="noopener noreferrer" class="btn btn--primary">Start 7-day free trial →</a>
+      <p class="close-note">Setup in one afternoon</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer gutter" role="contentinfo">
+  <div class="footer__inner">
+    <div class="footer__brand">Roster<em>.</em>Café <span style="font-family:var(--ff-sans);font-style:normal;font-weight:400;font-size:0.85em;color:var(--c-muted)">by Mad Frog, Ireland</span></div>
+    <span class="footer__legal">Organisation of Working Time Act 1997 · © 2026 Mad Frog</span>
+  </div>
+</footer>
