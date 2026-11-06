@@ -1,0 +1,390 @@
+<title>Roster Café — Style Directions</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Four visual directions for Roster Café — compare typography, colour and feel before choosing a style to build.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500&family=Onest:wght@400&family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@400;500&family=Plus+Jakarta+Sans:wght@400;600&family=Space+Grotesk:wght@400;700&display=swap">
+
+<style>
+/* Style board — Roster Café — 4 directions: Night / Espresso / Sage / Stark
+   Same content, four worlds. Pick one, then we build the full page. */
+
+:root {
+  --page-bg:   oklch(97% 0.004 240);
+  --page-ink:  oklch(22% 0.012 240);
+  --page-mute: oklch(52% 0.015 240);
+  --page-rule: oklch(88% 0.008 240);
+  --page-ff:   "DM Sans", ui-sans-serif, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page-bg:   oklch(13% 0.012 240);
+    --page-ink:  oklch(90% 0.012 240);
+    --page-mute: oklch(55% 0.015 240);
+    --page-rule: oklch(22% 0.012 240);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page-bg:   oklch(13% 0.012 240);
+  --page-ink:  oklch(90% 0.012 240);
+  --page-mute: oklch(55% 0.015 240);
+  --page-rule: oklch(22% 0.012 240);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { overflow-x: clip; }
+body {
+  overflow-x: clip; margin: 0;
+  background: var(--page-bg); color: var(--page-ink);
+  font-family: var(--page-ff); font-size: 1rem; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  padding-left:  max(16px, env(safe-area-inset-left,  0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 56px;
+}
+p { margin: 0; }
+h1, h2, h3 { margin: 0; text-wrap: balance; overflow-wrap: break-word; min-width: 0; }
+
+/* Page header */
+.page-header { max-width: 640px; margin-bottom: 56px; }
+.page-label {
+  font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--page-mute); margin-bottom: 12px;
+}
+.page-title { font-family: var(--page-ff); font-size: clamp(1.75rem, 3vw, 2.5rem); font-weight: 500; color: var(--page-ink); line-height: 1.1; margin-bottom: 12px; }
+.page-sub { font-size: 1rem; color: var(--page-mute); line-height: 1.6; max-width: 52ch; }
+
+/* Grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+@media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+
+/* ─── TILE SHELL ─── */
+.tile {
+  border-radius: 20px; overflow: hidden;
+  border: 1px solid var(--page-rule);
+  display: flex; flex-direction: column;
+}
+.tile__hero { padding: 48px 40px 40px; flex: 1; display: flex; flex-direction: column; }
+.tile__meta {
+  padding: 20px 40px 24px; border-top: 1px solid var(--t-rule, oklch(85% 0 0));
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.tile__name {
+  font-size: 13px; font-weight: 500; letter-spacing: 0.04em;
+}
+.tile__fonts { font-size: 11px; color: var(--t-mute, #888); }
+.swatches { display: flex; gap: 6px; }
+.swatch { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid oklch(0% 0 0 / 0.08); }
+
+@media (max-width: 500px) { .tile__hero { padding: 32px 24px 28px; } .tile__meta { padding: 16px 24px; } }
+
+/* ─── TILE 1: NIGHT / ULTRAVIOLET ─── */
+.tile--night {
+  background: oklch(14% 0.02 290);
+  --t-ink:    oklch(92% 0.04 300);
+  --t-ink-2:  oklch(76% 0.06 300);
+  --t-mute:   oklch(58% 0.07 300);
+  --t-accent: oklch(55% 0.25 290);
+  --t-soft:   oklch(36% 0.09 293);
+  --t-rule:   oklch(26% 0.04 290);
+  --t-btn-bg: oklch(55% 0.25 290);
+  --t-btn-fg: oklch(97% 0.01 300);
+  --t-name:   oklch(92% 0.04 300);
+}
+.tile--night .tile__hero {
+  background: oklch(14% 0.02 290);
+}
+.tile--night .tile__meta {
+  background: oklch(17.5% 0.025 290);
+  border-top-color: oklch(26% 0.04 290);
+}
+.tile--night .tile__name { color: var(--t-name); }
+.tile--night .tile__fonts { color: var(--t-mute); }
+.tile--night .t-chip {
+  background: var(--t-soft); color: var(--t-ink-2);
+  font-family: "Outfit", sans-serif; font-size: 11px; font-weight: 500; text-transform: lowercase;
+  padding: 4px 12px; border-radius: 999px; display: inline-block; margin-bottom: 32px;
+}
+.tile--night .t-h1 {
+  font-family: "Outfit", sans-serif; font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+  font-weight: 500; letter-spacing: -0.03em; line-height: 1.04;
+  color: var(--t-ink); text-transform: lowercase; text-wrap: balance; margin-bottom: 12px;
+}
+.tile--night .t-lead {
+  font-family: "Onest", sans-serif; font-size: 0.9375rem; color: var(--t-ink-2);
+  line-height: 1.55; margin-bottom: 32px; max-width: 36ch;
+}
+.tile--night .t-btn {
+  display: inline-flex; align-items: center;
+  background: var(--t-btn-bg); color: var(--t-btn-fg);
+  font-family: "Outfit", sans-serif; font-size: 0.875rem; font-weight: 500; text-transform: lowercase;
+  padding: 10px 28px; border-radius: 999px; text-decoration: none;
+  align-self: flex-start;
+}
+.tile--night .t-fig {
+  font-family: "Outfit", sans-serif; font-size: 3.5rem; font-weight: 300;
+  letter-spacing: -0.04em; color: var(--t-accent); line-height: 1;
+  margin-top: auto; padding-top: 32px;
+}
+.tile--night .t-fig-label {
+  font-family: "Outfit", sans-serif; font-size: 11px; font-weight: 500;
+  color: var(--t-mute); text-transform: lowercase; margin-top: 4px;
+}
+
+/* ─── TILE 2: ESPRESSO / WARM ARTISAN ─── */
+.tile--espresso {
+  background: oklch(97% 0.014 65);
+  --t-ink:    oklch(22% 0.025 55);
+  --t-ink-2:  oklch(38% 0.035 55);
+  --t-mute:   oklch(55% 0.03  55);
+  --t-accent: oklch(42% 0.085 50);
+  --t-soft:   oklch(90% 0.030 60);
+  --t-rule:   oklch(88% 0.018 60);
+  --t-btn-bg: oklch(42% 0.085 50);
+  --t-btn-fg: oklch(96% 0.012 65);
+  --t-name:   oklch(22% 0.025 55);
+}
+.tile--espresso .tile__hero { background: oklch(97% 0.014 65); }
+.tile--espresso .tile__meta { background: oklch(93% 0.020 65); border-top-color: var(--t-rule); }
+.tile--espresso .tile__name { color: var(--t-name); }
+.tile--espresso .tile__fonts { color: var(--t-mute); }
+.tile--espresso .t-chip {
+  background: var(--t-soft); color: var(--t-accent);
+  font-family: "DM Sans", sans-serif; font-size: 11px; font-weight: 500;
+  padding: 4px 12px; border-radius: 6px; display: inline-block; margin-bottom: 28px;
+}
+.tile--espresso .t-h1 {
+  font-family: "Playfair Display", serif; font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+  font-weight: 700; line-height: 1.1; color: var(--t-ink);
+  text-wrap: balance; margin-bottom: 14px;
+}
+.tile--espresso .t-lead {
+  font-family: "DM Sans", sans-serif; font-size: 0.9375rem; color: var(--t-ink-2);
+  line-height: 1.6; margin-bottom: 28px; max-width: 38ch;
+}
+.tile--espresso .t-btn {
+  display: inline-flex; align-items: center;
+  background: var(--t-btn-bg); color: var(--t-btn-fg);
+  font-family: "DM Sans", sans-serif; font-size: 0.875rem; font-weight: 500;
+  padding: 10px 24px; border-radius: 8px; text-decoration: none;
+  align-self: flex-start;
+}
+.tile--espresso .t-fig {
+  font-family: "Playfair Display", serif; font-style: italic; font-weight: 400;
+  font-size: clamp(2.25rem, 4vw, 3.25rem); color: var(--t-accent); line-height: 1.1;
+  margin-top: auto; padding-top: 28px;
+}
+.tile--espresso .t-fig-label {
+  font-family: "DM Sans", sans-serif; font-size: 11px; color: var(--t-mute); margin-top: 4px;
+}
+
+/* ─── TILE 3: SAGE / FRESH SAAS ─── */
+.tile--sage {
+  background: oklch(99% 0.004 150);
+  --t-ink:    oklch(16% 0.018 160);
+  --t-ink-2:  oklch(32% 0.024 160);
+  --t-mute:   oklch(52% 0.030 155);
+  --t-accent: oklch(50% 0.140 150);
+  --t-soft:   oklch(94% 0.040 150);
+  --t-rule:   oklch(89% 0.016 150);
+  --t-btn-bg: oklch(50% 0.140 150);
+  --t-btn-fg: oklch(99% 0.004 150);
+  --t-name:   oklch(16% 0.018 160);
+}
+.tile--sage .tile__hero { background: oklch(99% 0.004 150); }
+.tile--sage .tile__meta { background: oklch(96% 0.012 150); border-top-color: var(--t-rule); }
+.tile--sage .tile__name { color: var(--t-name); }
+.tile--sage .tile__fonts { color: var(--t-mute); }
+.tile--sage .t-chip {
+  background: var(--t-soft); color: var(--t-accent);
+  font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; font-weight: 600;
+  padding: 4px 12px; border-radius: 999px; display: inline-block; margin-bottom: 28px;
+}
+.tile--sage .t-h1 {
+  font-family: "Plus Jakarta Sans", sans-serif; font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+  font-weight: 600; line-height: 1.1; color: var(--t-ink);
+  text-wrap: balance; margin-bottom: 12px; letter-spacing: -0.02em;
+}
+.tile--sage .t-lead {
+  font-family: "Plus Jakarta Sans", sans-serif; font-size: 0.9375rem; color: var(--t-ink-2);
+  line-height: 1.6; margin-bottom: 28px; max-width: 38ch; font-weight: 400;
+}
+.tile--sage .t-btn {
+  display: inline-flex; align-items: center;
+  background: var(--t-btn-bg); color: var(--t-btn-fg);
+  font-family: "Plus Jakarta Sans", sans-serif; font-size: 0.875rem; font-weight: 600;
+  padding: 10px 24px; border-radius: 999px; text-decoration: none;
+  align-self: flex-start;
+}
+.tile--sage .t-fig {
+  font-family: "Plus Jakarta Sans", sans-serif; font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 600; letter-spacing: -0.03em; color: var(--t-accent); line-height: 1;
+  margin-top: auto; padding-top: 28px;
+}
+.tile--sage .t-fig-label {
+  font-family: "Plus Jakarta Sans", sans-serif; font-size: 11px; color: var(--t-mute); margin-top: 4px;
+}
+
+/* ─── TILE 4: STARK / EDITORIAL ─── */
+.tile--stark {
+  background: oklch(99% 0 0);
+  --t-ink:    oklch(7%  0 0);
+  --t-ink-2:  oklch(28% 0 0);
+  --t-mute:   oklch(52% 0 0);
+  --t-accent: oklch(52% 0.185 27);
+  --t-soft:   oklch(94% 0.025 27);
+  --t-rule:   oklch(88% 0 0);
+  --t-btn-bg: oklch(7%  0 0);
+  --t-btn-fg: oklch(99% 0 0);
+  --t-name:   oklch(7%  0 0);
+}
+.tile--stark .tile__hero { background: oklch(99% 0 0); }
+.tile--stark .tile__meta { background: oklch(96% 0 0); border-top-color: var(--t-rule); }
+.tile--stark .tile__name { color: var(--t-name); }
+.tile--stark .tile__fonts { color: var(--t-mute); }
+.tile--stark .t-chip {
+  background: var(--t-soft); color: var(--t-accent);
+  font-family: "Space Grotesk", sans-serif; font-size: 11px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 2px; display: inline-block; margin-bottom: 28px;
+}
+.tile--stark .t-h1 {
+  font-family: "Space Grotesk", sans-serif; font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+  font-weight: 700; line-height: 1.04; color: var(--t-ink);
+  text-wrap: balance; margin-bottom: 12px; letter-spacing: -0.02em;
+}
+.tile--stark .t-lead {
+  font-family: "Space Grotesk", sans-serif; font-size: 0.9375rem; color: var(--t-ink-2);
+  line-height: 1.55; margin-bottom: 28px; max-width: 38ch; font-weight: 400;
+}
+.tile--stark .t-btn {
+  display: inline-flex; align-items: center;
+  background: var(--t-btn-bg); color: var(--t-btn-fg);
+  font-family: "Space Grotesk", sans-serif; font-size: 0.875rem; font-weight: 700;
+  letter-spacing: 0.01em;
+  padding: 10px 24px; border-radius: 0; text-decoration: none;
+  align-self: flex-start;
+}
+.tile--stark .t-fig {
+  font-family: "Space Grotesk", sans-serif; font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 700; letter-spacing: -0.03em; line-height: 1;
+  margin-top: auto; padding-top: 28px;
+}
+.tile--stark .t-fig em { font-style: normal; color: var(--t-accent); }
+.tile--stark .t-fig-label {
+  font-family: "Space Grotesk", sans-serif; font-size: 11px; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--t-mute); margin-top: 4px;
+}
+
+/* Footer note */
+.footer-note {
+  margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--page-rule);
+  font-size: 0.875rem; color: var(--page-mute); line-height: 1.6; max-width: 56ch;
+}
+</style>
+
+<!-- PAGE HEADER -->
+<header class="page-header">
+  <p class="page-label">Roster Café — Style Directions</p>
+  <h1 class="page-title">Pick your direction</h1>
+  <p class="page-sub">Four visual worlds, same product. Each one shows how tone, type and colour change what Roster Café feels like. Tell us which one (or which parts) feel right.</p>
+</header>
+
+<!-- GRID -->
+<div class="grid">
+
+  <!-- ① NIGHT -->
+  <div class="tile tile--night">
+    <div class="tile__hero">
+      <span class="t-chip">ireland · any size café</span>
+      <h2 class="t-h1">Done in minutes.<br>Perfect every week.</h2>
+      <p class="t-lead">Build your roster your way — set shifts, manage preferences, export to Excel. No more Sunday evenings lost to rotas.</p>
+      <a href="#" class="t-btn">start free trial</a>
+      <div class="t-fig">5 min<br><span class="t-fig-label">average to build a full week</span></div>
+    </div>
+    <div class="tile__meta">
+      <div>
+        <div class="tile__name">Night — Ultraviolet</div>
+        <div class="tile__fonts">Outfit 500 · Onest 400 · all lowercase · pills</div>
+      </div>
+      <div class="swatches">
+        <span class="swatch" style="background:oklch(14% 0.02 290)" title="Ground"></span>
+        <span class="swatch" style="background:oklch(55% 0.25 290)" title="Violet accent"></span>
+        <span class="swatch" style="background:oklch(92% 0.04 300)" title="Ink"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② ESPRESSO -->
+  <div class="tile tile--espresso">
+    <div class="tile__hero">
+      <span class="t-chip">Ireland · any size café</span>
+      <h2 class="t-h1">Done in minutes.<br>Perfect every week.</h2>
+      <p class="t-lead">Build your roster your way — set shifts, manage preferences, export to Excel. No more Sunday evenings lost to rotas.</p>
+      <a href="#" class="t-btn">Start free trial</a>
+      <div class="t-fig">5 min<br><span class="t-fig-label">average to build a full week</span></div>
+    </div>
+    <div class="tile__meta">
+      <div>
+        <div class="tile__name">Espresso — Warm Artisan</div>
+        <div class="tile__fonts">Playfair Display 700 · DM Sans 400 · rounded 8px</div>
+      </div>
+      <div class="swatches">
+        <span class="swatch" style="background:oklch(97% 0.014 65)" title="Cream"></span>
+        <span class="swatch" style="background:oklch(42% 0.085 50)" title="Espresso brown"></span>
+        <span class="swatch" style="background:oklch(22% 0.025 55)" title="Dark ink"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ SAGE -->
+  <div class="tile tile--sage">
+    <div class="tile__hero">
+      <span class="t-chip">Ireland · any size café</span>
+      <h2 class="t-h1">Done in minutes.<br>Perfect every week.</h2>
+      <p class="t-lead">Build your roster your way — set shifts, manage preferences, export to Excel. No more Sunday evenings lost to rotas.</p>
+      <a href="#" class="t-btn">Start free trial</a>
+      <div class="t-fig">5 min<br><span class="t-fig-label">average to build a full week</span></div>
+    </div>
+    <div class="tile__meta">
+      <div>
+        <div class="tile__name">Sage — Fresh SaaS</div>
+        <div class="tile__fonts">Plus Jakarta Sans 600/400 · rounded pills</div>
+      </div>
+      <div class="swatches">
+        <span class="swatch" style="background:oklch(99% 0.004 150)" title="White-green"></span>
+        <span class="swatch" style="background:oklch(50% 0.14 150)" title="Sage green"></span>
+        <span class="swatch" style="background:oklch(16% 0.018 160)" title="Dark ink"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ STARK -->
+  <div class="tile tile--stark">
+    <div class="tile__hero">
+      <span class="t-chip">NEW</span>
+      <h2 class="t-h1">Done in minutes.<br>Perfect every week.</h2>
+      <p class="t-lead">Build your roster your way — set shifts, manage preferences, export to Excel. No more Sunday evenings lost to rotas.</p>
+      <a href="#" class="t-btn">Start free trial</a>
+      <div class="t-fig"><em>5</em> min<br><span class="t-fig-label">AVERAGE TO BUILD A FULL WEEK</span></div>
+    </div>
+    <div class="tile__meta">
+      <div>
+        <div class="tile__name">Stark — Editorial</div>
+        <div class="tile__fonts">Space Grotesk 700/400 · no radius · terracotta pop</div>
+      </div>
+      <div class="swatches">
+        <span class="swatch" style="background:oklch(99% 0 0)" title="White"></span>
+        <span class="swatch" style="background:oklch(52% 0.185 27)" title="Terracotta"></span>
+        <span class="swatch" style="background:oklch(7% 0 0)" title="Near-black"></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<p class="footer-note">These are mini-compositions — not full pages. Once you pick a direction (or mix ideas from two), we build the complete landing page in that style with all sections.</p>

@@ -30,7 +30,13 @@
 
 | File | Last Change |
 |---|---|
-| `scratchpad/landing.html` | Impeccable polish v6: keyholder role data corrected (Barista→Asst.Manager/Head Barista), CTA consistency (all "Start 7-day trial"), light-mode neutral chroma fix, browser surface tokens, word count 455→446, sloplint 0 FAIL 2 REFLEX(waived). Artifact: https://claude.ai/artifact/Me2iNCAfc8K4oSuHG1DvZJ |
+| `scratchpad/landing-uv.html` | Hallmark Ultraviolet night redesign: counter hero (11h/4.5h/6h WTI thresholds), Feature Stack shape, violet-black ground. sloplint 0 FAIL 0 WARN 2 REFLEX(waived). Artifact: https://claude.ai/artifact/KfYXFggHrDdyUeN27BszSn |
+| `scratchpad/styleboard.html` | NEW — 4-tile style comparison (Night/Ultraviolet, Espresso, Sage, Stark) for user to pick visual direction. Artifact: https://claude.ai/artifact/NhwUu4sQ7Xy1uu32LNbESN |
+| `scratchpad/layouts.html` | NEW — 4-tile layout comparison in Night colourway (Números, Split, Manifesto, Feature Grid). Artifact: https://claude.ai/artifact/3Hv4annZVTYwSGpi5daPB8 |
+| `scratchpad/landing-manifesto.html` | NEW — Full Manifesto landing page (Night colourway): giant display headline hero → Steps → Product → Pricing → FAQ → Close band → Footer. Ireland-wide messaging, speed/ease focus. Artifact: https://claude.ai/artifact/9kYxxnNN46N6a4tumTNcSy |
+| `scratchpad/landing-serif.html` | NEW — Serif editorial landing (Night violet/black): Playfair Display question headline with italic violet accent, trust bar, structured editorial sections. Same content angle. Artifact: https://claude.ai/artifact/19E1avKjVQKtnC67LGjdZA |
+| `tokens.css` | NEW — Hallmark Ultraviolet scaffold output (lavender light tokens; night overrides inline in page files) |
+| `base.css` | NEW — Hallmark scaffold base styles |
 
 ---
 
@@ -62,14 +68,14 @@ app_escala/
 
 ## Next Immediate Steps
 
-1. **Copy landing page to stable path** — move/rename `scratchpad/landing.html` to repo root or `public/index.html` for hosting on madfrog.ie or Streamlit Cloud.
-2. **Deploy Edge Function** — `supabase functions deploy stripe-webhook` (requires Supabase CLI + `supabase link`).
+1. **Choose final landing page** — user comparing `landing-manifesto.html` vs `landing-serif.html`; copy chosen file to `public/index.html` for hosting on Cloudflare Pages.
+2. **Set up Zoho Mail free** — custom domain email `@madfrog.ie`; add MX records in Cloudflare DNS; use webmail only (free tier, no IMAP).
 3. **Deploy Edge Function** — `supabase functions deploy stripe-webhook` (requires Supabase CLI + `supabase link`).
 4. **Add Stripe secrets** — Streamlit Cloud: `STRIPE_SECRET_KEY` + `APP_URL`. Supabase Edge Functions: `STRIPE_WEBHOOK_SECRET` + `STRIPE_SECRET_KEY`.
 5. **Register webhook in Stripe** — Dashboard → Developers → Webhooks → `https://nbggytkbrxqhnqvtvbpl.supabase.co/functions/v1/stripe-webhook`. Events: `checkout.session.completed`, `customer.subscription.deleted`.
-6. **License key flow** — implement `LicenseKeys` table + activation step in registration flow.
-7. **Credentials rotation (manual)** — rotate Supabase DB password + admin@cafe.com via Password Reset UI.
-8. **billing_logic.py** — replace free/pro model with trial/paid (`plano = 'trial'` with `validade`).
+6. **billing_logic.py** — replace free/pro model with trial/paid (`plano = 'trial'` with `validade`).
+7. **License key flow** — implement `LicenseKeys` table + activation step in registration flow.
+8. **Credentials rotation (manual)** — rotate Supabase DB password + admin@cafe.com via Password Reset UI.
 
 ---
 

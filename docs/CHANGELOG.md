@@ -2,6 +2,31 @@
 
 ---
 
+## 2026-11-06 — Landing page exploration: style + layout + serif redesign
+
+### Added
+- `scratchpad/styleboard.html` — 4-tile style comparison board (Night/Ultraviolet, Espresso, Sage, Stark) so user could pick visual direction without full builds. User chose Night/Ultraviolet (black + violet).
+- `scratchpad/layouts.html` — 4-tile layout comparison in Night colourway (Números, Split, Manifesto, Feature Grid). User chose Manifesto.
+- `scratchpad/landing-manifesto.html` — Full Manifesto layout landing page: giant display headline fills first viewport, sections unfold below (Steps → Product panel → Pricing → FAQ → Close band → Footer). Outfit + Onest sans, violet-black Night palette. Ireland-wide messaging, speed/ease focus (not Dublin/law-heavy).
+- `scratchpad/landing-serif.html` — Serif editorial landing: Playfair Display 700 roman + italic violet accent question headline ("Is your roster still eating your Sunday?"), trust bar, editorial sections with eyebrow + big serif statement. Night violet/black palette. Same content angle.
+- `tokens.css` + `base.css` — Hallmark Ultraviolet scaffold output (shared tokens + base).
+
+### Changed
+- Content strategy pivot confirmed: messaging now Ireland-wide (not Dublin-specific), angle is speed/practicality/customization (not law/WRC compliance as primary hook).
+- Hosting/email decisions: Cloudflare Pages (free) for landing; Zoho Mail free tier for custom domain email (`@madfrog.ie`), webmail only.
+
+### Files Modified
+- `scratchpad/styleboard.html` (new)
+- `scratchpad/layouts.html` (new)
+- `scratchpad/landing-manifesto.html` (new)
+- `scratchpad/landing-serif.html` (new)
+- `tokens.css` (new)
+- `base.css` (new)
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## 2026-11-06 — Design skills + pricing decisions + landing page v1
 
 ### Added

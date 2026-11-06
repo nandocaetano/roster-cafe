@@ -1,0 +1,429 @@
+<title>Roster Café — Layout Directions</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Quatro composições de layout para o Roster Café no estilo Night — mesma cor e tipografia, estruturas diferentes.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500&family=Onest:wght@400&display=swap">
+
+<style>
+/* Layout comparison — Roster Café Night colourway
+   Same tokens, four different structural compositions */
+
+/* ── Page shell (neutral) ── */
+:root {
+  --pg-bg:   oklch(97% 0.004 240);
+  --pg-ink:  oklch(20% 0.012 240);
+  --pg-mute: oklch(50% 0.015 240);
+  --pg-rule: oklch(87% 0.008 240);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pg-bg:   oklch(12% 0.012 240);
+    --pg-ink:  oklch(90% 0.012 240);
+    --pg-mute: oklch(55% 0.015 240);
+    --pg-rule: oklch(22% 0.012 240);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --pg-bg:   oklch(12% 0.012 240);
+  --pg-ink:  oklch(90% 0.012 240);
+  --pg-mute: oklch(55% 0.015 240);
+  --pg-rule: oklch(22% 0.012 240);
+  color-scheme: dark;
+}
+
+/* ── Night tokens ── */
+:root {
+  --n-ground:  oklch(14%   0.020 290);
+  --n-surf:    oklch(17.5% 0.025 290);
+  --n-surf-2:  oklch(21%   0.030 290);
+  --n-ink:     oklch(92%   0.040 300);
+  --n-ink-2:   oklch(78%   0.050 300);
+  --n-muted:   oklch(60%   0.060 300);
+  --n-rule:    oklch(26%   0.040 290);
+  --n-accent:  oklch(55%   0.250 290);
+  --n-soft:    oklch(36%   0.090 293);
+  --n-ok:      oklch(68%   0.14  150);
+  --n-ok-soft: oklch(22%   0.04  150);
+  --ff-d:      "Outfit",  ui-sans-serif, system-serif;
+  --ff-b:      "Onest",   ui-sans-serif, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { overflow-x: clip; }
+body {
+  overflow-x: clip; margin: 0; background: var(--pg-bg); color: var(--pg-ink);
+  font-family: "DM Sans", "Onest", ui-sans-serif, sans-serif; font-size: 1rem; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 56px;
+}
+h1,h2,h3,p { margin: 0; }
+img { max-width: 100%; display: block; }
+
+.page-header { max-width: 580px; margin-bottom: 48px; }
+.page-label { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--pg-mute); margin-bottom: 10px; }
+.page-title { font-size: clamp(1.625rem, 2.5vw, 2.25rem); font-weight: 500; color: var(--pg-ink); line-height: 1.1; margin-bottom: 10px; }
+.page-sub { font-size: 0.9375rem; color: var(--pg-mute); line-height: 1.6; max-width: 50ch; }
+
+/* ── Tile grid ── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+@media (max-width: 820px) { .grid { grid-template-columns: 1fr; } }
+
+/* ── Tile shell ── */
+.tile {
+  border-radius: 16px; overflow: hidden;
+  border: 1px solid var(--pg-rule);
+  display: flex; flex-direction: column;
+}
+.tile__preview {
+  background: var(--n-ground);
+  flex: 1; overflow: hidden;
+  display: flex; flex-direction: column;
+  position: relative;
+}
+.tile__label {
+  background: var(--pg-rule);
+  padding: 16px 24px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  border-top: 1px solid var(--pg-rule);
+}
+.tile__name { font-size: 0.875rem; font-weight: 500; color: var(--pg-ink); }
+.tile__desc { font-size: 0.8125rem; color: var(--pg-mute); }
+
+/* ── Shared Night mini components ── */
+.m-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 20px; background: var(--n-surf);
+  border-bottom: 1px solid var(--n-rule); flex-shrink: 0;
+}
+.m-logo {
+  font-family: var(--ff-d); font-size: 13px; font-weight: 500;
+  color: var(--n-ink); letter-spacing: -0.02em; text-transform: lowercase;
+}
+.m-logo em { color: var(--n-accent); font-style: normal; }
+.m-nav-btn {
+  font-family: var(--ff-d); font-size: 10px; font-weight: 500; text-transform: lowercase;
+  background: var(--n-accent); color: oklch(97% 0.01 300);
+  padding: 5px 12px; border-radius: 999px;
+}
+.m-btn {
+  display: inline-flex; align-items: center;
+  font-family: var(--ff-d); font-size: 11px; font-weight: 500; text-transform: lowercase;
+  background: var(--n-accent); color: oklch(97% 0.01 300);
+  padding: 7px 18px; border-radius: 999px;
+}
+.m-btn--ghost {
+  background: transparent; color: var(--n-ink-2);
+  box-shadow: inset 0 0 0 1px var(--n-rule);
+}
+.m-chip {
+  font-family: var(--ff-d); font-size: 10px; font-weight: 500; text-transform: lowercase;
+  background: var(--n-soft); color: var(--n-ink-2);
+  padding: 3px 10px; border-radius: 999px; display: inline-block;
+}
+
+/* ══════════════════════════════════════
+   LAYOUT 1 — NÚMEROS
+   Three big stats lead; headline + CTA below
+   ══════════════════════════════════════ */
+.l1 .m-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.l1 .m-counters {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1px; background: var(--n-rule);
+  border: 1px solid var(--n-rule); border-radius: 10px; overflow: hidden;
+}
+.l1 .m-counter {
+  background: var(--n-surf); padding: 14px 12px 12px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.l1 .m-counter:first-child .m-fig { color: var(--n-accent); }
+.l1 .m-fig {
+  font-family: var(--ff-d); font-size: 2rem; font-weight: 300;
+  letter-spacing: -0.04em; color: var(--n-ink); line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.l1 .m-fig-lbl {
+  font-family: var(--ff-d); font-size: 9px; font-weight: 500;
+  color: var(--n-muted); text-transform: lowercase; line-height: 1.3;
+}
+.l1 .m-h1 {
+  font-family: var(--ff-d); font-size: 1.5rem; font-weight: 500;
+  letter-spacing: -0.03em; color: var(--n-ink); line-height: 1.04;
+  text-transform: lowercase;
+}
+.l1 .m-lead { font-family: var(--ff-b); font-size: 11px; color: var(--n-ink-2); line-height: 1.55; max-width: 32ch; }
+.l1 .m-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.l1 .m-note { font-size: 10px; color: var(--n-muted); font-family: var(--ff-b); }
+
+/* ══════════════════════════════════════
+   LAYOUT 2 — SPLIT
+   Headline + CTA left; product panel right
+   ══════════════════════════════════════ */
+.l2 .m-body { padding: 20px; display: flex; flex-direction: column; flex: 1; }
+.l2 .m-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; flex: 1; align-items: center; }
+.l2 .m-left { display: flex; flex-direction: column; gap: 12px; }
+.l2 .m-h1 {
+  font-family: var(--ff-d); font-size: 1.375rem; font-weight: 500;
+  letter-spacing: -0.03em; color: var(--n-ink); line-height: 1.08;
+  text-transform: lowercase;
+}
+.l2 .m-lead { font-family: var(--ff-b); font-size: 10.5px; color: var(--n-ink-2); line-height: 1.55; }
+.l2 .m-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.l2 .m-panel {
+  background: var(--n-surf); border-radius: 8px; overflow: hidden;
+  border: 1px solid var(--n-rule);
+}
+.l2 .m-panel-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 10px; background: var(--n-surf-2); border-bottom: 1px solid var(--n-rule);
+}
+.l2 .m-panel-title { font-size: 9px; color: var(--n-muted); font-family: monospace; }
+.l2 .m-panel-badge {
+  font-size: 9px; font-family: var(--ff-d); color: var(--n-ink-2);
+  background: var(--n-soft); padding: 2px 7px; border-radius: 999px;
+  text-transform: lowercase; font-weight: 500;
+}
+.l2 .m-row {
+  display: grid; grid-template-columns: auto 1fr auto;
+  gap: 6px; padding: 6px 10px; border-bottom: 1px solid var(--n-rule);
+  align-items: center;
+}
+.l2 .m-row:last-child { border-bottom: none; }
+.l2 .m-row-day { font-size: 9px; color: var(--n-muted); font-family: monospace; }
+.l2 .m-row-name { font-size: 10px; color: var(--n-ink); font-family: var(--ff-b); font-weight: 500; }
+.l2 .m-row-status { font-size: 9px; font-family: monospace; }
+.ok-dot { color: var(--n-ok); }
+.acc-dot { color: var(--n-accent); }
+
+/* ══════════════════════════════════════
+   LAYOUT 3 — MANIFESTO
+   Giant display headline fills the frame; minimal chrome
+   ══════════════════════════════════════ */
+.l3 .m-body { padding: 24px 20px 20px; display: flex; flex-direction: column; flex: 1; }
+.l3 .m-h1 {
+  font-family: var(--ff-d); font-size: clamp(2rem, 7vw, 3rem); font-weight: 500;
+  letter-spacing: -0.04em; color: var(--n-ink); line-height: 0.98;
+  text-transform: lowercase; flex: 1; display: flex; align-items: center;
+}
+.l3 .m-h1 em { color: var(--n-accent); font-style: normal; display: block; }
+.l3 .m-rule { width: 100%; height: 1px; background: var(--n-rule); margin: 16px 0; }
+.l3 .m-bottom { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.l3 .m-tagline { font-family: var(--ff-b); font-size: 10.5px; color: var(--n-muted); max-width: 28ch; line-height: 1.5; }
+
+/* ══════════════════════════════════════
+   LAYOUT 4 — FEATURE GRID
+   Features as cards open the page; no traditional hero column
+   ══════════════════════════════════════ */
+.l4 .m-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.l4 .m-h1 {
+  font-family: var(--ff-d); font-size: 1.25rem; font-weight: 500;
+  letter-spacing: -0.03em; color: var(--n-ink); line-height: 1.1;
+  text-transform: lowercase;
+}
+.l4 .m-features {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1px; background: var(--n-rule);
+  border: 1px solid var(--n-rule); border-radius: 10px; overflow: hidden;
+}
+.l4 .m-feat {
+  background: var(--n-surf); padding: 14px 12px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.l4 .m-feat-num {
+  font-family: var(--ff-d); font-size: 1.5rem; font-weight: 300;
+  color: var(--n-accent); letter-spacing: -0.04em; line-height: 1;
+}
+.l4 .m-feat-title {
+  font-family: var(--ff-d); font-size: 10px; font-weight: 500;
+  color: var(--n-ink); text-transform: lowercase; line-height: 1.3;
+}
+.l4 .m-feat-desc {
+  font-family: var(--ff-b); font-size: 9.5px; color: var(--n-muted); line-height: 1.5;
+}
+.l4 .m-actions { display: flex; gap: 8px; align-items: center; }
+.l4 .m-note { font-size: 10px; color: var(--n-muted); font-family: var(--ff-b); }
+
+/* Footer note */
+.footer-note {
+  margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--pg-rule);
+  font-size: 0.875rem; color: var(--pg-mute); line-height: 1.65; max-width: 56ch;
+}
+</style>
+
+<!-- PAGE HEADER -->
+<header class="page-header">
+  <p class="page-label">Roster Café Night — Layout Directions</p>
+  <h1 class="page-title">Mesmo estilo, estruturas diferentes</h1>
+  <p class="page-sub">Preto e roxo em quatro composições distintas. Mesmo conteúdo, foco em velocidade e facilidade.</p>
+</header>
+
+<div class="grid">
+
+  <!-- ① NÚMEROS — Counter hero -->
+  <div class="tile l1">
+    <div class="tile__preview">
+      <div class="m-nav">
+        <span class="m-logo">roster<em>.</em>café</span>
+        <span class="m-nav-btn">trial grátis</span>
+      </div>
+      <div class="m-body">
+        <div class="m-counters">
+          <div class="m-counter">
+            <span class="m-fig">5</span>
+            <span class="m-fig-lbl">minutos para montar a semana</span>
+          </div>
+          <div class="m-counter">
+            <span class="m-fig">1×</span>
+            <span class="m-fig-lbl">clique para exportar</span>
+          </div>
+          <div class="m-counter">
+            <span class="m-fig">7d</span>
+            <span class="m-fig-lbl">trial gratuito</span>
+          </div>
+        </div>
+        <h2 class="m-h1">feito em minutos. perfeito toda semana.</h2>
+        <p class="m-lead">Monta o teu roster, à tua maneira. Define turnos, gere preferências e exporta com um clique.</p>
+        <div class="m-actions">
+          <span class="m-btn">começar grátis</span>
+          <span class="m-btn m-btn--ghost">ver preços</span>
+        </div>
+        <p class="m-note">sem cartão · cancela quando quiseres</p>
+      </div>
+    </div>
+    <div class="tile__label">
+      <span class="tile__name">① Números</span>
+      <span class="tile__desc">3 stats grandes acima do headline</span>
+    </div>
+  </div>
+
+  <!-- ② SPLIT — Text + product panel -->
+  <div class="tile l2">
+    <div class="tile__preview">
+      <div class="m-nav">
+        <span class="m-logo">roster<em>.</em>café</span>
+        <span class="m-nav-btn">trial grátis</span>
+      </div>
+      <div class="m-body">
+        <div class="m-cols">
+          <div class="m-left">
+            <span class="m-chip">irlanda · qualquer tamanho</span>
+            <h2 class="m-h1">feito em minutos. perfeito toda semana.</h2>
+            <p class="m-lead">Define turnos, gere preferências e exporta em Excel — tudo num só lugar.</p>
+            <div class="m-actions">
+              <span class="m-btn">começar grátis</span>
+            </div>
+          </div>
+          <div class="m-panel">
+            <div class="m-panel-head">
+              <span class="m-panel-title">semana 47</span>
+              <span class="m-panel-badge">3 regras ativas</span>
+            </div>
+            <div class="m-row">
+              <span class="m-row-day">seg</span>
+              <span class="m-row-name">Sarah M.</span>
+              <span class="m-row-status acc-dot">●</span>
+            </div>
+            <div class="m-row">
+              <span class="m-row-day">seg</span>
+              <span class="m-row-name">Tom K.</span>
+              <span class="m-row-status ok-dot">✓</span>
+            </div>
+            <div class="m-row">
+              <span class="m-row-day">ter</span>
+              <span class="m-row-name">Lisa P.</span>
+              <span class="m-row-status ok-dot">✓</span>
+            </div>
+            <div class="m-row">
+              <span class="m-row-day">ter</span>
+              <span class="m-row-name">Marco A.</span>
+              <span class="m-row-status ok-dot">✓</span>
+            </div>
+            <div class="m-row">
+              <span class="m-row-day">qua</span>
+              <span class="m-row-name">Sarah M.</span>
+              <span class="m-row-status ok-dot">✓</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tile__label">
+      <span class="tile__name">② Split</span>
+      <span class="tile__desc">Texto esquerda · produto direita</span>
+    </div>
+  </div>
+
+  <!-- ③ MANIFESTO — Giant headline -->
+  <div class="tile l3">
+    <div class="tile__preview">
+      <div class="m-nav">
+        <span class="m-logo">roster<em>.</em>café</span>
+        <span class="m-nav-btn">trial grátis</span>
+      </div>
+      <div class="m-body">
+        <h2 class="m-h1">
+          feito em<br>
+          <em>minutos.</em><br>
+          perfeito<br>
+          toda semana.
+        </h2>
+        <div class="m-rule"></div>
+        <div class="m-bottom">
+          <p class="m-tagline">O teu roster, à tua maneira. Irlanda.</p>
+          <span class="m-btn">começar grátis</span>
+        </div>
+      </div>
+    </div>
+    <div class="tile__label">
+      <span class="tile__name">③ Manifesto</span>
+      <span class="tile__desc">Headline gigante ocupa o ecrã inteiro</span>
+    </div>
+  </div>
+
+  <!-- ④ FEATURE GRID — Cards open the page -->
+  <div class="tile l4">
+    <div class="tile__preview">
+      <div class="m-nav">
+        <span class="m-logo">roster<em>.</em>café</span>
+        <span class="m-nav-btn">trial grátis</span>
+      </div>
+      <div class="m-body">
+        <h2 class="m-h1">o teu roster, em minutos.</h2>
+        <div class="m-features">
+          <div class="m-feat">
+            <span class="m-feat-num">01</span>
+            <span class="m-feat-title">monta em 5 min</span>
+            <p class="m-feat-desc">Define turnos e preferências de cada pessoa.</p>
+          </div>
+          <div class="m-feat">
+            <span class="m-feat-num">02</span>
+            <span class="m-feat-title">personaliza tudo</span>
+            <p class="m-feat-desc">Funções, disponibilidade, folgas e contratos.</p>
+          </div>
+          <div class="m-feat">
+            <span class="m-feat-num">03</span>
+            <span class="m-feat-title">exporta pronto</span>
+            <p class="m-feat-desc">Excel, CSV ou PDF com um clique.</p>
+          </div>
+        </div>
+        <div class="m-actions">
+          <span class="m-btn">começar grátis</span>
+          <span class="m-btn m-btn--ghost">ver preços</span>
+        </div>
+        <p class="m-note">7 dias grátis · sem cartão</p>
+      </div>
+    </div>
+    <div class="tile__label">
+      <span class="tile__name">④ Feature Grid</span>
+      <span class="tile__desc">Cards de funcionalidades abrem a página</span>
+    </div>
+  </div>
+
+</div>
+
+<p class="footer-note">Diz qual destes layouts (ou mistura de dois) te interessa, e construímos a página completa. Podemos também combinar, por ex. ② Split com os stats do ①.</p>
