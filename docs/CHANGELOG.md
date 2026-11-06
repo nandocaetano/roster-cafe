@@ -2,6 +2,78 @@
 
 ---
 
+## 2026-11-06 — Perf: DB Caching & Session Guard
+
+### Changed
+- `app.py`: `init_db()` now runs once per browser session (guarded by `session_state['db_initialized']`), not on every Streamlit rerun — saves 1–2 s on Supabase (6+ round-trip DDL statements eliminated per click)
+- `app.py`: Added `@st.cache_data` wrappers `_cached_cafe(ttl=300)`, `_cached_funcionarios(ttl=60)`, `_cached_rosters(ttl=30)` — avoids new psycopg2 connections on every rerender
+- `app.py`: `equipe_v` and `roster_v` version counters in `session_state` incremented after every write (add/edit/desativar/salvar/deletar) to bust cache without stale data
+
+### Files Modified
+- `app.py`
+
+---
+
+## 2026-11-05 — Phase 7: Supabase/PostgreSQL Migration
+
+### Added
+- `database.py`: Full dual-backend rewrite — `_PG = bool(os.environ.get('DATABASE_URL'))` flag; `_P = '%s' if _PG else '?'` placeholder; `_get_conn()` returns psycopg2 (RealDictCursor) or sqlite3 based on flag
+- `database.py`: Separate CREATE TABLE SQL blocks for PG (SERIAL, NOW()::TEXT, BOOLEAN DEFAULT TRUE) vs SQLite (AUTOINCREMENT, datetime('now'), BOOLEAN DEFAULT 1)
+- `database.py`: PG safe migrations via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`; SQLite migrations via try/except OperationalError
+- `database.py`: `RETURNING id` for PG INSERTs; `cursor.lastrowid` for SQLite — both return new row id
+- `requirements.txt`: `psycopg2-binary>=2.9.0`
+
+### Changed
+- Supabase project created; Transaction pooler URL (IPv4, Frankfurt) set as `DATABASE_URL` in Streamlit Cloud Secrets
+- App confirmed live and authenticated at Streamlit Cloud
+
+### Files Modified
+- `database.py`
+- `requirements.txt`
+
+---
+
+## 2026-11-05 — Phase 7 Prep + Algorithm Rewrite + UX Fixes
+
+### Added
+- `database.py`: `nivel TEXT DEFAULT 'experiente'` column on Funcionarios (PG: `ADD COLUMN IF NOT EXISTS`; SQLite: try/except)
+- `database.py`: `adicionar_funcionario` / `atualizar_funcionario` accept `nivel` param
+- `app.py` Tab 1: `nivel` selectbox (experiente/novato) in Novo Funcionário and Editar forms; `nivel` column shown in employee table
+- `app.py` Tab 2: `"nivel"` passed through to `config_semana` per employee
+- `logic.py`: Novato constraint — max 1 novato per opening block and per closing block per day (`novato_opening_today` / `novato_closing_today` flags)
+- `logic.py`: `closing_count` dict tracks closing shifts per employee across the week
+- `logic.py`: `_remaining_avail_days(employee, from_day_index)` helper counts future available days
+- `logic.py`: 4-key urgency sort — restricted availability first → closing_count balance → urgency ratio (hours_needed / remaining_days) → minimum hours deficit
+- `logic.py`: 08:00-16:00 auto-drop when available staff count < number of shifts for the day
+- `app.py` sidebar: `nc_k` counter resets "Registrar Novo Cafe" form fields after successful submission
+- `app.py` Tab 1: "Até" time defaults to 18:15 in Específico availability selector
+
+### Files Modified
+- `app.py`
+- `database.py`
+- `logic.py`
+
+---
+
+## 2026-11-05 — Phase 6: RBAC, Commercial Limits & Ajuda Tab
+
+### Added
+- `database.py`: `role` column on Users; `superadmin` role seeded for `admin@cafe.com`; migration upgrades existing admin seed to superadmin
+- `database.py`: `EMPLOYEE_LIMIT = 20`; `adicionar_funcionario` raises `ValueError("limite_funcionarios:20")` when limit reached
+- `app.py`: Auth gate — only `superadmin` role sees "Registrar Novo Cafe" expander in sidebar
+- `app.py` Tab 1: Catches `limite_funcionarios` ValueError and shows user-friendly error message
+- `app.py` Tab 5 (Ajuda): Full help tab with onboarding guide, availability table, scheduler rules, WTI rules, and FAQ
+
+### Changed
+- `app.py` login UI: Gradient card (purple/indigo) with styled form; Register tab removed — user creation is superadmin-only via sidebar
+- `database.py`: Seed migration step upgrades role 'admin' → 'superadmin' for admin@cafe.com on every `init_db()` (idempotent)
+
+### Files Modified
+- `app.py`
+- `database.py`
+
+---
+
 ## 2026-11-05 — Phase 5: PDF/Excel Export, Warning Severity & Analytics Tab
 
 ### Added

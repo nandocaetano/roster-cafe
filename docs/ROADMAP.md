@@ -2,65 +2,64 @@
 
 ---
 
-## Completed
+## Concluído
 
-### Phase 1 — Modularisation
-Split the monolithic single-file Streamlit app into three clean modules:
-- `database.py` — all SQLite connection and CRUD logic
-- `logic.py` — pure business logic (shift math, availability, auto-scheduler)
-- `app.py` — Streamlit UI only, imports from the two modules above
-
-### Phase 2 — Multi-Tenancy
-Added full tenant isolation so the platform can serve multiple independent cafes:
-- `Cafes` table with id, name, admin_email, created_at
-- `tenant_id` FK column on `Funcionarios` (safe ALTER migration for existing DBs)
-- All CRUD functions require `tenant_id`; UPDATE/DELETE include `AND tenant_id = ?` guard
-- Default tenant seeded at `id = 1`
-
-### Phase 3 — Authentication
-Secure login system gating access to the full app:
-- `Users` table with per-tenant scope, SHA-256 + salt password hashing
-- `create_user`, `verify_credentials`, `get_cafe_by_id` helpers in `database.py`
-- Login / Register tabs in Streamlit; `st.stop()` blocks unauthenticated access
-- Authenticated sidebar: cafe name, user email, role badge, Logout button
-- Default seed: `admin@cafe.com` / `admin123` on first run
+| Fase | Descrição | Status |
+|---|---|---|
+| 1 | Modularisation — app.py / database.py / logic.py | ✅ |
+| 2 | Multi-Tenancy — Cafes table, tenant_id FK, CRUD isolado por tenant | ✅ |
+| 3 | Authentication — Users table, SHA-256+salt, login gate, sidebar | ✅ |
+| 4 | Algorithm & WTI Constraints — clopening, keyholder, 11h rest, 7-day limit | ✅ |
+| 5 | Weekly Overrides + Soft Tolerance — Folga/Férias/Treinamento na Aba 2, margem de horas, break warnings, export CSV/Excel/PDF, Roster History, Analytics Tab 4 | ✅ |
+| 6 | RBAC & Commercial Limits — superadmin role, registro público bloqueado, limite 20 funcionários por tenant, login UI card, Aba 5 Ajuda | ✅ |
+| 7 | Persistent Database (Supabase/PostgreSQL) — psycopg2 dual-backend, Transaction pooler, DATABASE_URL secret, live on Streamlit Cloud | ✅ |
 
 ---
 
-## Active
+## Ativo
 
-### Phase 4 — Algorithm Optimization & Irish Labour Constraints
-Improve the auto-scheduler's correctness and compliance:
+### Fase 8 — Billing & Subscription (Stripe)
+Monetização do Micro-SaaS.
 
-- [ ] Encode Irish Working Time Act rules (WTI):
-  - Max 48 hrs/week averaged over 4 months
-  - Max 8 hrs/day for night workers
-  - Min 11 hrs rest between shifts
-  - Min 24 hrs rest per 7-day period
-  - Breaks: 15 min after 4.5 hrs, 30 min after 6 hrs
-- [ ] Add `validar_turno(nome, turno, dia, config_semana)` to `logic.py`
-- [ ] Surface violations in Tab 3 "Avisos de Regras" alongside existing keyholder check
-- [ ] Optionally score and rank scheduler candidates by constraint compliance
+- [ ] Integrar Stripe Checkout para planos mensais
+- [ ] Tabela `Subscriptions` (tenant_id, plano, validade, stripe_customer_id)
+- [ ] Bloquear funcionalidades avançadas (PDF, Analytics, histórico) para plano Free
+- [ ] Webhook Stripe para atualizar estado da subscrição automaticamente
+- [ ] Página de gestão de plano no sidebar do superadmin
 
 ---
 
-## Upcoming
+## Próximo
 
-### Phase 5 — Roster History & Export
-- Save approved rosters to a `Rosters` table (tenant-scoped)
-- Week selector to browse past schedules
-- Export to PDF / CSV
+### Fase 9 — Mobile UX & Progressive Web App
+App usável no telemóvel pelos managers do café.
 
-### Phase 6 — Role-Based Access Control
-- Extend `Users.role` to: `admin`, `manager`, `viewer`
-- Managers can generate and edit rosters; viewers can only read
-- Restrict destructive actions (desativar_funcionario, etc.) to admin/manager
+- [ ] Substituir seletor de disponibilidade (8 colunas) por toggle grid responsivo
+- [ ] Aba 2 reformulada para funcionar em ecrã estreito
+- [ ] Meta tags PWA + ícone para "Add to Home Screen"
+- [ ] Testar fluxo completo em iOS Safari e Android Chrome
 
-### Phase 7 — Production Database Migration
-- Replace SQLite with PostgreSQL (or Supabase)
-- Swap `sqlite3` calls in `database.py` for `psycopg2` / SQLAlchemy — zero changes to `logic.py` or `app.py`
-- Add connection pooling
+### Fase 10 — Employee Self-Service Portal
+Funcionários gerem a própria disponibilidade.
 
-### Phase 8 — Notifications & Alerts
-- Email shift summaries to employees
-- Push alerts for keyholder gaps or budget overrun
+- [ ] Role `employee` na tabela Users
+- [ ] Portal próprio: funcionário vê a sua escala da semana e altera disponibilidade
+- [ ] Manager aprova alterações antes de regenerar a escala
+- [ ] Notificações por e-mail quando a escala é publicada (SendGrid ou Resend)
+
+### Fase 11 — Multi-Week View & Reporting
+Visão histórica e relatórios para compliance.
+
+- [ ] Comparativo de horas entre semanas (gráfico de tendência)
+- [ ] Relatório mensal por funcionário (horas totais, gaps, avisos WTI)
+- [ ] Export PDF do relatório mensal
+- [ ] Dashboard superadmin: todos os cafés + métricas agregadas
+
+---
+
+## Notas de Arquitetura
+
+- **DB migration path:** SQLite → Supabase; apenas `database.py` muda
+- **Deploy:** Streamlit Community Cloud (nandocaetano/roster-cafe · main · app.py)
+- **Limite atual:** 20 funcionários por tenant (configurável em `EMPLOYEE_LIMIT` em `database.py`)
+- **Autenticação:** SHA-256 + salt; futuro — considerar migração para Supabase Auth
