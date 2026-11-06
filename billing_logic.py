@@ -87,14 +87,23 @@ def create_stripe_checkout_session(tenant_id, success_url, cancel_url):
         mode="subscription",
         line_items=[
             {
+                # One-time setup fee — billed on the first invoice only
                 "price_data": {
                     "currency": "eur",
-                    "unit_amount": 2000,
-                    "recurring": {"interval": "month"},
-                    "product_data": {"name": "Coffee Shop Roster Pro"},
+                    "unit_amount": 3990,  # €39.90
+                    "product_data": {"name": "Roster Café — Setup"},
                 },
                 "quantity": 1,
-            }
+            },
+            {
+                "price_data": {
+                    "currency": "eur",
+                    "unit_amount": 2000,  # €20.00/mês
+                    "recurring": {"interval": "month"},
+                    "product_data": {"name": "Roster Café Pro — Mensal"},
+                },
+                "quantity": 1,
+            },
         ],
         metadata={"tenant_id": str(tenant_id)},
         subscription_data={"metadata": {"tenant_id": str(tenant_id)}},

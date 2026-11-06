@@ -196,6 +196,12 @@ _cafe_nome = _cafe['name'] if _cafe else "Cafe"
 _is_pro = is_pro(TENANT_ID)
 _emp_limit = get_employee_limit(TENANT_ID)
 
+# Post-payment redirect: Stripe sends back ?upgraded=1
+if st.query_params.get("upgraded") == "1":
+    st.session_state["_upgrade_msg"] = True
+    st.query_params.clear()
+    st.rerun()
+
 with st.sidebar:
     st.markdown(f"### ☕ {_cafe_nome}")
     st.write(f"👤 {_user['email']}")
@@ -287,6 +293,8 @@ with st.sidebar:
         st.rerun()
 
 st.title("☕ Gerenciador de Escalas - Cafe")
+if st.session_state.pop("_upgrade_msg", False):
+    st.success("🎉 Pagamento confirmado! O teu plano Roster Café Pro está ativo.")
 
 aba1, aba2, aba3, aba4, aba5 = st.tabs(["👥 Gestão do Time", "⚙️ Setup da Semana", "📅 Rascunho e Aprovação", "📊 Análise", "📖 Ajuda"])
 
