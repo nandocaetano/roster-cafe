@@ -301,7 +301,8 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
 
     for e in employees:
         total = assigned_hours[e] + training_min[e] / 60.0
-        if total + 1e-9 > maximum_hours[e]:
+        # Use 0.05h (3 min) tolerance to avoid false positives when solver hits exactly max
+        if total > maximum_hours[e] + 0.05:
             warnings.append(
                 f"{e}: limite semanal excedido ({total:.2f}h > {maximum_hours[e]:.2f}h)."
             )
@@ -331,21 +332,24 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
                 f"{e}: WTI — {len(days)} dias consecutivos sem folga (mín. 1 dia de descanso/semana)."
             )
 
-    # WTI break warnings
-    for row in records:
-        if row["Funcionário"] == "A Preencher":
-            continue
-        dur = duration_min(row["Horário"])
-        if dur > 6 * 60:
-            warnings.append(
-                f"{row['Funcionário']} ({row['Dia']} {row['Horário']}): "
-                f"turno >6h — pausa de 30 min obrigatória (WTI)."
-            )
-        elif dur > 4 * 60 + 30:
-            warnings.append(
-                f"{row['Funcionário']} ({row['Dia']} {row['Horário']}): "
-                f"turno >4.5h — pausa de 15 min recomendada."
-            )
+    # WTI break warnings — one summary line each instead of one per shift
+    wti_30 = sum(
+        1 for row in records
+        if row["Funcionário"] != "A Preencher" and duration_min(row["Horário"]) > 6 * 60
+    )
+    wti_15 = sum(
+        1 for row in records
+        if row["Funcionário"] != "A Preencher"
+        and 4 * 60 + 30 < duration_min(row["Horário"]) <= 6 * 60
+    )
+    if wti_30:
+        warnings.append(
+            f"WTI pausas: {wti_30} turno(s) >6h — pausa de 30 min obrigatória por lei."
+        )
+    if wti_15:
+        warnings.append(
+            f"WTI pausas: {wti_15} turno(s) entre 4.5h–6h — pausa de 15 min recomendada."
+        )
 
     # Keyholder on closing check (post-solve verification)
     for row in records:

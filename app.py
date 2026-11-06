@@ -4,8 +4,6 @@ import re
 import streamlit as st
 import pandas as pd
 
-import json
-
 from database import (
     init_db,
     get_funcionarios_ativos,
@@ -427,7 +425,7 @@ with aba3:
     turnos_padrao = {
         "Seg": ["07:00 - 12:00", "07:00 - 14:00", "07:30 - 15:00", "08:00 - 16:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
         "Ter": ["07:00 - 12:00", "07:00 - 14:00", "07:30 - 15:00", "08:00 - 16:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
-        "Qua": ["06:30 - 12:00", "07:00 - 14:00", "07:00 - 14:00", "07:30 - 15:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
+        "Qua": ["06:30 - 12:00", "07:00 - 14:00", "07:30 - 15:00", "08:00 - 16:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
         "Qui": ["07:00 - 12:00", "07:00 - 14:00", "07:30 - 15:00", "08:00 - 16:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
         "Sex": ["07:00 - 12:00", "07:00 - 14:00", "07:30 - 15:00", "08:00 - 16:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
         "Sáb": ["07:30 - 14:00", "07:30 - 15:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
@@ -542,20 +540,29 @@ with aba3:
 
         constraints_warnings = st.session_state.get('constraints_warnings', [])
         if constraints_warnings:
+            # CP-SAT solver status shown as a standalone banner
+            _cpsat = [w for w in constraints_warnings if w.startswith("CP-SAT:")]
+            for _cs in _cpsat:
+                st.info(f"ℹ️ {_cs}")
+
             _erros = [w for w in constraints_warnings if any(k in w for k in (
                 "turno não atribuído", "limite semanal", "mínimo semanal",
                 "clopening inválido", "fechamento sem keyholder"
             ))]
+            # >4.5h recommendation and CP-SAT lines go to info; >6h mandatory break stays in warns
             _infos = [w for w in constraints_warnings if "recomendada" in w]
-            _warns = [w for w in constraints_warnings if w not in _erros and w not in _infos]
-            label = f"⚠️ Avisos de Regras Trabalhistas ({len(_erros)} erro(s), {len(_warns)} aviso(s), {len(_infos)} info)"
-            with st.expander(label, expanded=bool(_erros)):
-                for w in _erros:
-                    st.error(w)
-                for w in _warns:
-                    st.warning(w)
-                for w in _infos:
-                    st.info(w)
+            _warns = [w for w in constraints_warnings
+                      if w not in _erros and w not in _infos and not w.startswith("CP-SAT:")]
+
+            if _erros or _warns or _infos:
+                label = f"⚠️ Regras Trabalhistas ({len(_erros)} erro(s), {len(_warns)} aviso(s), {len(_infos)} info)"
+                with st.expander(label, expanded=bool(_erros)):
+                    for w in _erros:
+                        st.error(w)
+                    for w in _warns:
+                        st.warning(w)
+                    for w in _infos:
+                        st.info(w)
 
         st.divider()
         st.subheader("💾 Histórico de Escalas")
