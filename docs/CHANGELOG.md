@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-11-06 — Docs: Architecture sync + Mad Frog Stripe registration
+
+### Changed
+- `docs/ARCHITECTURE.md`: added `billing_logic.py` to module map; added `preferencia_turno` to Funcionarios schema; updated employee limit note (dynamic 10/20 via billing_logic); added `Subscriptions` table schema; added **Billing & Subscriptions** section (plans, webhook, Edge Function URL); updated Deployment table with Mad Frog studio, Supabase project ref, Stripe mode, and all required secrets.
+- `docs/CURRENT_STATE.md`: Phase 8 status updated to reflect Mad Frog Stripe test mode configured.
+- Memory `reference_infra.md`: added Mad Frog studio identity, Stripe account info (test mode, local key location, webhook URL), Supabase project ref, Edge Function secrets.
+- Memory `project_decisions_phase8.md`: added Mad Frog Stripe architectural decision (isolated account, test mode active).
+
+### Decision log
+- Mad Frog is the official studio brand for all SaaS/APK products.
+- Stripe account is standalone and isolated (no Ko-fi or managed intermediary restrictions).
+- Secret key stored locally — never committed to git. Added to Streamlit Cloud Secrets manually.
+
+### Files Modified
+- `docs/ARCHITECTURE.md`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+- `memory/reference_infra.md`
+- `memory/project_decisions_phase8.md`
+
+---
+
 ## 2026-11-06 — Phase 8: Stripe Webhook (Edge Function)
 
 ### Added

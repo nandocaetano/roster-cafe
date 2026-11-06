@@ -24,11 +24,11 @@
 │    _cached_rosters(tid, _v)          ttl=30s                       │
 │                                                                    │
 │  Imports ────────────────────────────────────────────────────────► │
-│          database.py                   logic.py                    │
+│          database.py        logic.py        billing_logic.py       │
 └──────────────────────────────────────────────────────────────────┘
 
-┌────────────────────────────┐   ┌──────────────────────────────────┐
-│        database.py          │   │            logic.py               │
+┌────────────────────────────┐   ┌──────────────────────────────────┐   ┌──────────────────────────────────┐
+│        database.py          │   │            logic.py               │   │        billing_logic.py           │
 │  Dual-backend CRUD layer    │   │  Pure Python — no I/O             │
 │  • _PG flag (DATABASE_URL)  │   │  • calcular_horas_turno()         │
 │  • _get_conn() factory      │   │  • pode_trabalhar()               │
@@ -46,8 +46,14 @@
 │  • salvar_roster()          │
 │  • get_rosters()            │
 │  • get_roster_by_id()       │
-│  • deletar_roster()         │
-└────────────────────────────┘
+│  • deletar_roster()         │   │                                  │   │  get_subscription()               │
+└────────────────────────────┘   └──────────────────────────────────┘   │  is_pro()                         │
+                                                                          │  get_employee_limit() → 10/20     │
+                                                                          │  check_feature_gate()             │
+                                                                          │  create_stripe_checkout_session() │
+                                                                          │                                   │
+                                                                          │  No streamlit. No DB imports.     │
+                                                                          └──────────────────────────────────┘
 ```
 
 ---
@@ -109,8 +115,9 @@ For local dev, copy `.env.example` to `.env` and fill in `DATABASE_URL` if testi
 | d_seg … d_dom | TEXT | Availability: Indisponível / Livre / Só Manhã / Só Tarde / Específico: HH:MM–HH:MM |
 | status_ativo | BOOLEAN DEFAULT TRUE | Soft-delete flag |
 | nivel | TEXT DEFAULT 'experiente' | `experiente` / `novato` — CP-SAT novato constraint |
+| preferencia_turno | TEXT DEFAULT 'Sem preferência' | Soft CP-SAT preference: `Manhã` / `Tarde` / `Sem preferência` |
 
-**Limit:** `EMPLOYEE_LIMIT = 20` active employees per tenant (enforced in `adicionar_funcionario`).
+**Limit:** Dynamic via `billing_logic.get_employee_limit(tenant_id)` — **10 for Free, 20 for Pro**. `database.py` EMPLOYEE_LIMIT=20 is a safety-net hard cap at DB layer.
 
 ---
 
@@ -122,6 +129,21 @@ For local dev, copy `.env.example` to `.env` and fill in `DATABASE_URL` if testi
 | semana | TEXT NOT NULL | User-defined label (e.g. "Semana 47 — Nov 2026") |
 | dados_json | TEXT NOT NULL | Full roster as JSON (`orient="records"`) |
 | criado_em | TEXT NOT NULL | ISO-8601 UTC timestamp |
+
+---
+
+### `Subscriptions`
+| Column | Type | Notes |
+|---|---|---|
+| id | SERIAL / AUTOINCREMENT PK | |
+| tenant_id | INTEGER FK → Cafes.id NOT NULL | |
+| plano | TEXT NOT NULL DEFAULT 'free' | `free` / `pro` |
+| validade | TEXT | ISO-8601 expiry date; NULL = no expiry |
+| stripe_customer_id | TEXT | Stripe customer ID |
+| stripe_subscription_id | TEXT | Stripe subscription ID |
+| criado_em | TEXT NOT NULL | ISO-8601 UTC timestamp |
+
+**Note:** Multiple rows per tenant are allowed (history preserved). `get_subscription()` picks the latest via `ORDER BY criado_em DESC LIMIT 1`. RLS enabled on Supabase (psycopg2 bypasses RLS).
 
 ---
 
@@ -224,12 +246,37 @@ stored = f"{salt.hex()}:{hash}"
 
 ---
 
+## Billing & Subscriptions (Phase 8)
+
+### Plans
+
+| Plan | Employee Limit | Features |
+|---|---|---|
+| Free | 10 | Scheduler, CSV/Excel export, Tabs 1–2–5 |
+| Pro (€20/mês) | 20 | + PDF export, Analytics (Tab 4), Roster History (Tab 3) |
+
+**Setup fee:** €39.90 one-time (Stripe Checkout, `mode="subscription"` with setup intent).
+
+### Stripe Webhook — Supabase Edge Function
+
+- **Path:** `supabase/functions/stripe-webhook/index.ts`
+- **URL (prod):** `https://nbggytkbrxqhnqvtvbpl.supabase.co/functions/v1/stripe-webhook`
+- **Events:** `checkout.session.completed` → upgrade; `customer.subscription.deleted` → downgrade
+- **Strategy:** INSERT new row per event (audit trail); `get_subscription()` picks latest row
+- **Deploy:** `supabase functions deploy stripe-webhook` (Supabase CLI)
+
+---
+
 ## Deployment
 
 | Item | Value |
 |---|---|
+| Studio | **Mad Frog** (Dublin, Ireland) |
 | Repo | github.com/nandocaetano/roster-cafe |
 | Branch | master → Streamlit Cloud watches master |
-| Platform | Streamlit Community Cloud (free tier, ~1GB RAM) |
-| Secrets | `DATABASE_URL` set in Streamlit Cloud Settings → Secrets |
+| Platform | Streamlit Community Cloud (free tier) |
+| DB | Supabase PostgreSQL — project `nbggytkbrxqhnqvtvbpl` (Frankfurt) |
+| Streamlit Secrets | `DATABASE_URL`, `STRIPE_SECRET_KEY`, `APP_URL` |
+| Stripe | Test mode — isolated Mad Frog account |
+| Edge Function Secrets | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` (in Supabase Project Settings) |
 | Local dev | Copy `.env.example` → `.env`, fill DATABASE_URL |

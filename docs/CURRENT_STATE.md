@@ -6,7 +6,7 @@
 
 ## Active Phase
 
-**Phase 8 — Billing & Subscription (Stripe)** *(in progress — billing gates + webhook Edge Function built; deploy + secrets pending)*
+**Phase 8 — Billing & Subscription (Stripe)** *(in progress — billing gates + webhook built; Stripe test mode configured under Mad Frog; deploy + secrets pending)*
 
 **Add-ons A+B — Fairness Score + Preference Weighting** *(complete — merged into solver)*
 
