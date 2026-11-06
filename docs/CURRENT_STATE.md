@@ -30,7 +30,7 @@
 
 | File | Last Change |
 |---|---|
-| `scratchpad/landing.html` | New — Landing page v2: Hallmark Console theme, Stage hero with roster panel, 3 WTI readings, Diff table, Steps, Pricing, FAQ, Trial Close. 0 Floor FAIL, 0 WARN on sloplint. Artifact: https://claude.ai/artifact/Me2iNCAfc8K4oSuHG1DvZJ |
+| `scratchpad/landing.html` | Impeccable polish v6: keyholder role data corrected (Barista→Asst.Manager/Head Barista), CTA consistency (all "Start 7-day trial"), light-mode neutral chroma fix, browser surface tokens, word count 455→446, sloplint 0 FAIL 2 REFLEX(waived). Artifact: https://claude.ai/artifact/Me2iNCAfc8K4oSuHG1DvZJ |
 
 ---
 
@@ -62,13 +62,14 @@ app_escala/
 
 ## Next Immediate Steps
 
-1. **Impeccable polish** — run `/impeccable polish` on landing page v2 (`scratchpad/landing.html`, artifact https://claude.ai/artifact/Me2iNCAfc8K4oSuHG1DvZJ).
-2. **Copy landing page to repo root** — move/rename `scratchpad/landing.html` to a stable public path and update Streamlit Cloud or hosting.
+1. **Copy landing page to stable path** — move/rename `scratchpad/landing.html` to repo root or `public/index.html` for hosting on madfrog.ie or Streamlit Cloud.
+2. **Deploy Edge Function** — `supabase functions deploy stripe-webhook` (requires Supabase CLI + `supabase link`).
 3. **Deploy Edge Function** — `supabase functions deploy stripe-webhook` (requires Supabase CLI + `supabase link`).
 4. **Add Stripe secrets** — Streamlit Cloud: `STRIPE_SECRET_KEY` + `APP_URL`. Supabase Edge Functions: `STRIPE_WEBHOOK_SECRET` + `STRIPE_SECRET_KEY`.
 5. **Register webhook in Stripe** — Dashboard → Developers → Webhooks → `https://nbggytkbrxqhnqvtvbpl.supabase.co/functions/v1/stripe-webhook`. Events: `checkout.session.completed`, `customer.subscription.deleted`.
 6. **License key flow** — implement `LicenseKeys` table + activation step in registration flow.
 7. **Credentials rotation (manual)** — rotate Supabase DB password + admin@cafe.com via Password Reset UI.
+8. **billing_logic.py** — replace free/pro model with trial/paid (`plano = 'trial'` with `validade`).
 
 ---
 
