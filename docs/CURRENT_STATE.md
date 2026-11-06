@@ -8,6 +8,8 @@
 
 **Phase 8 — Billing & Subscription (Stripe)** *(in progress — billing layer scaffolded; app.py wiring pending)*
 
+**Add-ons A+B — Fairness Score + Preference Weighting** *(complete — merged into solver)*
+
 ---
 
 ## Completed Phases
@@ -28,10 +30,10 @@
 
 | File | Last Change |
 |---|---|
-| `.claude/commands/auto-sync.md` | New command — autonomous memory sync directive; self-triggers doc updates after any significant block |
-| `docs/ROADMAP.md` | Added Fase 12 (Configurable Shift Templates), Fase 13 (Multi-Location), and 4 REA-derived premium add-ons (Fairness Score, Preference Weighting, Clock-In Variance, Constraint Weights) |
-| `docs/CURRENT_STATE.md` | Updated Modified Files and Next Steps |
-| `docs/CHANGELOG.md` | New dated entry for REA analysis session |
+| `logic.py` | Added `preferencia` dict + `contract_groups` extraction; injected `preference_cost` (PREF_PENALTY=60) and `fairness_cost` (FAIRNESS_WEIGHT=10, spread vars) into CP-SAT objective |
+| `database.py` | Added `preferencia_turno TEXT DEFAULT 'Sem preferência'` to Funcionarios; PG IF NOT EXISTS + SQLite try/except migrations; updated `adicionar_funcionario` + `atualizar_funcionario` |
+| `app.py` | Tab 1: preference selectbox (new + edit forms); Tab 2: `tipo_contrato` + `preferencia_turno` added to `inputs_semana` dict; table shows new column |
+| `test_fairness_solver.py` | New validation suite — 3 tests proving hard constraints (C5, C3, capacity) always dominate soft preference terms |
 
 ---
 
@@ -64,8 +66,9 @@ app_escala/
 1. **Wire billing_logic.py into app.py** — import check_feature_gate + get_employee_limit; gate PDF export (Tab 3), Analytics (Tab 4), Roster History (Tab 3) behind feature check; replace hardcoded EMPLOYEE_LIMIT with get_employee_limit().
 2. **Stripe Checkout UI** — add "Upgrade to Pro" button in sidebar for non-superadmin users, calling create_stripe_checkout_session(); add STRIPE_SECRET_KEY to Streamlit Cloud Secrets.
 3. **Stripe webhook** — POST /webhook endpoint to update Subscriptions.plano on paid/cancelled events.
-4. **Landing page** — run `/rea-analyze` on Deputy/7shifts landing pages first, then build from GTM_STRATEGY.md copy.
-5. **Credentials rotation (manual):** rotate Supabase DB password + admin@cafe.com via Password Reset UI.
+4. **Supabase migration** — run `ALTER TABLE Funcionarios ADD COLUMN IF NOT EXISTS preferencia_turno TEXT DEFAULT 'Sem preferência'` in Supabase SQL Editor to sync the new column to production DB.
+5. **Landing page** — run `/rea-analyze` on Deputy/7shifts landing pages first, then build from GTM_STRATEGY.md copy.
+6. **Credentials rotation (manual):** rotate Supabase DB password + admin@cafe.com via Password Reset UI.
 
 ---
 

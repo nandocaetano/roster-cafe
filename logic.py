@@ -134,6 +134,16 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
     novato_emps    = [e for e in employees
                       if str(config_semana[e].get("nivel", "experiente")).lower() == "novato"]
 
+    # Preference and contract grouping — consumed by soft objectives below
+    preferencia = {
+        e: str(config_semana[e].get("preferencia_turno", "Sem preferência") or "Sem preferência")
+        for e in employees
+    }
+    contract_groups: dict = {}
+    for e in employees:
+        ct = str(config_semana[e].get("tipo_contrato", "Full-time") or "Full-time")
+        contract_groups.setdefault(ct, []).append(e)
+
     # Classify shifts once
     closing_shifts_by_day = {}
     opening_shifts_by_day = {}
@@ -253,7 +263,44 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
 
     hour_deviation_cost = sum(over_vars[e] + under_vars[e] for e in employees)
 
-    model.Minimize(unassigned_cost + hour_deviation_cost)
+    # Soft: shift preference penalty (Timefold-inspired REA, Add-on B)
+    # PREF_PENALTY << BIG_PENALTY so hard constraints (C1-C7) always dominate.
+    PREF_PENALTY = 60
+    preference_cost_terms = []
+    for e in employees:
+        pref = preferencia[e]
+        if pref == "Sem preferência":
+            continue
+        for d in days:
+            for s in turnos_padrao[d]:
+                t = parse_times(s)
+                if t is None:
+                    continue
+                is_morning = t[0] < 12 * 60
+                if (pref == "Manhã" and not is_morning) or (pref == "Tarde" and is_morning):
+                    preference_cost_terms.append(PREF_PENALTY * x[e, d, s])
+    preference_cost = sum(preference_cost_terms) if preference_cost_terms else 0
+
+    # Soft: fairness score — minimize hour spread within same contract type (Timefold-inspired REA, Add-on A)
+    # max_g/min_g auxiliary vars bound the spread; solver minimises it at FAIRNESS_WEIGHT per minute.
+    FAIRNESS_WEIGHT = 10
+    fairness_cost_terms = []
+    _max_min = max(int(maximum_hours[e] * 60) for e in employees) + 10
+    for ct, group in contract_groups.items():
+        if len(group) < 2:
+            continue
+        max_g  = model.NewIntVar(0, _max_min, f"max_g|{ct}")
+        min_g  = model.NewIntVar(0, _max_min, f"min_g|{ct}")
+        spread = model.NewIntVar(0, _max_min, f"spread|{ct}")
+        for e in group:
+            _assigned_m = sum(duration_min(s) * x[e, d, s] for d in days for s in turnos_padrao[d])
+            model.Add(max_g >= _assigned_m + training_min[e])
+            model.Add(min_g <= _assigned_m + training_min[e])
+        model.Add(spread == max_g - min_g)
+        fairness_cost_terms.append(FAIRNESS_WEIGHT * spread)
+    fairness_cost = sum(fairness_cost_terms) if fairness_cost_terms else 0
+
+    model.Minimize(unassigned_cost + hour_deviation_cost + preference_cost + fairness_cost)
 
     # ── SOLVE ────────────────────────────────────────────────────────────────
 

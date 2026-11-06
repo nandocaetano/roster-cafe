@@ -101,8 +101,9 @@ def init_db():
                 horas_max      INTEGER,
                 d_seg TEXT, d_ter TEXT, d_qua TEXT,
                 d_qui TEXT, d_sex TEXT, d_sab TEXT, d_dom TEXT,
-                status_ativo   BOOLEAN DEFAULT TRUE,
-                nivel          TEXT    DEFAULT 'experiente'
+                status_ativo      BOOLEAN DEFAULT TRUE,
+                nivel             TEXT    DEFAULT 'experiente',
+                preferencia_turno TEXT    DEFAULT 'Sem preferência'
             )
         ''')
         cur.execute('''
@@ -122,6 +123,10 @@ def init_db():
         cur.execute('''
             ALTER TABLE Funcionarios
             ADD COLUMN IF NOT EXISTS nivel TEXT DEFAULT 'experiente'
+        ''')
+        cur.execute('''
+            ALTER TABLE Funcionarios
+            ADD COLUMN IF NOT EXISTS preferencia_turno TEXT DEFAULT 'Sem preferência'
         ''')
     else:
         cur.execute('''
@@ -153,8 +158,9 @@ def init_db():
                 horas_max      INTEGER,
                 d_seg TEXT, d_ter TEXT, d_qua TEXT,
                 d_qui TEXT, d_sex TEXT, d_sab TEXT, d_dom TEXT,
-                status_ativo   BOOLEAN DEFAULT 1,
-                nivel          TEXT    DEFAULT 'experiente'
+                status_ativo      BOOLEAN DEFAULT 1,
+                nivel             TEXT    DEFAULT 'experiente',
+                preferencia_turno TEXT    DEFAULT 'Sem preferência'
             )
         ''')
         cur.execute('''
@@ -174,6 +180,10 @@ def init_db():
             pass
         try:
             cur.execute("ALTER TABLE Funcionarios ADD COLUMN nivel TEXT DEFAULT 'experiente'")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            cur.execute("ALTER TABLE Funcionarios ADD COLUMN preferencia_turno TEXT DEFAULT 'Sem preferência'")
         except sqlite3.OperationalError:
             pass
 
@@ -316,7 +326,7 @@ def get_funcionarios_ativos(tenant_id):
     return df
 
 
-def adicionar_funcionario(tenant_id, nome, cargo, contrato, h_min, h_max, dias, nivel='experiente'):
+def adicionar_funcionario(tenant_id, nome, cargo, contrato, h_min, h_max, dias, nivel='experiente', preferencia='Sem preferência'):
     """Insert a new employee. Raises ValueError if the tenant has reached EMPLOYEE_LIMIT."""
     conn = _get_conn()
     cur = conn.cursor()
@@ -326,24 +336,24 @@ def adicionar_funcionario(tenant_id, nome, cargo, contrato, h_min, h_max, dias, 
     cur.execute(
         f'''INSERT INTO Funcionarios
             (tenant_id, nome, cargo, tipo_contrato, horas_min, horas_max,
-             d_seg, d_ter, d_qua, d_qui, d_sex, d_sab, d_dom, nivel)
-            VALUES ({_P},{_P},{_P},{_P},{_P},{_P},{_P},{_P},{_P},{_P},{_P},{_P},{_P},{_P})''',
-        (tenant_id, nome, cargo, contrato, h_min, h_max, *dias, nivel),
+             d_seg, d_ter, d_qua, d_qui, d_sex, d_sab, d_dom, nivel, preferencia_turno)
+            VALUES ({_P},{_P},{_P},{_P},{_P},{_P},{_P},{_P},{_P},{_P},{_P},{_P},{_P},{_P},{_P})''',
+        (tenant_id, nome, cargo, contrato, h_min, h_max, *dias, nivel, preferencia),
     )
     conn.commit()
     conn.close()
 
 
-def atualizar_funcionario(tenant_id, id_func, nome, cargo, contrato, h_min, h_max, dias, nivel='experiente'):
+def atualizar_funcionario(tenant_id, id_func, nome, cargo, contrato, h_min, h_max, dias, nivel='experiente', preferencia='Sem preferência'):
     conn = _get_conn()
     cur = conn.cursor()
     cur.execute(
         f'''UPDATE Funcionarios
             SET nome={_P}, cargo={_P}, tipo_contrato={_P}, horas_min={_P}, horas_max={_P},
                 d_seg={_P}, d_ter={_P}, d_qua={_P}, d_qui={_P}, d_sex={_P}, d_sab={_P}, d_dom={_P},
-                nivel={_P}
+                nivel={_P}, preferencia_turno={_P}
             WHERE id_funcionario={_P} AND tenant_id={_P}''',
-        (nome, cargo, contrato, h_min, h_max, *dias, nivel, id_func, tenant_id),
+        (nome, cargo, contrato, h_min, h_max, *dias, nivel, preferencia, id_func, tenant_id),
     )
     conn.commit()
     conn.close()

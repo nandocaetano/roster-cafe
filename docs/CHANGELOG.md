@@ -2,6 +2,34 @@
 
 ---
 
+## 2026-11-06 — Add-ons A+B: Fairness Score + Preference Weighting in CP-SAT
+
+### Added
+- `logic.py`: `preferencia` dict extraction + `contract_groups` dict per contract type, consumed by two new soft objective terms.
+- `logic.py`: `preference_cost` — `PREF_PENALTY=60` per anti-preferred shift assignment (`x[e,d,s]`). Manhã employees penalised on afternoon/closing shifts; Tarde employees on morning shifts. Strictly soft: BIG_PENALTY (100,000) ensures coverage always dominates.
+- `logic.py`: `fairness_cost` — `FAIRNESS_WEIGHT=10` per minute of hour spread within same contract type. `max_g`/`min_g` auxiliary IntVars bound the spread; solver minimises `spread = max_g - min_g` per group. Never violates C4 (max hours hard constraint).
+- `database.py`: `preferencia_turno TEXT DEFAULT 'Sem preferência'` column added to Funcionarios table schema (PG `IF NOT EXISTS` migration + SQLite `try/except` migration).
+- `database.py`: `adicionar_funcionario` and `atualizar_funcionario` signatures extended with `preferencia='Sem preferência'` parameter.
+- `app.py`: "Preferência de Turno" selectbox (`Sem preferência / Manhã / Tarde`) in both Novo Funcionário and Editar Funcionário forms (Tab 1).
+- `app.py`: `tipo_contrato` and `preferencia_turno` forwarded through `inputs_semana` dict (Tab 2) to solver.
+- `test_fairness_solver.py`: 3-test validation suite proving hard constraints beat soft preferences.
+
+### Decision log
+- Audit confirmed C1–C7 are all hard `model.Add()` constraints — no risk of soft terms compromising them.
+- Test 2 result: 1 unassigned closing is a capacity issue (C3: 1 shift/day + only 1 keyholder), not a preference-override — C5 keyholder constraint held.
+- Test 3 result: 4.5h spread is structural minimum given keyholder restriction forces Bob onto longer closing shifts. Fairness score worked; asymmetry is inherent to C5.
+- Checkpoint tag `checkpoint/pre-fairness-20261106` on commit `988aba0` available for rollback.
+
+### Files Modified
+- `logic.py`
+- `database.py`
+- `app.py`
+- `test_fairness_solver.py` (new)
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## 2026-11-06 — REA Analysis: Timefold + Odoo + ERPNext → Roadmap Add-ons
 
 ### Added

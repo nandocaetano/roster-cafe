@@ -271,6 +271,8 @@ with aba1:
             _cols_tabela = ['nome', 'cargo', 'tipo_contrato', 'horas_min', 'horas_max']
             if 'nivel' in df_equipe.columns:
                 _cols_tabela.append('nivel')
+            if 'preferencia_turno' in df_equipe.columns:
+                _cols_tabela.append('preferencia_turno')
             st.dataframe(df_equipe[_cols_tabela], use_container_width=True)
         else:
             st.info("Nenhum funcionário cadastrado ainda.")
@@ -296,11 +298,17 @@ with aba1:
         nivel_novo = st.selectbox("Nível", ["experiente", "novato"], key=f"novo_nivel_{_nk}",
                                   help="Novato: não pode partilhar o bloco de abertura ou fecho com outro novato.")
 
+        pref_novo = st.selectbox(
+            "Preferência de Turno", ["Sem preferência", "Manhã", "Tarde"],
+            key=f"novo_pref_{_nk}",
+            help="Soft constraint — o robô tenta respeitar mas nunca viola contratos, keyholder ou WTI.",
+        )
+
         dias_selecionados = render_availability_selector(f"novo_{_nk}")
 
         if st.button("Cadastrar", key=f"novo_btn_{_nk}") and nome_novo:
             try:
-                adicionar_funcionario(TENANT_ID, nome_novo, cargo_novo, contrato_novo, h_min_nova, h_max_nova, dias_selecionados, nivel_novo)
+                adicionar_funcionario(TENANT_ID, nome_novo, cargo_novo, contrato_novo, h_min_nova, h_max_nova, dias_selecionados, nivel_novo, pref_novo)
                 st.success(f"{nome_novo} adicionado!")
                 st.session_state['equipe_v'] += 1
                 st.session_state['novo_k'] += 1
@@ -335,6 +343,14 @@ with aba1:
             nivel_ed = st.selectbox("Nível", _nivel_opts, index=_nivel_idx, key=f"{_pfx}_nivel",
                                     help="Novato: não pode partilhar o bloco de abertura ou fecho com outro novato.")
 
+            _pref_atual = str(dados_atuais.get('preferencia_turno', 'Sem preferência') or 'Sem preferência')
+            _pref_opts = ["Sem preferência", "Manhã", "Tarde"]
+            _pref_idx = _pref_opts.index(_pref_atual) if _pref_atual in _pref_opts else 0
+            pref_ed = st.selectbox(
+                "Preferência de Turno", _pref_opts, index=_pref_idx, key=f"{_pfx}_pref",
+                help="Soft constraint — o robô tenta respeitar mas nunca viola contratos, keyholder ou WTI.",
+            )
+
             dias_atuais = [
                 dados_atuais['d_seg'], dados_atuais['d_ter'], dados_atuais['d_qua'],
                 dados_atuais['d_qui'], dados_atuais['d_sex'], dados_atuais['d_sab'], dados_atuais['d_dom']
@@ -343,7 +359,7 @@ with aba1:
 
             col_btn1, col_btn2 = st.columns(2)
             if col_btn1.button("💾 Salvar", key=f"{_pfx}_salvar"):
-                atualizar_funcionario(TENANT_ID, int(dados_atuais['id_funcionario']), nome_ed, cargo_ed, contrato_ed, h_min_ed, h_max_ed, dias_ed, nivel_ed)
+                atualizar_funcionario(TENANT_ID, int(dados_atuais['id_funcionario']), nome_ed, cargo_ed, contrato_ed, h_min_ed, h_max_ed, dias_ed, nivel_ed, pref_ed)
                 st.success("Atualizado!")
                 st.session_state['equipe_v'] += 1
                 for _sk in [k for k in st.session_state if k.startswith(f"ed_{func_selecionado}")]:
@@ -408,7 +424,9 @@ with aba2:
                         "horas_min": float(row['horas_min']),
                         "horas_max": float(row['horas_max']),
                         "cargo": row['cargo'],
+                        "tipo_contrato": str(row.get('tipo_contrato', 'Full-time') or 'Full-time'),
                         "nivel": str(row['nivel']) if 'nivel' in df_equipe.columns else 'experiente',
+                        "preferencia_turno": str(row.get('preferencia_turno', 'Sem preferência') or 'Sem preferência'),
                         "disponibilidade": disp_dict,
                         "dias_folga": list(dias_folga_sel),
                         "dias_ferias": list(dias_ferias_sel),
