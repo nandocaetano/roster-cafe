@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-11-06 — Tooling: REA Methodology + Clean Room Design Protocol
+
+### Added
+- `.claude/commands/rea-analyze.md`: Custom slash command activating Reverse Engineering Architecture (REA) mode — decomposes competitor features into Core Problem / Logical Mechanism / UX Flow, then produces an original build plan for our Streamlit/OR-Tools stack with a Clean Room Checkpoint.
+- `docs/CLEAN_ROOM_RULES.md`: Project-level Clean Room protocol — three rules governing how competitor features are studied and re-implemented (Deconstruction Only, Abstract Translation, Original Execution).
+
+### Changed
+- `.claude/commands/maestro-start.md`: Added Clean Room protocol acknowledgement to the boot summary output.
+
+### Files Modified
+- `.claude/commands/rea-analyze.md` (new)
+- `.claude/commands/maestro-start.md`
+- `docs/CLEAN_ROOM_RULES.md` (new)
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## 2026-11-06 — Phase 8: Billing Logic + GTM Strategy + Subscriptions Table
 
 ### Added

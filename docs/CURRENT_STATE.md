@@ -6,7 +6,7 @@
 
 ## Active Phase
 
-**Phase 8 — Billing & Subscription (Stripe)** *(not yet started)*
+**Phase 8 — Billing & Subscription (Stripe)** *(in progress — billing layer scaffolded; app.py wiring pending)*
 
 ---
 
@@ -28,10 +28,9 @@
 
 | File | Last Change |
 |---|---|
-| `billing_logic.py` | New file (CODEX) — get_subscription, is_pro, get_employee_limit, check_feature_gate, create_stripe_checkout_session for Phase 8 billing |
-| `requirements.txt` | Added `stripe>=7.0.0` |
-| `docs/GTM_STRATEGY.md` | New file (GROK) — full Dublin GTM: acquisition channels, landing copy, cold email script, WTI sales argument, month-1 metrics, 14-day playbook |
-| **Supabase DB** | `Subscriptions` table created + seed row tenant_id=1 plano='free' |
+| `.claude/commands/rea-analyze.md` | New command — REA reverse engineering prompt: deconstructs competitor features into Core Problem / Mechanism / UX Flow → original build plan |
+| `.claude/commands/maestro-start.md` | Added Clean Room protocol acknowledgement line to boot summary |
+| `docs/CLEAN_ROOM_RULES.md` | New file — REA & Clean Room Design Protocol (3 rules: Deconstruction Only, Abstract Translation, Original Execution) |
 
 ---
 
@@ -64,7 +63,7 @@ app_escala/
 1. **Wire billing_logic.py into app.py** — import check_feature_gate + get_employee_limit; gate PDF export (Tab 3), Analytics (Tab 4), Roster History (Tab 3) behind feature check; replace hardcoded EMPLOYEE_LIMIT with get_employee_limit().
 2. **Stripe Checkout UI** — add "Upgrade to Pro" button in sidebar for non-superadmin users, calling create_stripe_checkout_session(); add STRIPE_SECRET_KEY to Streamlit Cloud Secrets.
 3. **Stripe webhook** — POST /webhook endpoint to update Subscriptions.plano on paid/cancelled events.
-4. **Landing page** — use docs/GTM_STRATEGY.md copy to build public landing page.
+4. **Landing page** — run `/rea-analyze` on Deputy/7shifts landing pages first, then build from GTM_STRATEGY.md copy.
 5. **Credentials rotation (manual):** rotate Supabase DB password + admin@cafe.com via Password Reset UI.
 
 ---
