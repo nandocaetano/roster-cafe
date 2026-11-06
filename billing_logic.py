@@ -97,6 +97,7 @@ def create_stripe_checkout_session(tenant_id, success_url, cancel_url):
             }
         ],
         metadata={"tenant_id": str(tenant_id)},
+        subscription_data={"metadata": {"tenant_id": str(tenant_id)}},
         success_url=success_url,
         cancel_url=cancel_url,
     )

@@ -2,6 +2,36 @@
 
 ---
 
+## 2026-11-06 — Phase 8: Stripe Webhook (Edge Function)
+
+### Added
+- `supabase/functions/stripe-webhook/index.ts` — Supabase Edge Function (Deno/TypeScript) that handles Stripe webhook events:
+  - `checkout.session.completed` → INSERT new `Subscriptions` row with `plano='pro'` and `validade` from Stripe `current_period_end`
+  - `customer.subscription.deleted` → INSERT new `Subscriptions` row with `plano='free'` (downgrade; app picks latest row via `ORDER BY criado_em DESC`)
+  - Verifies webhook signature via `stripe.webhooks.constructEventAsync`
+  - Fallback: resolves `tenant_id` from `stripe_subscription_id` lookup if subscription metadata is missing
+- `billing_logic.py`: added `subscription_data={"metadata": {"tenant_id": str(tenant_id)}}` to `create_stripe_checkout_session()` — propagates `tenant_id` to Stripe Subscription object metadata, enabling clean lookup in `customer.subscription.deleted`
+
+### Decision log
+- Uses INSERT rows (not UPDATE/UPSERT) to preserve subscription history. `get_subscription()` already uses `ORDER BY criado_em DESC LIMIT 1` — no schema change needed.
+- Edge Function is on Supabase free tier (500K invocations/month — sufficient for MVP).
+- Two required secrets: `STRIPE_WEBHOOK_SECRET` (from Stripe Dashboard → Webhooks) + `STRIPE_SECRET_KEY`. `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are auto-injected by Supabase into Edge Functions.
+
+### Deploy instructions (manual)
+1. Install Supabase CLI: `npm i -g supabase`
+2. `supabase login` → `supabase link --project-ref nbggytkbrxqhnqvtvbpl`
+3. `supabase functions deploy stripe-webhook`
+4. Register webhook URL in Stripe Dashboard: `https://nbggytkbrxqhnqvtvbpl.supabase.co/functions/v1/stripe-webhook`
+5. Add `STRIPE_WEBHOOK_SECRET` to Supabase Project Settings → Edge Functions secrets.
+
+### Files Modified
+- `supabase/functions/stripe-webhook/index.ts` (new)
+- `billing_logic.py`
+- `docs/CHANGELOG.md`
+- `docs/CURRENT_STATE.md`
+
+---
+
 ## 2026-11-06 — Phase 8: Billing Gates + Stripe Checkout UI
 
 ### Added

@@ -6,7 +6,7 @@
 
 ## Active Phase
 
-**Phase 8 — Billing & Subscription (Stripe)** *(in progress — billing gates wired into app.py; Stripe key + webhook pending)*
+**Phase 8 — Billing & Subscription (Stripe)** *(in progress — billing gates + webhook Edge Function built; deploy + secrets pending)*
 
 **Add-ons A+B — Fairness Score + Preference Weighting** *(complete — merged into solver)*
 
@@ -30,9 +30,10 @@
 
 | File | Last Change |
 |---|---|
-| `app.py` | Phase 8 billing wiring: `import os` + billing_logic imports; `_is_pro`/`_emp_limit` computed at runtime; sidebar Upgrade to Pro panel (non-superadmin); Tab 1 dynamic employee cap; Tab 3 PDF export gated; Tab 3 Roster History gated; Tab 4 Analytics gated |
-| `billing_logic.py` | Added `except Exception: return {"plano": "free"}` to `get_subscription()` — graceful fallback when Subscriptions table missing |
-| `database.py` | Added `Subscriptions` table schema to both PG and SQLite `init_db()` blocks; seed free-plan row for tenant_id=1 |
+| `supabase/functions/stripe-webhook/index.ts` | New Edge Function — handles `checkout.session.completed` (upgrade) and `customer.subscription.deleted` (downgrade) with signature verification |
+| `billing_logic.py` | Added `subscription_data` metadata to `create_stripe_checkout_session()`; `except Exception` fallback in `get_subscription()` |
+| `database.py` | Added `Subscriptions` table to `init_db()` (PG + SQLite) with free-plan seed row |
+| `app.py` | Full Phase 8 billing gates: dynamic employee cap, sidebar Upgrade CTA, PDF/Analytics/History paywalled |
 
 ---
 
@@ -64,9 +65,9 @@ app_escala/
 
 ## Next Immediate Steps
 
-1. **Add Streamlit Cloud Secrets** — `STRIPE_SECRET_KEY` (from Stripe dashboard) + `APP_URL` (live app URL). Checkout button will then work end-to-end.
-2. **Stripe webhook** — POST `/webhook` endpoint to update `Subscriptions.plano` on `checkout.session.completed` and `customer.subscription.deleted` events.
-3. **Supabase manual migration (if needed)** — run `ALTER TABLE Funcionarios ADD COLUMN IF NOT EXISTS preferencia_turno TEXT DEFAULT 'Sem preferência'` in Supabase SQL Editor to sync the preference column if Supabase was not restarted.
+1. **Deploy Edge Function** — `supabase functions deploy stripe-webhook` (requires Supabase CLI + `supabase link`).
+2. **Register webhook in Stripe** — Stripe Dashboard → Developers → Webhooks → Add endpoint: `https://nbggytkbrxqhnqvtvbpl.supabase.co/functions/v1/stripe-webhook`. Events: `checkout.session.completed`, `customer.subscription.deleted`.
+3. **Add secrets** — Streamlit Cloud: `STRIPE_SECRET_KEY` + `APP_URL`. Supabase Edge Functions: `STRIPE_WEBHOOK_SECRET` + `STRIPE_SECRET_KEY`.
 4. **Landing page** — run `/rea-analyze` on Deputy/7shifts first, then build from `docs/GTM_STRATEGY.md` copy.
 5. **Credentials rotation (manual)** — rotate Supabase DB password + admin@cafe.com via Password Reset UI.
 
