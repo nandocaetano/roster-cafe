@@ -30,10 +30,9 @@
 
 | File | Last Change |
 |---|---|
-| `supabase/functions/stripe-webhook/index.ts` | New Edge Function — handles `checkout.session.completed` (upgrade) and `customer.subscription.deleted` (downgrade) with signature verification |
-| `billing_logic.py` | Added `subscription_data` metadata to `create_stripe_checkout_session()`; `except Exception` fallback in `get_subscription()` |
-| `database.py` | Added `Subscriptions` table to `init_db()` (PG + SQLite) with free-plan seed row |
-| `app.py` | Full Phase 8 billing gates: dynamic employee cap, sidebar Upgrade CTA, PDF/Analytics/History paywalled |
+| `PRODUCT.md` | New — Impeccable product truth record (users, purpose, positioning, brand, evidence, principles) |
+| `docs/ARCHITECTURE.md` | Added Frontend UI/UX Governance section: Hallmark, Impeccable, Taste Skill workflow |
+| `memory/project_decisions_phase8.md` | Updated pricing model decisions: €19.90/mês, trial 3–7 days, add-ons monthly only, license key architecture, Multi-Café Panel as launch marketing material |
 
 ---
 
@@ -65,11 +64,13 @@ app_escala/
 
 ## Next Immediate Steps
 
-1. **Deploy Edge Function** — `supabase functions deploy stripe-webhook` (requires Supabase CLI + `supabase link`).
-2. **Register webhook in Stripe** — Stripe Dashboard → Developers → Webhooks → Add endpoint: `https://nbggytkbrxqhnqvtvbpl.supabase.co/functions/v1/stripe-webhook`. Events: `checkout.session.completed`, `customer.subscription.deleted`.
-3. **Add secrets** — Streamlit Cloud: `STRIPE_SECRET_KEY` + `APP_URL`. Supabase Edge Functions: `STRIPE_WEBHOOK_SECRET` + `STRIPE_SECRET_KEY`.
-4. **Landing page** — run `/rea-analyze` on Deputy/7shifts first, then build from `docs/GTM_STRATEGY.md` copy.
-5. **Credentials rotation (manual)** — rotate Supabase DB password + admin@cafe.com via Password Reset UI.
+1. **Landing page v2 with Hallmark** — run `/hallmark` on the current landing page HTML for a full quality-floor redesign. Current version at `scratchpad/landing.html` (Artifact published, URL in session).
+2. **Impeccable polish** — run `/impeccable polish` on landing page after Hallmark pass.
+3. **Deploy Edge Function** — `supabase functions deploy stripe-webhook` (requires Supabase CLI + `supabase link`).
+4. **Add Stripe secrets** — Streamlit Cloud: `STRIPE_SECRET_KEY` + `APP_URL`. Supabase Edge Functions: `STRIPE_WEBHOOK_SECRET` + `STRIPE_SECRET_KEY`.
+5. **Register webhook in Stripe** — Dashboard → Developers → Webhooks → `https://nbggytkbrxqhnqvtvbpl.supabase.co/functions/v1/stripe-webhook`. Events: `checkout.session.completed`, `customer.subscription.deleted`.
+6. **License key flow** — implement `LicenseKeys` table + activation step in registration flow.
+7. **Credentials rotation (manual)** — rotate Supabase DB password + admin@cafe.com via Password Reset UI.
 
 ---
 

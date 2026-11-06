@@ -267,6 +267,25 @@ stored = f"{salt.hex()}:{hash}"
 
 ---
 
+## Frontend UI/UX Governance
+
+Three design skills installed at `app_escala/.claude/skills/` and `.agents/skills/` govern all frontend work:
+
+| Skill | Command | Role |
+|---|---|---|
+| **Hallmark** (`nutlope/hallmark`) | `/hallmark` | New page generation — quality floor guarantee. Use when building any new page or redesigning from scratch. Never use on existing designs unless explicitly invoked. |
+| **Impeccable** | `/impeccable critique`, `/impeccable polish` | UI critique, polish, and deterministic rules. Hooks installed in `.claude/settings.local.json`. Run after any significant UI change. |
+| **Taste Skill** (`design-taste-frontend`) | `/taste` | Art direction, public domain photography, Puppeteer-based browser layout checks. Governs responsive testing and visual quality bar. |
+
+**Workflow:**
+1. New pages → `/hallmark` first, then `/impeccable polish`
+2. Existing pages → `/impeccable critique` to audit, then apply fixes
+3. Before shipping any page → Taste Skill browser check for layout and responsive issues
+
+**Product context:** `PRODUCT.md` at project root is the durable product truth record (Impeccable init). Read it before any design decision.
+
+---
+
 ## Deployment
 
 | Item | Value |

@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-11-06 — Design skills + pricing decisions + landing page v1
+
+### Added
+- `PRODUCT.md` — Impeccable product truth record: users (Dublin café owners/managers, 5–20 staff), purpose (WTI-compliant auto-scheduler), positioning (11h rest + clopening block + keyholder enforced), brand commitments (Mad Frog), evidence on hand, 5 product principles.
+- Three UI/UX design skills installed: **Hallmark** (`nutlope/hallmark`), **Impeccable** (v0.1.18, project-scoped), **Taste Skill** (`design-taste-frontend`). Skills live in `.claude/skills/` and `.agents/skills/`.
+- Landing page v1 published as Claude Artifact (dark espresso + copper accent, Cormorant Garant display, DM Sans body). Sections: hero, comparison table, how it works, features, pricing, FAQ, coming-soon Multi-Café Panel, contact.
+- GROK (CMO agent) reviewed landing page copy and produced 169-line feedback note. Feedback applied: new hero headline (Variant B — "Is your Sunday Excel roster WRC-safe?"), rewritten CTAs, feature card copy, FAQ section, trust signals.
+
+### Changed
+- `docs/ARCHITECTURE.md`: added **Frontend UI/UX Governance** section documenting Hallmark/Impeccable/Taste Skill workflow and when to use each.
+- `memory/project_decisions_phase8.md`: added new pricing model decisions confirmed by Maestro — trial 3–7 days (no free tier), add-ons monthly-only, €19.90/mês base, license key architecture, Multi-Café Panel as day-zero launch marketing material.
+- `docs/GTM_STRATEGY.md`: pricing reference updated to €19.90/mês (was €20).
+
+### Files Modified
+- `PRODUCT.md` (new)
+- `docs/ARCHITECTURE.md`
+- `docs/CURRENT_STATE.md`
+- `memory/project_decisions_phase8.md`
+
+---
+
 ## 2026-11-06 — Docs: Architecture sync + Mad Frog Stripe registration
 
 ### Changed
