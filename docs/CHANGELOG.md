@@ -2,6 +2,30 @@
 
 ---
 
+## 2026-11-06 — REA Analysis: Timefold + Odoo + ERPNext → Roadmap Add-ons
+
+### Added
+- `.claude/commands/auto-sync.md`: Autonomous memory sync directive — self-triggers CURRENT_STATE + CHANGELOG updates after every significant logical block, without waiting for user prompt.
+- `docs/ROADMAP.md` — Fase 12: Configurable Shift Templates per tenant (ERPNext ShiftType pattern).
+- `docs/ROADMAP.md` — Fase 13: Multi-Location Management with branch-scoped manager role (ERPNext branch RBAC pattern).
+- `docs/ROADMAP.md` — Add-on A: Fairness Score (Timefold balance constraint → CP-SAT deviation_e auxiliary variable).
+- `docs/ROADMAP.md` — Add-on B: Shift Preference Weighting (Timefold desirability soft penalty → `preferencia_turno` column in Funcionarios).
+- `docs/ROADMAP.md` — Add-on C: Clock-In & Variance Tracking (Odoo hr.attendance reconciliation → Attendance table + state machine).
+- `docs/ROADMAP.md` — Add-on D: Configurable Constraint Weights (Timefold ConstraintConfiguration → ConstraintConfig table per tenant).
+
+### Decision log
+- Add-ons A and B (Fairness Score, Preference Weighting) flagged as IMMEDIATE MVP candidates — small CP-SAT objective additions in logic.py with no new tables except one column on Funcionarios.
+- Add-ons C and D flagged as Phase 10+ Premium/Enterprise features — require new DB tables and UI surface area.
+- CHANGELOG/CURRENT_STATE are project docs (live in docs/); memory keeps a pointer (project_second_brain.md), not copies. Storing full copies in memory would create stale duplicates.
+
+### Files Modified
+- `.claude/commands/auto-sync.md` (new)
+- `docs/ROADMAP.md`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## 2026-11-06 — Tooling: REA Methodology + Clean Room Design Protocol
 
 ### Added

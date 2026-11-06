@@ -62,6 +62,64 @@ Visão histórica e relatórios para compliance.
 
 ---
 
+### Fase 12 — Configurable Shift Templates *(REA: ERPNext)*
+Replace hardcoded `turnos_padrao` dict with a per-tenant `ShiftTemplates` DB table.
+
+- [ ] `ShiftTemplates` table: `{id, tenant_id, name, start_time, end_time, is_keyholder_required}`
+- [ ] Tab 3 UI: manager edits their own shift templates instead of using hardcoded defaults
+- [ ] CP-SAT solver reads templates from DB instead of from `app.py` constant
+- [ ] **Origin:** ERPNext `ShiftType` entity pattern — template entity decoupled from assignment
+
+### Fase 13 — Multi-Location Management *(REA: ERPNext)*
+Support cafes with multiple branches, each with autonomous rosters and a local manager role.
+
+- [ ] `Locations` table: `{id, tenant_id, name, address}` — sub-units within a Cafe tenant
+- [ ] `location_id` FK on `Funcionarios` and `Rosters`
+- [ ] New role `location_manager` — scoped to one location, cannot see other branches
+- [ ] Superadmin sees aggregate view across all locations
+- [ ] **Origin:** ERPNext branch-scoped manager RBAC + ShiftType per branch
+
+---
+
+## Add-ons Premium (REA-Derived)
+
+> Features extracted via `/rea-analyze` from open-source rostering tools. Build from scratch using our stack — no adapted code.
+
+### Add-on A — Fairness Score *(REA: Timefold)* — IMMEDIATE MVP candidate
+Extend CP-SAT objective with an explicit fairness balance term.
+
+- [ ] Add `deviation_e` auxiliary variable per employee in `logic.py`: `deviation_e ≥ assigned_minutes_e − target_minutes_e` and `deviation_e ≥ target_minutes_e − assigned_minutes_e`
+- [ ] Add `sum(deviation_e)` as a third objective term with configurable weight
+- [ ] Display fairness score in Tab 4 Analytics (gini coefficient or max-spread metric)
+- [ ] **Origin:** Timefold `HardSoftScore` fairness balance constraint
+
+### Add-on B — Shift Preference Weighting *(REA: Timefold)* — IMMEDIATE MVP candidate
+Allow employees to mark morning/evening preference; CP-SAT penalizes anti-preferred assignments.
+
+- [ ] Add `preferencia_turno` column to `Funcionarios`: `Manhã / Tarde / Sem preferência`
+- [ ] Add soft penalty in CP-SAT objective: `+PREFERENCE_PENALTY × x[e,d,s]` when shift type conflicts with preference
+- [ ] Tab 1 UI: preference dropdown in employee form
+- [ ] **Origin:** Timefold `ShiftAssignment.desirability` soft constraint
+
+### Add-on C — Clock-In & Variance Tracking *(REA: Odoo)* — Phase 10 Premium Feature
+Close the loop between planned shifts and actual time worked.
+
+- [ ] `Attendance` table: `{id, tenant_id, employee_id, date, clock_in, clock_out, planned_start, planned_end, variance_minutes, status}`
+- [ ] Variance engine in `logic.py`: `variance = actual_duration − planned_duration`; `overtime_flag = variance > grace_period`
+- [ ] State machine per `(employee, date)`: `Planned → Present | Absent | Late | Overtime`
+- [ ] Manager variance table in Tab 4; export to CSV/PDF
+- [ ] **Origin:** Odoo `hr.attendance` + `hr.planning.slot` reconciliation pattern
+
+### Add-on D — Configurable Constraint Weights *(REA: Timefold)* — Enterprise Tier
+Manager-tunable soft constraint weights stored per tenant.
+
+- [ ] `ConstraintConfig` table: `{tenant_id, fairness_weight, preference_weight, hour_balance_weight}`
+- [ ] Tab 5 Ajuda or new Settings tab: sliders for each weight (Pro/Enterprise plans only)
+- [ ] CP-SAT objective reads weights from DB at schedule generation time
+- [ ] **Origin:** Timefold `ConstraintConfiguration` entity pattern
+
+---
+
 ## Notas de Arquitetura
 
 - **DB migration path:** SQLite → Supabase; apenas `database.py` muda

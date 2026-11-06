@@ -28,9 +28,10 @@
 
 | File | Last Change |
 |---|---|
-| `.claude/commands/rea-analyze.md` | New command — REA reverse engineering prompt: deconstructs competitor features into Core Problem / Mechanism / UX Flow → original build plan |
-| `.claude/commands/maestro-start.md` | Added Clean Room protocol acknowledgement line to boot summary |
-| `docs/CLEAN_ROOM_RULES.md` | New file — REA & Clean Room Design Protocol (3 rules: Deconstruction Only, Abstract Translation, Original Execution) |
+| `.claude/commands/auto-sync.md` | New command — autonomous memory sync directive; self-triggers doc updates after any significant block |
+| `docs/ROADMAP.md` | Added Fase 12 (Configurable Shift Templates), Fase 13 (Multi-Location), and 4 REA-derived premium add-ons (Fairness Score, Preference Weighting, Clock-In Variance, Constraint Weights) |
+| `docs/CURRENT_STATE.md` | Updated Modified Files and Next Steps |
+| `docs/CHANGELOG.md` | New dated entry for REA analysis session |
 
 ---
 
