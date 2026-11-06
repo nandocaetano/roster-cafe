@@ -30,9 +30,7 @@
 
 | File | Last Change |
 |---|---|
-| `PRODUCT.md` | New — Impeccable product truth record (users, purpose, positioning, brand, evidence, principles) |
-| `docs/ARCHITECTURE.md` | Added Frontend UI/UX Governance section: Hallmark, Impeccable, Taste Skill workflow |
-| `memory/project_decisions_phase8.md` | Updated pricing model decisions: €19.90/mês, trial 3–7 days, add-ons monthly only, license key architecture, Multi-Café Panel as launch marketing material |
+| `scratchpad/landing.html` | New — Landing page v2: Hallmark Console theme, Stage hero with roster panel, 3 WTI readings, Diff table, Steps, Pricing, FAQ, Trial Close. 0 Floor FAIL, 0 WARN on sloplint. Artifact: https://claude.ai/artifact/Me2iNCAfc8K4oSuHG1DvZJ |
 
 ---
 
@@ -64,8 +62,8 @@ app_escala/
 
 ## Next Immediate Steps
 
-1. **Landing page v2 with Hallmark** — run `/hallmark` on the current landing page HTML for a full quality-floor redesign. Current version at `scratchpad/landing.html` (Artifact published, URL in session).
-2. **Impeccable polish** — run `/impeccable polish` on landing page after Hallmark pass.
+1. **Impeccable polish** — run `/impeccable polish` on landing page v2 (`scratchpad/landing.html`, artifact https://claude.ai/artifact/Me2iNCAfc8K4oSuHG1DvZJ).
+2. **Copy landing page to repo root** — move/rename `scratchpad/landing.html` to a stable public path and update Streamlit Cloud or hosting.
 3. **Deploy Edge Function** — `supabase functions deploy stripe-webhook` (requires Supabase CLI + `supabase link`).
 4. **Add Stripe secrets** — Streamlit Cloud: `STRIPE_SECRET_KEY` + `APP_URL`. Supabase Edge Functions: `STRIPE_WEBHOOK_SECRET` + `STRIPE_SECRET_KEY`.
 5. **Register webhook in Stripe** — Dashboard → Developers → Webhooks → `https://nbggytkbrxqhnqvtvbpl.supabase.co/functions/v1/stripe-webhook`. Events: `checkout.session.completed`, `customer.subscription.deleted`.

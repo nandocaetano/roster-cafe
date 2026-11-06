@@ -1,0 +1,655 @@
+<title>Roster Café</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="WTI-compliant staff rostering for Dublin cafés. 11-hour rest, legal breaks, keyholder on every close — enforced automatically. 7-day free trial.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garant:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:ital,wght@0,400;0,500;1,400;1,500&display=swap">
+
+<style>
+/* Hallmark · v2.0.0 · theme:Console · dealt:3/3 · seed:wti-compliant-staff-rota-independent-036a·4083b399·2026-11-06·r0 · brand:kept (Cormorant Garant, DM Sans, copper tokens) · redesign:full
+   shape:Feature Ledger · hero:Stage (text 1–5, panel 7–12) · nav:edge-aligned · footer:colophon · job:sign up
+   signature:three WTI thresholds (11h / 4.5h / 6h) in DM Mono
+   sections:Hero · Readings · DiffTable · Steps · Pricing · FAQ · TrialClose · Footer
+   material:real — WTI thresholds, €19.90/mês, €39.90 setup, 7-day trial, Dublin · absent:logos, screenshots (auth-gated), testimonials
+   sweep:sloplint pass-1: 10 FAIL 12 REFLEX 3 WARN 2 NOTE → pass-2 fixes applied */
+/* pre-emit critique: P4 H5 E4 S5 R4 V4 · weakest:P; kept — compliance product earns trust through precision */
+/* waive 47c · hero panel is a sample data-slot showing product output at sample fidelity; values are named sample data */
+/* waive 64 · roster-table thead th and panel__legend use mono as Console data-dimension labels; content is measurement context (column headers for shift times, legend keys for audit markers), not label prose */
+
+/* ═══ TOKENS ═══ */
+:root {
+  --c-paper:        oklch(13.5% 0.011 55);
+  --c-paper-2:      oklch(17%   0.012 55);
+  --c-paper-3:      oklch(10.5% 0.010 55);
+  --c-ink:          oklch(93%   0.008 65);
+  --c-ink-2:        oklch(79%   0.009 65);
+  --c-muted:        oklch(64%   0.011 55);
+  --c-subtle:       oklch(43%   0.011 50);
+  --c-rule:         oklch(27%   0.011 50);
+  --c-rule-2:       oklch(33%   0.013 50);
+  --c-accent:       oklch(60%   0.14  55);
+  --c-accent-h:     oklch(66%   0.14  55);
+  --c-accent-ink:   oklch(13%   0.03  55);
+  --c-accent-soft:  oklch(21%   0.04  55);
+  --c-cool:         oklch(68%   0.10  245);
+  --c-ok:           oklch(66%   0.14  150);
+  --c-ok-soft:      oklch(22%   0.04  150);
+  --c-bad:          oklch(62%   0.14  25);
+  --c-bad-soft:     oklch(22%   0.04  25);
+  --c-focus:        oklch(60%   0.14  55);
+  --ff-display:     'Cormorant Garant', Georgia, serif;
+  --ff-body:        'DM Sans', system-ui, sans-serif;
+  --ff-mono:        'DM Mono', 'Fira Code', ui-monospace, monospace;
+  --text-display:   clamp(52px, 6vw, 84px);
+  --text-section:   clamp(34px, 3.6vw, 52px);
+  --text-title:     clamp(18px, 1.8vw, 25px);
+  --text-lead:      clamp(17px, 1.5vw, 20px);
+  --text-md:        16px;
+  --text-sm:        14px;
+  --space-xs:       8px;
+  --space-sm:       12px;
+  --space-md:       16px;
+  --space-lg:       24px;
+  --space-xl:       40px;
+  --space-2xl:      64px;
+  --space-3xl:      96px;
+  --section-gap-s:  120px;
+  --section-gap:    144px;
+  --container:      1360px;
+  --gutter:         64px;
+  --gap-col:        32px;
+  --radius-card:    10px;
+  --radius-pill:    6px;
+  --rule-hair:      1px solid var(--c-rule);
+  --dur-short:      150ms;
+  --ease-out:       cubic-bezier(0.3, 0, 0.1, 1);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --c-paper:        oklch(97.5% 0.006 75);
+    --c-paper-2:      oklch(100%  0.000 75);
+    --c-paper-3:      oklch(93%   0.008 75);
+    --c-ink:          oklch(15%   0.012 55);
+    --c-ink-2:        oklch(28%   0.012 55);
+    --c-muted:        oklch(48%   0.012 55);
+    --c-subtle:       oklch(66%   0.010 55);
+    --c-rule:         oklch(84%   0.010 55);
+    --c-rule-2:       oklch(72%   0.012 55);
+    --c-accent:       oklch(48%   0.14  55);
+    --c-accent-h:     oklch(54%   0.14  55);
+    --c-accent-ink:   oklch(97%   0.004 75);
+    --c-accent-soft:  oklch(92%   0.030 60);
+    --c-ok:           oklch(38%   0.14  150);
+    --c-ok-soft:      oklch(93%   0.025 150);
+    --c-bad:          oklch(43%   0.14  25);
+    --c-bad-soft:     oklch(93%   0.025 25);
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --c-paper:        oklch(97.5% 0.006 75);
+  --c-paper-2:      oklch(100%  0.000 75);
+  --c-paper-3:      oklch(93%   0.008 75);
+  --c-ink:          oklch(15%   0.012 55);
+  --c-ink-2:        oklch(28%   0.012 55);
+  --c-muted:        oklch(48%   0.012 55);
+  --c-subtle:       oklch(66%   0.010 55);
+  --c-rule:         oklch(84%   0.010 55);
+  --c-rule-2:       oklch(72%   0.012 55);
+  --c-accent:       oklch(48%   0.14  55);
+  --c-accent-h:     oklch(54%   0.14  55);
+  --c-accent-ink:   oklch(97%   0.004 75);
+  --c-accent-soft:  oklch(92%   0.030 60);
+  --c-ok:           oklch(38%   0.14  150);
+  --c-ok-soft:      oklch(93%   0.025 150);
+  --c-bad:          oklch(43%   0.14  25);
+  --c-bad-soft:     oklch(93%   0.025 25);
+  color-scheme: light;
+}
+
+/* ═══ RESET + BASE ═══ */
+*, *::before, *::after { box-sizing: border-box; }
+html { overflow-x: clip; -webkit-text-size-adjust: 100%; }
+body {
+  overflow-x: clip; margin: 0;
+  background: var(--c-paper); color: var(--c-ink);
+  font-family: var(--ff-body); font-size: var(--text-md); line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto;
+  height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--c-paper-2);
+}
+img { max-width: 100%; display: block; }
+h1, h2, h3 {
+  font-family: var(--ff-display); font-weight: 700; letter-spacing: -0.02em;
+  text-wrap: balance; overflow-wrap: break-word; min-width: 0; margin: 0; line-height: 1.04;
+}
+h1 { font-size: var(--text-display); }
+h2 { font-size: var(--text-section); }
+h3 { font-size: var(--text-title); font-weight: 600; line-height: 1.2; }
+p { margin: 0; }
+ul, ol { margin: 0; padding: 0; list-style: none; }
+a { color: inherit; }
+::selection { background: color-mix(in oklab, var(--c-accent) 25%, transparent); }
+::-webkit-scrollbar { width: 6px; background: var(--c-paper-3); }
+::-webkit-scrollbar-thumb { background: var(--c-rule-2); border-radius: 3px; }
+scrollbar-color: var(--c-rule-2) var(--c-paper-3);
+caret-color: var(--c-accent);
+.measured { font-family: var(--ff-mono); font-variant-numeric: tabular-nums slashed-zero; }
+
+/* ═══ FOCUS ═══ */
+:focus-visible { outline: 2px solid var(--c-focus); outline-offset: 2px; border-radius: var(--radius-pill); }
+
+/* ═══ CONTAINER ═══ */
+.wrap { max-width: var(--container); margin-inline: auto; padding-inline: max(var(--gutter), env(safe-area-inset-left, 0px)); }
+@media (max-width: 1100px) { .wrap { --gutter: 32px; } }
+@media (max-width: 600px)  { .wrap { --gutter: 16px; } }
+
+/* ═══ SECTIONS ═══ */
+.section     { padding-block: var(--section-gap); }
+.section--s  { padding-block: var(--section-gap-s); }
+.section--paper2      { background: var(--c-paper-2); }
+.section--paper3      { background: var(--c-paper-3); }
+.section--accent-soft { background: var(--c-accent-soft); }
+
+/* ═══ BUTTONS ═══ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-sm);
+  border: var(--rule-hair); border-radius: var(--radius-pill);
+  padding: var(--space-sm) var(--space-xl);
+  font-family: var(--ff-body); font-size: var(--text-sm); font-weight: 500;
+  text-decoration: none; cursor: pointer; white-space: nowrap;
+  background: var(--c-paper-2); color: var(--c-ink);
+  transition: background-color var(--dur-short) var(--ease-out), border-color var(--dur-short) var(--ease-out);
+}
+.btn:hover  { background: var(--c-paper-3); border-color: var(--c-rule-2); }
+.btn:active { background: var(--c-paper-3); transform: translateY(1px); }
+.btn--primary { background: var(--c-accent); border-color: var(--c-accent); color: var(--c-accent-ink); }
+.btn--primary:hover { background: var(--c-accent-h); border-color: var(--c-accent-h); }
+.btn--lg { padding: var(--space-md) var(--space-2xl); font-size: var(--text-md); }
+.btn--ghost { background: transparent; border-color: transparent; color: var(--c-ink-2); }
+.btn--ghost:hover { background: transparent; border-color: transparent; color: var(--c-ink); }
+@media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+
+/* ═══ NAV ═══ */
+.nav {
+  position: sticky; top: env(safe-area-inset-top, 0px);
+  background: var(--c-paper-2); border-bottom: var(--rule-hair); z-index: 9;
+  padding-block: var(--space-md);
+  padding-inline: max(var(--gutter), env(safe-area-inset-left, 0px));
+}
+.nav__inner { max-width: var(--container); margin-inline: auto; display: flex; align-items: center; justify-content: space-between; gap: var(--space-lg); }
+.nav__logo { font-family: var(--ff-display); font-size: 1.35rem; font-weight: 700; letter-spacing: -0.015em; text-decoration: none; color: var(--c-ink); line-height: 1; }
+.nav__logo span { color: var(--c-accent); }
+@media (max-width: 1100px) { .nav { --gutter: 32px; } }
+@media (max-width: 600px)  { .nav { --gutter: 16px; } }
+
+/* ═══ HERO (Stage posture) ═══ */
+.hero {
+  padding-block-start: var(--section-gap-s); padding-block-end: var(--section-gap);
+  padding-inline: max(var(--gutter), env(safe-area-inset-left, 0px));
+  background: var(--c-paper);
+}
+.hero__inner {
+  max-width: var(--container); margin-inline: auto;
+  display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: var(--space-3xl); align-items: start;
+}
+.hero__h1   { font-size: var(--text-display); color: var(--c-ink); margin-bottom: var(--space-lg); max-width: 11ch; }
+.hero__lead { font-size: var(--text-lead); color: var(--c-ink-2); line-height: 1.55; max-width: 46ch; margin-bottom: var(--space-2xl); }
+.hero__actions { display: flex; flex-wrap: wrap; gap: var(--space-md); align-items: center; margin-bottom: var(--space-md); }
+.hero__note { font-size: 13px; color: var(--c-subtle); font-family: var(--ff-body); }
+
+/* Hero product panel */
+.hero__panel { border: var(--rule-hair); border-radius: var(--radius-card); background: var(--c-paper-2); overflow: hidden; }
+.panel__header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-md) var(--space-lg); border-bottom: var(--rule-hair); background: var(--c-paper-3);
+}
+.panel__title { font-family: var(--ff-mono); font-size: 12px; color: var(--c-muted); font-weight: 500; }
+.panel__status {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: var(--ff-mono); font-size: 11px; color: var(--c-ok);
+  background: var(--c-ok-soft); padding: 4px var(--space-sm); border-radius: 4px; font-weight: 500;
+}
+.panel__status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--c-ok); flex-shrink: 0; }
+.roster-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.roster-table thead th {
+  font-family: var(--ff-mono); font-size: 11px; font-weight: 500; color: var(--c-muted);
+  padding: var(--space-sm) var(--space-md); border-bottom: var(--rule-hair); text-align: left; background: var(--c-paper-3);
+}
+.roster-table tbody td { padding: var(--space-sm) var(--space-md); border-bottom: var(--rule-hair); font-size: 13px; line-height: 1.4; }
+.roster-table tbody tr:last-child td { border-bottom: none; }
+.roster-table tbody tr:hover { background: color-mix(in oklab, var(--c-rule) 40%, transparent); }
+.cell-day   { font-family: var(--ff-mono); font-size: 11px; color: var(--c-muted); white-space: nowrap; }
+.cell-name  { font-weight: 500; color: var(--c-ink); }
+.cell-shift { font-family: var(--ff-mono); font-size: 12px; color: var(--c-cool); white-space: nowrap; }
+.cell-role  { font-size: 12px; color: var(--c-muted); }
+.cell-check { font-family: var(--ff-mono); font-size: 11px; font-weight: 500; white-space: nowrap; }
+.check--ok  { color: var(--c-ok); }
+.check--key { color: var(--c-accent); }
+.check--blocked { color: var(--c-bad); background: var(--c-bad-soft); padding: 4px var(--space-xs); border-radius: 3px; text-decoration: line-through; font-size: 10px; }
+.panel__footer { padding: var(--space-sm) var(--space-lg); border-top: var(--rule-hair); background: var(--c-paper-3); }
+.panel__legend { font-family: var(--ff-mono); font-size: 11px; color: var(--c-subtle); display: flex; gap: var(--space-lg); }
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot  { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+@media (max-width: 1100px) { .hero { --gutter: 32px; } }
+@media (max-width: 900px) {
+  .hero__inner { grid-template-columns: 1fr; gap: var(--space-2xl); }
+  .hero__h1    { max-width: none; }
+}
+@media (max-width: 600px) {
+  .hero { --gutter: 16px; padding-block-start: var(--space-2xl); }
+  .cell-role { display: none; }
+}
+
+/* ═══ READINGS ═══ */
+.readings-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-xs); }
+.reading-cell {
+  background: var(--c-paper); border: var(--rule-hair); border-radius: var(--radius-card);
+  padding: var(--space-2xl) var(--space-xl); display: flex; flex-direction: column; gap: var(--space-md);
+}
+.reading-value { font-family: var(--ff-mono); font-size: clamp(44px, 5.5vw, 72px); font-weight: 400; letter-spacing: -0.04em; line-height: 1; color: var(--c-ink); font-variant-numeric: tabular-nums slashed-zero; }
+.reading-label { font-size: var(--text-sm); color: var(--c-muted); line-height: 1.5; }
+.reading-label strong { color: var(--c-accent); font-weight: 500; }
+@media (max-width: 700px) { .readings-grid { grid-template-columns: 1fr; } }
+
+/* ═══ DIFF TABLE ═══ */
+.diff-wrap { overflow-x: auto; }
+.diff-table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); min-width: 480px; }
+.diff-table thead th {
+  padding: var(--space-sm) var(--space-lg); border-bottom: 2px solid var(--c-rule);
+  text-align: left; font-size: var(--text-sm); font-weight: 500; color: var(--c-muted);
+}
+.diff-table thead th:last-child { color: var(--c-accent); border-bottom-color: var(--c-accent); }
+.diff-table tbody td { padding: var(--space-md) var(--space-lg); border-bottom: var(--rule-hair); vertical-align: middle; }
+.diff-table tbody tr:last-child td { border-bottom: none; }
+.diff-table .row-label { font-weight: 500; color: var(--c-ink-2); }
+.diff-table .cell-no  { font-family: var(--ff-mono); font-size: 12px; color: var(--c-bad); font-weight: 500; }
+.diff-table .cell-yes { font-family: var(--ff-mono); font-size: 12px; color: var(--c-ok); font-weight: 500; }
+
+/* ═══ STEPS — CSS counter, no DOM eyebrow ═══ */
+ol.steps { counter-reset: step-counter; }
+.steps {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  border: var(--rule-hair); border-radius: var(--radius-card); overflow: hidden;
+}
+.step {
+  counter-increment: step-counter;
+  padding: var(--space-2xl) var(--space-xl);
+  border-right: var(--rule-hair); background: var(--c-paper-2);
+}
+.step:last-child { border-right: none; }
+.step::before {
+  content: "0" counter(step-counter);
+  font-family: var(--ff-mono); font-size: clamp(36px, 4vw, 52px); font-weight: 400;
+  color: var(--c-accent); line-height: 1; display: block;
+  margin-bottom: var(--space-xl); font-variant-numeric: tabular-nums;
+}
+.step h3 { margin-bottom: var(--space-sm); }
+.step p  { font-size: var(--text-sm); color: var(--c-muted); line-height: 1.6; }
+@media (max-width: 800px) {
+  .steps { grid-template-columns: 1fr; overflow: visible; }
+  .step  { border-right: none; border-bottom: var(--rule-hair); }
+  .step:last-child { border-bottom: none; }
+}
+
+/* ═══ PRICING ═══ */
+.pricing-layout {
+  display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: var(--space-3xl); align-items: start;
+}
+.pricing-card { border: 1px solid var(--c-accent); border-radius: var(--radius-card); background: var(--c-paper-2); overflow: hidden; }
+.pricing-card__head { padding: var(--space-2xl) var(--space-xl) var(--space-xl); border-bottom: var(--rule-hair); }
+.pricing-trial {
+  font-family: var(--ff-body); font-size: 12px; color: var(--c-ok);
+  background: var(--c-ok-soft); padding: 4px var(--space-sm); border-radius: 4px; font-weight: 500;
+  display: inline-block; margin-bottom: var(--space-lg);
+}
+.pricing-price { font-family: var(--ff-mono); font-size: clamp(44px, 5vw, 64px); font-weight: 400; letter-spacing: -0.04em; line-height: 1; color: var(--c-ink); font-variant-numeric: tabular-nums slashed-zero; margin-bottom: var(--space-xs); }
+.pricing-price-note { font-size: 13px; color: var(--c-muted); }
+.pricing-price-note strong { color: var(--c-ink-2); font-weight: 500; }
+.pricing-card__features { padding: var(--space-xl); display: flex; flex-direction: column; gap: 2px; }
+.feature-row { display: flex; align-items: center; gap: var(--space-md); padding: var(--space-sm) 0; font-size: var(--text-sm); color: var(--c-ink-2); border-bottom: var(--rule-hair); }
+.feature-row:last-child { border-bottom: none; }
+.feature-tick { font-family: var(--ff-mono); font-size: 12px; color: var(--c-ok); font-weight: 500; flex-shrink: 0; width: 16px; }
+.pricing-card__cta { padding: var(--space-lg) var(--space-xl) var(--space-xl); }
+.pricing-card__cta .btn { width: 100%; }
+.pricing-card__cta-note { font-size: 11px; color: var(--c-subtle); text-align: center; margin-top: var(--space-sm); }
+
+.pricing-side h3 { font-family: var(--ff-display); font-size: var(--text-section); font-weight: 600; line-height: 1.1; letter-spacing: -0.02em; color: var(--c-ink); margin-bottom: var(--space-xl); }
+.pricing-side p  { font-size: var(--text-sm); color: var(--c-muted); line-height: 1.65; margin-bottom: var(--space-2xl); }
+.objections { display: flex; flex-direction: column; gap: 2px; border: var(--rule-hair); border-radius: var(--radius-card); overflow: hidden; }
+.obj { display: grid; grid-template-columns: auto 1fr; gap: var(--space-lg); padding: var(--space-lg) var(--space-xl); background: var(--c-paper-2); border-bottom: var(--rule-hair); align-items: start; }
+.obj:last-child { border-bottom: none; }
+.obj__q { font-family: var(--ff-body); font-size: 11px; color: var(--c-subtle); font-weight: 500; white-space: nowrap; padding-top: 1px; }
+.obj__a { font-size: var(--text-sm); color: var(--c-ink-2); line-height: 1.55; }
+@media (max-width: 900px) { .pricing-layout { grid-template-columns: 1fr; gap: var(--space-2xl); } }
+
+/* ═══ FAQ ═══ */
+.faq-layout { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: var(--space-3xl); align-items: start; }
+.faq-layout h2 { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 80px); }
+.faq-rows { display: flex; flex-direction: column; border-top: var(--rule-hair); }
+.faq-row { padding-block: var(--space-xl); border-bottom: var(--rule-hair); display: flex; flex-direction: column; gap: var(--space-sm); }
+.faq-q { font-family: var(--ff-display); font-size: var(--text-title); font-weight: 600; letter-spacing: -0.01em; color: var(--c-ink); line-height: 1.25; }
+.faq-a { font-size: var(--text-sm); color: var(--c-muted); line-height: 1.65; }
+@media (max-width: 800px) { .faq-layout { grid-template-columns: 1fr; gap: var(--space-2xl); } .faq-layout h2 { position: static; } }
+
+/* ═══ TRIAL CLOSE ═══ */
+.close-inner { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3xl); align-items: center; }
+.close-text h2 { margin-bottom: var(--space-md); color: var(--c-ink); }
+.close-text p  { font-size: var(--text-sm); color: var(--c-muted); }
+.close-actions { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-sm); }
+.close-note { font-size: 11px; color: var(--c-subtle); text-align: right; }
+@media (max-width: 700px) { .close-inner { grid-template-columns: 1fr; } .close-actions { align-items: flex-start; } .close-note { text-align: left; } }
+
+/* ═══ COMING SOON ═══ */
+.coming-row {
+  display: flex; flex-wrap: wrap; gap: var(--space-2xl); align-items: center; justify-content: space-between;
+  padding: var(--space-2xl) var(--space-xl); border: var(--rule-hair); border-radius: var(--radius-card); background: var(--c-paper-2);
+}
+.coming-row h3 { margin-bottom: var(--space-xs); }
+.coming-row p  { font-size: var(--text-sm); color: var(--c-muted); max-width: 52ch; line-height: 1.6; }
+
+/* ═══ FOOTER ═══ */
+.footer { border-top: var(--rule-hair); padding-block: var(--space-xl); padding-inline: max(var(--gutter), env(safe-area-inset-left, 0px)); }
+.footer__inner { max-width: var(--container); margin-inline: auto; display: flex; flex-wrap: wrap; gap: var(--space-lg); align-items: center; justify-content: space-between; }
+.footer__brand { font-family: var(--ff-display); font-size: 1rem; font-weight: 600; color: var(--c-muted); letter-spacing: -0.01em; }
+.footer__brand em { color: var(--c-accent); font-style: normal; }
+.footer__link { font-size: var(--text-sm); color: var(--c-subtle); text-decoration: none; }
+.footer__link:hover { color: var(--c-muted); }
+.footer__legal { font-size: 12px; color: var(--c-subtle); }
+@media (max-width: 1100px) { .footer { --gutter: 32px; } }
+@media (max-width: 600px)  { .footer { --gutter: 16px; } }
+</style>
+
+<!-- NAV -->
+<nav class="nav" role="navigation" aria-label="Main">
+  <div class="nav__inner">
+    <a href="#" class="nav__logo" aria-label="Roster Café home">Roster<span>.</span>café</a>
+    <a href="https://roster-cafe.streamlit.app" target="_blank" rel="noopener noreferrer" class="btn btn--primary">Start free trial</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" aria-label="Hero">
+  <div class="hero__inner">
+    <div class="hero__text">
+      <h1 class="hero__h1">Your roster. Legal before it prints.</h1>
+      <p class="hero__lead">WTI rules built in. The illegal shift is not an option.</p>
+      <div class="hero__actions">
+        <a href="https://roster-cafe.streamlit.app" target="_blank" rel="noopener noreferrer" class="btn btn--primary btn--lg">Start 7-day trial</a>
+        <a href="#pricing" class="btn btn--lg btn--ghost">See pricing</a>
+      </div>
+      <p class="hero__note">No card, cancel anytime</p>
+    </div>
+
+    <figure class="hero__panel" role="img" aria-label="Sample weekly roster showing WTI compliance status" data-slot="product-panel">
+      <div class="panel__header">
+        <span class="panel__title measured">Week 47, Nov 2026, Dublin</span>
+        <span class="panel__status">3 rules enforced</span>
+      </div>
+      <table class="roster-table" aria-label="Sample roster">
+        <thead>
+          <tr>
+            <th scope="col">Day</th>
+            <th scope="col">Employee</th>
+            <th scope="col">Shift</th>
+            <th scope="col">Role</th>
+            <th scope="col">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="cell-day">Mon</td>
+            <td class="cell-name">Sarah M.</td>
+            <td class="cell-shift measured">08:00 -17:00</td>
+            <td class="cell-role">Head Barista</td>
+            <td class="cell-check check--key">keyholder open</td>
+          </tr>
+          <tr>
+            <td class="cell-day">Mon</td>
+            <td class="cell-name">Tom K.</td>
+            <td class="cell-shift measured">12:00 -21:00</td>
+            <td class="cell-role">Barista</td>
+            <td class="cell-check check--key">keyholder close</td>
+          </tr>
+          <tr>
+            <td class="cell-day">Tue</td>
+            <td class="cell-name">Lisa P.</td>
+            <td class="cell-shift measured">08:00 -17:00</td>
+            <td class="cell-role">Barista</td>
+            <td class="cell-check check--ok">✓ 11h rest</td>
+          </tr>
+          <tr>
+            <td class="cell-day">Tue</td>
+            <td class="cell-name">Tom K.</td>
+            <td class="cell-shift measured">12:00 -21:00</td>
+            <td class="cell-role">Barista</td>
+            <td class="cell-check check--ok">✓ 11h rest</td>
+          </tr>
+          <tr aria-label="Clopening blocked: Tom K. cannot work Wed 07:00 after Tue 21:00 close">
+            <td class="cell-day">Wed</td>
+            <td class="cell-name">Tom K.</td>
+            <td class="cell-shift measured" style="text-decoration:line-through;color:var(--c-subtle)">07:00 -16:00</td>
+            <td class="cell-role">Barista</td>
+            <td class="cell-check"><span class="check--blocked">clopening blocked</span></td>
+          </tr>
+          <tr>
+            <td class="cell-day">Wed</td>
+            <td class="cell-name">Sarah M.</td>
+            <td class="cell-shift measured">07:00 -16:00</td>
+            <td class="cell-role">Head Barista</td>
+            <td class="cell-check check--ok">✓ keyholder</td>
+          </tr>
+          <tr>
+            <td class="cell-day">Thu</td>
+            <td class="cell-name">Lisa P.</td>
+            <td class="cell-shift measured">12:00 -21:00</td>
+            <td class="cell-role">Barista</td>
+            <td class="cell-check check--key">keyholder close</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="panel__footer">
+        <div class="panel__legend">
+          <span class="legend-item"><span class="legend-dot" style="background:var(--c-accent)" aria-hidden="true"></span>keyholder</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--c-ok)" aria-hidden="true"></span>11h rest</span>
+          <span class="legend-item"><span class="legend-dot" style="background:var(--c-bad)" aria-hidden="true"></span>blocked</span>
+        </div>
+      </div>
+      <figcaption style="clip:rect(0 0 0 0);clip-path:inset(50%);position:absolute;overflow:hidden;white-space:nowrap;width:1px;height:1px;">Sample roster generated by Roster Café showing WTI compliance enforcement across a working week.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- READINGS -->
+<section class="section--s section--paper2" aria-label="WTI compliance thresholds">
+  <div class="wrap">
+    <div class="readings-grid">
+      <article class="reading-cell">
+        <div class="reading-value measured">11h</div>
+        <p class="reading-label">Minimum rest between shifts. <strong>Under 11h, unavailable.</strong></p>
+      </article>
+      <article class="reading-cell">
+        <div class="reading-value measured">4.5h</div>
+        <p class="reading-label">4.5h or more. <strong>15-minute break, automatic.</strong></p>
+      </article>
+      <article class="reading-cell">
+        <div class="reading-value measured">6h</div>
+        <p class="reading-label">Over 6h. <strong>30-minute break before the roster prints.</strong></p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- DIFF TABLE -->
+<section class="section" aria-label="Comparison with Excel">
+  <div class="wrap">
+    <h2 style="max-width:14ch;margin-bottom:var(--space-2xl)">Excel draws the grid. This enforces the law.</h2>
+    <div class="diff-wrap">
+      <table class="diff-table" aria-label="Comparison: Excel vs Roster Café">
+        <thead>
+          <tr>
+            <th scope="col">WTI requirement</th>
+            <th scope="col">Excel / Paper</th>
+            <th scope="col">Roster Café</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="row-label">11h rest between shifts</td>
+            <td class="cell-no">not checked</td>
+            <td class="cell-yes">enforced: shift not available</td>
+          </tr>
+          <tr>
+            <td class="row-label">Break at 4.5h and 6h</td>
+            <td class="cell-no">often missed</td>
+            <td class="cell-yes">scheduled automatically</td>
+          </tr>
+          <tr>
+            <td class="row-label">Keyholder on every close</td>
+            <td class="cell-no">hope-based</td>
+            <td class="cell-yes">hard constraint, no exceptions</td>
+          </tr>
+          <tr>
+            <td class="row-label">Export and audit trail</td>
+            <td class="cell-no">easy to lose</td>
+            <td class="cell-yes">CSV, Excel, PDF per week</td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- STEPS -->
+<section class="section section--paper3" aria-label="How it works">
+  <div class="wrap">
+    <h2 style="margin-bottom:var(--space-2xl)">Three steps. One legal week.</h2>
+    <ol class="steps">
+      <li class="step">
+        <h3>Add your team</h3>
+        <p>Role, contract hours, availability. Set once, updated as needed.</p>
+      </li>
+      <li class="step">
+        <h3>Generate the week</h3>
+        <p>Click generate. A WTI-legal week in seconds.</p>
+      </li>
+      <li class="step">
+        <h3>Export and post</h3>
+        <p>Download to Excel, CSV or PDF and post it. Sunday is not for rosters.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="section section--paper2" id="pricing" aria-label="Pricing">
+  <div class="wrap">
+    <div class="pricing-layout">
+      <div class="pricing-card">
+        <div class="pricing-card__head">
+          <span class="pricing-trial">7-day free trial</span>
+          <div class="pricing-price measured">€19.90<span style="font-size:0.45em;vertical-align:0.3em;color:var(--c-muted)">/mês</span></div>
+          <p class="pricing-price-note"><strong>€39.90</strong> one-time setup<br>1 café, up to 10 staff</p>
+        </div>
+        <div class="pricing-card__features">
+          <div class="feature-row"><span class="feature-tick">✓</span><span>WTI-compliant auto-scheduler</span></div>
+          <div class="feature-row"><span class="feature-tick">✓</span><span>Unlimited weekly rosters</span></div>
+          <div class="feature-row"><span class="feature-tick">✓</span><span>CSV, Excel and PDF export</span></div>
+          <div class="feature-row"><span class="feature-tick">✓</span><span>Roster history and analytics</span></div>
+          <div class="feature-row"><span class="feature-tick">✓</span><span>Manager access control</span></div>
+        </div>
+        <div class="pricing-card__cta">
+          <a href="https://roster-cafe.streamlit.app" target="_blank" rel="noopener noreferrer" class="btn btn--primary btn--lg">Start 7-day trial</a>
+          <p class="pricing-card__cta-note">No card, cancel anytime</p>
+        </div>
+      </div>
+
+      <div class="pricing-side">
+        <h3>Less than one hour of roster work, every week.</h3>
+        <p>Setup covers getting your team configured. Monthly keeps the law on your side.</p>
+        <div class="objections">
+          <div class="obj">
+            <span class="obj__q">Small café?</span>
+            <p class="obj__a">Built for 5 to 20 staff. The WRC does not size complaints by headcount.</p>
+          </div>
+          <div class="obj">
+            <span class="obj__q">Already legal?</span>
+            <p class="obj__a">The app proves it in writing. Good intentions do not hold up without records.</p>
+          </div>
+          <div class="obj">
+            <span class="obj__q">Monthly forever?</span>
+            <p class="obj__a">One compliance case costs more than years of this subscription.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section" aria-label="Common questions" id="faq">
+  <div class="wrap">
+    <div class="faq-layout">
+      <h2>Common questions</h2>
+      <div class="faq-rows">
+        <div class="faq-row">
+          <p class="faq-q">Is this just another rota app?</p>
+          <p class="faq-a">Excel draws the grid. This enforces the law: the illegal shift is blocked, not flagged.</p>
+        </div>
+        <div class="faq-row">
+          <p class="faq-q">What happens after the 7-day trial?</p>
+          <p class="faq-a">€39.90 setup and €19.90 per month, or stop. No card, no auto-charge.</p>
+        </div>
+        <div class="faq-row">
+          <p class="faq-q">What does the setup fee cover?</p>
+          <p class="faq-a">Café setup, team configuration, first-week check. That is what the €39.90 covers.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMING SOON -->
+<section class="section--s" style="background:var(--c-paper);padding-block:var(--section-gap-s)" aria-label="Coming soon">
+  <div class="wrap">
+    <div class="coming-row">
+      <div>
+        <h3>Multi-Café Admin Panel</h3>
+
+      </div>
+      <a href="#contact" class="btn">Get early access</a>
+    </div>
+  </div>
+</section>
+
+<!-- TRIAL CLOSE -->
+<section class="section--s section--accent-soft" id="contact" aria-label="Start your trial">
+  <div class="wrap">
+    <div class="close-inner">
+      <div class="close-text">
+        <h2>Start a 7-day trial, no card required.</h2>
+        <p>Email for a 15-minute demo.</p>
+        <p style="margin-top:var(--space-md)">
+          <a href="mailto:caetanolaska@gmail.com" class="footer__link" style="font-size:var(--text-sm);color:var(--c-muted)">caetanolaska@gmail.com</a><span style="font-size:var(--text-sm);color:var(--c-subtle)"> Mad Frog, Dublin</span>
+        </p>
+      </div>
+      <div class="close-actions">
+        <a href="https://roster-cafe.streamlit.app" target="_blank" rel="noopener noreferrer" class="btn btn--primary btn--lg">Start free trial</a>
+        <p class="close-note">Setup in one afternoon</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer" role="contentinfo">
+  <div class="footer__inner">
+    <div class="footer__brand">Roster<em>.</em>café <span style="color:var(--c-subtle);font-weight:400;font-size:0.9em">by Mad Frog, Dublin</span></div>
+    <span class="footer__legal">Organisation of Working Time Act 1997 · © 2026 Mad Frog</span>
+  </div>
+</footer>
