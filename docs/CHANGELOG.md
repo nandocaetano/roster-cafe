@@ -2,6 +2,33 @@
 
 ---
 
+## 2026-11-06 — Feat: Password Reset UI + Architecture Docs + Phase 8 Scope
+
+### Added
+- `database.py`: `get_all_users()` — returns all Users joined with Cafes.name, ordered by cafe then email; superadmin use only
+- `database.py`: `reset_password(email, new_password)` — updates password_hash for any user by email; returns bool
+- `app.py`: "🔑 Reset de Password" expander in superadmin sidebar — user selectbox (email + cafe), new password + confirm inputs, 6-char minimum validation, `rp_k` form-reset counter
+- `.env.example`: Documents `DATABASE_URL` env var for local dev setup (`.env` already in `.gitignore`)
+
+### Changed
+- `docs/ARCHITECTURE.md`: Full rewrite — dual-backend strategy table, all 4 DB table schemas (Cafes, Users, Funcionarios, Rosters), CP-SAT solver diagram with C1–C7 constraints, password reset flow, updated session state keys (11 keys), deployment section
+- `docs/ROADMAP.md`: Phase 8 scope clarified — Stripe Checkout + Subscriptions table + feature gating confirmed; License Keys and Stock/Clock-in add-ons explicitly deferred to future phases
+
+### Decision log
+- Pricing confirmed: €39.90 setup + €20/mês
+- Phase 8 scope narrowed to Stripe only (no premature add-ons)
+- GROK GTM prompt deferred until after this session's code ships; pricing now confirmed
+- CODEX billing_logic.py deferred — existing `EMPLOYEE_LIMIT` already enforces the 20-employee cap; Stripe schema not yet defined
+
+### Files Modified
+- `app.py`
+- `database.py`
+- `docs/ARCHITECTURE.md`
+- `docs/ROADMAP.md`
+- `.env.example` (new)
+
+---
+
 ## 2026-11-06 — Fix: Warning UI Flood & Qua Duplicate Slot
 
 ### Fixed

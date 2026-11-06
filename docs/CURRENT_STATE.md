@@ -28,9 +28,11 @@
 
 | File | Last Change |
 |---|---|
-| `logic.py` | OR-Tools CP-SAT solver replaces greedy scheduler; boolean var matrix x[e,d,s]; hard constraints (coverage, availability, 1-shift/day, max hours, keyholder, clopening 11h, novato); BIG_PENALTY objective; WTI break warnings summarised (2 lines total instead of 30+); floating point tolerance fixed (0.05h instead of 1e-9) |
-| `app.py` | Duplicate `07:00–14:00` Qua slot removed (replaced with `08:00–16:00`); CP-SAT solver status shown as `st.info()` banner outside warnings expander; warnings re-categorised (erros / avisos / infos); unused `import json` removed |
-| `requirements.txt` | Added `ortools>=9.8.0` |
+| `database.py` | Added `get_all_users()` (all users joined with cafe name) and `reset_password(email, new_password)` — superadmin password reset backend |
+| `app.py` | Added `get_all_users` + `reset_password` imports; added "🔑 Reset de Password" expander in superadmin sidebar with user selectbox, new password + confirm inputs, 6-char minimum validation |
+| `docs/ARCHITECTURE.md` | Full rewrite — dual-backend strategy, all 4 DB tables with schema, CP-SAT solver diagram, password reset flow, updated session state keys table, deployment section |
+| `docs/ROADMAP.md` | Phase 8 scope clarified: Stripe Checkout + Subscriptions table + feature gating; out-of-scope items (License Keys, Stock/Clock-in add-ons) explicitly noted |
+| `.env.example` | New file — documents `DATABASE_URL` env var for local dev |
 
 ---
 
@@ -52,17 +54,16 @@ app_escala/
 
 ## Blockers
 
-- **No password reset flow** — forgotten passwords must be manually reset via Supabase SQL Editor. No self-service or admin UI exists yet.
+- **Credentials rotation (manual action required)** — Supabase DB password and admin@cafe.com password need to be rotated by the user in the Supabase dashboard + Streamlit Cloud Secrets. Code is ready (.env.example + Password Reset UI), but rotation itself is a manual step.
 - **Budget thresholds (290/300/305h) hardcoded** — these are Balsbridge-specific numbers global to all tenants. Multi-tenancy design gap, not critical yet.
-- **Credentials rotation pending** — Supabase DB password and admin@cafe.com password should be rotated (noted previous session, still pending).
 
 ---
 
 ## Next Immediate Steps
 
-1. **Phase 8 — Stripe Billing:** Integrate Stripe Checkout for monthly plans; add `Subscriptions` table (tenant_id, plano, validade, stripe_customer_id); gate PDF/Analytics/history behind paid plan.
-2. **Add password reset UI** — superadmin can set a new password for any user in the same tenant; needed for the Natalie / Balsbridge credential situation.
-3. **Update `docs/ARCHITECTURE.md`** — add Rosters table schema, `nivel` column, dual-backend section, 5-tab module map, new session state keys, caching strategy, CP-SAT solver overview.
+1. **Phase 8 — Stripe Billing:** Add `Subscriptions` table → Stripe Checkout (20/mes) → feature gating (PDF/Analytics/history) → Stripe webhook.
+2. **GTM prompt for GROK (CMO):** Pricing confirmed 39.90 setup + 20/mes. Dispatch GTM strategy + landing page copy + Dublin outreach brief. WTI compliance as main differentiator.
+3. **Credentials rotation (manual):** User to rotate Supabase DB password in dashboard and update Streamlit Cloud Secrets; then use Password Reset UI (now live) to change admin@cafe.com password.
 
 ---
 

@@ -19,13 +19,18 @@
 ## Ativo
 
 ### Fase 8 — Billing & Subscription (Stripe)
-Monetização do Micro-SaaS.
+Monetização do Micro-SaaS. Pricing: **€39.90 setup (one-time) + €20/mês**.
 
-- [ ] Integrar Stripe Checkout para planos mensais
-- [ ] Tabela `Subscriptions` (tenant_id, plano, validade, stripe_customer_id)
-- [ ] Bloquear funcionalidades avançadas (PDF, Analytics, histórico) para plano Free
-- [ ] Webhook Stripe para atualizar estado da subscrição automaticamente
+**Scope confirmado:**
+- [ ] Tabela `Subscriptions` (tenant_id, plano, validade, stripe_customer_id, stripe_subscription_id)
+- [ ] Integrar Stripe Checkout para planos mensais (€20/mês)
+- [ ] Webhook Stripe para atualizar `Subscriptions` automaticamente (paid / cancelled / past_due)
+- [ ] Feature gating: bloquear PDF export, Analytics (Tab 4) e Roster History para plano Free
 - [ ] Página de gestão de plano no sidebar do superadmin
+
+**Fora do scope desta fase (re-avaliar em fases futuras):**
+- License Keys — incompatível com modelo web SaaS multi-tenant
+- Add-ons Stock / Clock-in — módulos não definidos; implementar só após Phase 8 completa
 
 ---
 

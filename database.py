@@ -269,6 +269,34 @@ def verify_credentials(email, password):
     return None
 
 
+def get_all_users() -> pd.DataFrame:
+    """Return all users joined with cafe name. Superadmin use only."""
+    conn = _get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT u.id, u.tenant_id, u.email, u.role, c.name AS cafe_nome "
+        "FROM Users u JOIN Cafes c ON c.id = u.tenant_id "
+        "ORDER BY c.name, u.email"
+    )
+    df = _fetchdf(cur)
+    conn.close()
+    return df
+
+
+def reset_password(email: str, new_password: str) -> bool:
+    """Update password_hash for the user with given email. Returns True if user found."""
+    conn = _get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        f"UPDATE Users SET password_hash = {_P} WHERE email = {_P}",
+        (_hash_password(new_password), email),
+    )
+    affected = cur.rowcount
+    conn.commit()
+    conn.close()
+    return affected > 0
+
+
 # ──────────────────────────────────────────────────────────────────
 # Employee CRUD — all queries scoped to tenant_id
 # ──────────────────────────────────────────────────────────────────

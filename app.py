@@ -14,6 +14,8 @@ from database import (
     criar_cafe,
     create_user,
     verify_credentials,
+    get_all_users,
+    reset_password,
     salvar_roster,
     get_rosters,
     get_roster_by_id,
@@ -214,6 +216,36 @@ with st.sidebar:
                             st.rerun()
                         except Exception as _e:
                             st.error(f"Erro: {_e}")
+
+        if 'rp_k' not in st.session_state:
+            st.session_state['rp_k'] = 0
+        _rpk = st.session_state['rp_k']
+        with st.expander("🔑 Reset de Password"):
+            _all_users = get_all_users()
+            if _all_users.empty:
+                st.caption("Nenhum utilizador encontrado.")
+            else:
+                _user_opts = [
+                    f"{r['email']} ({r['cafe_nome']})"
+                    for _, r in _all_users.iterrows()
+                ]
+                with st.form(f"form_reset_pw_{_rpk}"):
+                    _rp_sel = st.selectbox("Utilizador", _user_opts, key=f"rp_sel_{_rpk}")
+                    _rp_nova = st.text_input("Nova Password", type="password", key=f"rp_nova_{_rpk}")
+                    _rp_conf = st.text_input("Confirmar", type="password", key=f"rp_conf_{_rpk}")
+                    if st.form_submit_button("Redefinir"):
+                        if not _rp_nova or len(_rp_nova) < 6:
+                            st.error("Password deve ter pelo menos 6 caracteres.")
+                        elif _rp_nova != _rp_conf:
+                            st.error("As passwords não coincidem.")
+                        else:
+                            _rp_email = _rp_sel.split(" (")[0]
+                            if reset_password(_rp_email, _rp_nova):
+                                st.success(f"Password de {_rp_email} redefinida.")
+                                st.session_state['rp_k'] += 1
+                                st.rerun()
+                            else:
+                                st.error("Utilizador não encontrado.")
     st.divider()
     if st.button("🚪 Logout"):
         st.session_state['user'] = None
