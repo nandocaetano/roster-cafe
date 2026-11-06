@@ -2,6 +2,38 @@
 
 ---
 
+## 2026-11-06 — Phase 8: Billing Gates + Stripe Checkout UI
+
+### Added
+- `app.py`: Phase 8 billing layer wired — `import os` + `from billing_logic import is_pro, get_employee_limit, check_feature_gate, create_stripe_checkout_session`.
+- `app.py`: `_is_pro` and `_emp_limit` computed per-tenant on every rerun (live subscription check).
+- `app.py`: Sidebar **"Upgrade para Pro"** expander for non-superadmin users on free plan — shows feature list, price (€39.90 setup + €20/mês), and "Upgrade Agora" button that calls `create_stripe_checkout_session()`. Graceful `KeyError` fallback when `STRIPE_SECRET_KEY` is not yet set.
+- `app.py`: Tab 1 — employee add button now checks `len(df_equipe) >= _emp_limit` before calling `adicionar_funcionario()`. Free plan blocks at 10, Pro at 20. Error message is dynamic.
+- `app.py`: Tab 3 — PDF export gated behind `check_feature_gate(TENANT_ID, "pdf_export")`. Free users see "🔒 PDF — Pro" in the export column.
+- `app.py`: Tab 3 — Roster History section gated behind `check_feature_gate(TENANT_ID, "roster_history")`. Free users see a lock message; pro users get the full save/load UI.
+- `app.py`: Tab 4 — Analytics gated behind `check_feature_gate(TENANT_ID, "analytics")`. Free users see a lock message instead of charts.
+- `billing_logic.py`: `except Exception: return {"plano": "free"}` added to `get_subscription()` — graceful fallback when Subscriptions table missing (first run, SQLite dev, PG cold start).
+- `database.py`: `Subscriptions` table added to `init_db()` for both PG (`CREATE TABLE IF NOT EXISTS`) and SQLite. Seed row (free plan) inserted for `tenant_id=1` on first run.
+
+### Decision log
+- Free plan limit: **10 employees** (billing_logic.get_employee_limit returns 10 for non-pro). Pro plan: 20.
+- Billing check at app layer (`app.py`) uses `len(df_equipe)` (cached df) — no extra DB round-trip. `database.py` EMPLOYEE_LIMIT=20 stays as absolute safety net at DB layer.
+- Superadmin users bypass the billing sidebar panel (they manage all cafes; each cafe's admin sees the upgrade CTA).
+- `create_stripe_checkout_session()` wires €20/mês recurring. €39.90 one-time setup fee not yet wired into Stripe session (Phase 8 continuation).
+
+### Validation
+- `python -c "..."` dry-run confirmed: free plan → limit=10; pdf_export, analytics, roster_history all blocked; csv_export, solver open.
+- `app.py` syntax check: `ast.parse()` clean.
+
+### Files Modified
+- `app.py`
+- `billing_logic.py`
+- `database.py`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## 2026-11-06 — Add-ons A+B: Fairness Score + Preference Weighting in CP-SAT
 
 ### Added

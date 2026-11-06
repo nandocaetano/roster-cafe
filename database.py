@@ -115,6 +115,17 @@ def init_db():
                 criado_em  TEXT    NOT NULL DEFAULT (NOW()::TEXT)
             )
         ''')
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS Subscriptions (
+                id                     SERIAL PRIMARY KEY,
+                tenant_id              INTEGER NOT NULL REFERENCES Cafes(id),
+                plano                  TEXT    NOT NULL DEFAULT 'free',
+                validade               TEXT,
+                stripe_customer_id     TEXT,
+                stripe_subscription_id TEXT,
+                criado_em              TEXT    NOT NULL DEFAULT (NOW()::TEXT)
+            )
+        ''')
         # Safe migrations (PG 9.6+ supports IF NOT EXISTS)
         cur.execute('''
             ALTER TABLE Funcionarios
@@ -172,6 +183,17 @@ def init_db():
                 criado_em  TEXT    NOT NULL DEFAULT (datetime('now'))
             )
         ''')
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS Subscriptions (
+                id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id              INTEGER NOT NULL REFERENCES Cafes(id),
+                plano                  TEXT    NOT NULL DEFAULT 'free',
+                validade               TEXT,
+                stripe_customer_id     TEXT,
+                stripe_subscription_id TEXT,
+                criado_em              TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        ''')
         try:
             cur.execute(
                 "ALTER TABLE Funcionarios ADD COLUMN tenant_id INTEGER NOT NULL DEFAULT 1 REFERENCES Cafes(id)"
@@ -206,6 +228,13 @@ def init_db():
         f"UPDATE Users SET role = 'superadmin' WHERE email = {_P} AND role = 'admin'",
         ("admin@cafe.com",),
     )
+
+    # Seed free plan for default tenant
+    if _cnt(cur, 'Subscriptions', f"tenant_id = {_P}", (1,)) == 0:
+        cur.execute(
+            f"INSERT INTO Subscriptions (tenant_id, plano, criado_em) VALUES ({_P},{_P},{_P})",
+            (1, 'free', datetime.utcnow().isoformat()),
+        )
 
     conn.commit()
     conn.close()

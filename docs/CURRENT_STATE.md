@@ -6,7 +6,7 @@
 
 ## Active Phase
 
-**Phase 8 — Billing & Subscription (Stripe)** *(in progress — billing layer scaffolded; app.py wiring pending)*
+**Phase 8 — Billing & Subscription (Stripe)** *(in progress — billing gates wired into app.py; Stripe key + webhook pending)*
 
 **Add-ons A+B — Fairness Score + Preference Weighting** *(complete — merged into solver)*
 
@@ -30,10 +30,9 @@
 
 | File | Last Change |
 |---|---|
-| `logic.py` | Added `preferencia` dict + `contract_groups` extraction; injected `preference_cost` (PREF_PENALTY=60) and `fairness_cost` (FAIRNESS_WEIGHT=10, spread vars) into CP-SAT objective |
-| `database.py` | Added `preferencia_turno TEXT DEFAULT 'Sem preferência'` to Funcionarios; PG IF NOT EXISTS + SQLite try/except migrations; updated `adicionar_funcionario` + `atualizar_funcionario` |
-| `app.py` | Tab 1: preference selectbox (new + edit forms); Tab 2: `tipo_contrato` + `preferencia_turno` added to `inputs_semana` dict; table shows new column |
-| `test_fairness_solver.py` | New validation suite — 3 tests proving hard constraints (C5, C3, capacity) always dominate soft preference terms |
+| `app.py` | Phase 8 billing wiring: `import os` + billing_logic imports; `_is_pro`/`_emp_limit` computed at runtime; sidebar Upgrade to Pro panel (non-superadmin); Tab 1 dynamic employee cap; Tab 3 PDF export gated; Tab 3 Roster History gated; Tab 4 Analytics gated |
+| `billing_logic.py` | Added `except Exception: return {"plano": "free"}` to `get_subscription()` — graceful fallback when Subscriptions table missing |
+| `database.py` | Added `Subscriptions` table schema to both PG and SQLite `init_db()` blocks; seed free-plan row for tenant_id=1 |
 
 ---
 
@@ -55,20 +54,21 @@ app_escala/
 
 ## Blockers
 
-- **Stripe secret key not configured** — `STRIPE_SECRET_KEY` needs to be added to Streamlit Cloud Secrets before `create_stripe_checkout_session()` works in production.
-- **Credentials rotation (manual action required)** — Supabase DB password and admin@cafe.com password need to be rotated by the user in the Supabase dashboard + Streamlit Cloud Secrets.
-- **Budget thresholds (290/300/305h) hardcoded** — these are Balsbridge-specific numbers global to all tenants. Multi-tenancy design gap, not critical yet.
+- **`STRIPE_SECRET_KEY` not configured** — add to Streamlit Cloud Secrets before checkout works. UI shows a friendly warning when missing.
+- **`APP_URL` not configured** — add `APP_URL = https://your-actual-app.streamlit.app` to Streamlit Cloud Secrets for Stripe success/cancel redirect URLs.
+- **Supabase `Subscriptions` table** — `init_db()` creates it via `CREATE TABLE IF NOT EXISTS`, so it will auto-create on next cold start in Supabase. No manual SQL needed.
+- **Credentials rotation (manual action required)** — Supabase DB password and admin@cafe.com password need to be rotated.
+- **Budget thresholds (290/300/305h) hardcoded** — Balsbridge-specific, multi-tenancy gap, not critical yet.
 
 ---
 
 ## Next Immediate Steps
 
-1. **Wire billing_logic.py into app.py** — import check_feature_gate + get_employee_limit; gate PDF export (Tab 3), Analytics (Tab 4), Roster History (Tab 3) behind feature check; replace hardcoded EMPLOYEE_LIMIT with get_employee_limit().
-2. **Stripe Checkout UI** — add "Upgrade to Pro" button in sidebar for non-superadmin users, calling create_stripe_checkout_session(); add STRIPE_SECRET_KEY to Streamlit Cloud Secrets.
-3. **Stripe webhook** — POST /webhook endpoint to update Subscriptions.plano on paid/cancelled events.
-4. **Supabase migration** — run `ALTER TABLE Funcionarios ADD COLUMN IF NOT EXISTS preferencia_turno TEXT DEFAULT 'Sem preferência'` in Supabase SQL Editor to sync the new column to production DB.
-5. **Landing page** — run `/rea-analyze` on Deputy/7shifts landing pages first, then build from GTM_STRATEGY.md copy.
-6. **Credentials rotation (manual):** rotate Supabase DB password + admin@cafe.com via Password Reset UI.
+1. **Add Streamlit Cloud Secrets** — `STRIPE_SECRET_KEY` (from Stripe dashboard) + `APP_URL` (live app URL). Checkout button will then work end-to-end.
+2. **Stripe webhook** — POST `/webhook` endpoint to update `Subscriptions.plano` on `checkout.session.completed` and `customer.subscription.deleted` events.
+3. **Supabase manual migration (if needed)** — run `ALTER TABLE Funcionarios ADD COLUMN IF NOT EXISTS preferencia_turno TEXT DEFAULT 'Sem preferência'` in Supabase SQL Editor to sync the preference column if Supabase was not restarted.
+4. **Landing page** — run `/rea-analyze` on Deputy/7shifts first, then build from `docs/GTM_STRATEGY.md` copy.
+5. **Credentials rotation (manual)** — rotate Supabase DB password + admin@cafe.com via Password Reset UI.
 
 ---
 

@@ -31,6 +31,8 @@ def get_subscription(tenant_id):
                 row["stripe_subscription_id"] if _PG else row[2]
             ),
         }
+    except Exception:
+        return {"plano": "free"}
     finally:
         conn.close()
 

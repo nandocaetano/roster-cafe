@@ -1,5 +1,6 @@
 """Streamlit UI for Gerador de Escalas — imports all logic from database.py and logic.py."""
 import io
+import os
 import re
 import streamlit as st
 import pandas as pd
@@ -22,6 +23,12 @@ from database import (
     deletar_roster,
 )
 from logic import calcular_horas_turno, gerar_escala_automatica, gerar_pdf_escala
+from billing_logic import (
+    is_pro,
+    get_employee_limit,
+    check_feature_gate,
+    create_stripe_checkout_session,
+)
 
 
 # ==========================================
@@ -186,6 +193,8 @@ if 'roster_v' not in st.session_state:
 
 _cafe = _cached_cafe(TENANT_ID)
 _cafe_nome = _cafe['name'] if _cafe else "Cafe"
+_is_pro = is_pro(TENANT_ID)
+_emp_limit = get_employee_limit(TENANT_ID)
 
 with st.sidebar:
     st.markdown(f"### ☕ {_cafe_nome}")
@@ -246,6 +255,31 @@ with st.sidebar:
                                 st.rerun()
                             else:
                                 st.error("Utilizador não encontrado.")
+    if _user.get('role') != 'superadmin':
+        st.divider()
+        _plan_label = "Pro ✨" if _is_pro else "Free"
+        st.caption(f"Plano: **{_plan_label}** · Limite: {_emp_limit} funcionários")
+        if not _is_pro:
+            with st.expander("⭐ Upgrade para Pro"):
+                st.markdown(
+                    "**Desbloqueias:**\n"
+                    "- 🖨️ PDF Export\n"
+                    "- 📊 Analytics\n"
+                    "- 💾 Histórico de Escalas\n"
+                    "- 👥 Até 20 funcionários"
+                )
+                st.markdown("**€39.90** setup + **€20/mês**")
+                if st.button("🚀 Upgrade Agora", key="btn_upgrade", type="primary"):
+                    try:
+                        _base = os.environ.get("APP_URL", "https://your-app.streamlit.app")
+                        url = create_stripe_checkout_session(
+                            TENANT_ID, f"{_base}?upgraded=1", _base
+                        )
+                        st.markdown(f"[➡️ Ir para pagamento]({url})")
+                    except KeyError:
+                        st.warning("Stripe não configurado. Adicione `STRIPE_SECRET_KEY` nas Streamlit Cloud Secrets.")
+                    except Exception as _se:
+                        st.error(f"Erro ao iniciar checkout: {_se}")
     st.divider()
     if st.button("🚪 Logout"):
         st.session_state['user'] = None
@@ -307,17 +341,21 @@ with aba1:
         dias_selecionados = render_availability_selector(f"novo_{_nk}")
 
         if st.button("Cadastrar", key=f"novo_btn_{_nk}") and nome_novo:
-            try:
-                adicionar_funcionario(TENANT_ID, nome_novo, cargo_novo, contrato_novo, h_min_nova, h_max_nova, dias_selecionados, nivel_novo, pref_novo)
-                st.success(f"{nome_novo} adicionado!")
-                st.session_state['equipe_v'] += 1
-                st.session_state['novo_k'] += 1
-                st.rerun()
-            except ValueError as _ve:
-                if "limite_funcionarios" in str(_ve):
-                    st.error("Limite de 20 funcionários atingido para esta licença. Contacte o suporte para fazer upgrade.")
-                else:
-                    st.error(f"Erro ao cadastrar: {_ve}")
+            _cur_count = len(df_equipe) if not df_equipe.empty else 0
+            if _cur_count >= _emp_limit:
+                st.error(f"License Limit Reached: O seu plano atual suporta no máximo {_emp_limit} funcionários. Faça upgrade para Pro no sidebar.")
+            else:
+                try:
+                    adicionar_funcionario(TENANT_ID, nome_novo, cargo_novo, contrato_novo, h_min_nova, h_max_nova, dias_selecionados, nivel_novo, pref_novo)
+                    st.success(f"{nome_novo} adicionado!")
+                    st.session_state['equipe_v'] += 1
+                    st.session_state['novo_k'] += 1
+                    st.rerun()
+                except ValueError as _ve:
+                    if "limite_funcionarios" in str(_ve):
+                        st.error(f"License Limit Reached: Limite de {_emp_limit} funcionários atingido.")
+                    else:
+                        st.error(f"Erro ao cadastrar: {_ve}")
 
     with col2:
         st.subheader("✏️ Editar ou Remover")
@@ -517,7 +555,10 @@ with aba3:
             _xls = io.BytesIO()
             _rdf.to_excel(_xls, index=False, engine='openpyxl')
             ec2.download_button("📊 Excel", _xls.getvalue(), "escala.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-            ec3.download_button("🖨️ PDF", gerar_pdf_escala(_rdf, _cafe_nome, _semana_lbl), "escala.pdf", "application/pdf")
+            if check_feature_gate(TENANT_ID, "pdf_export"):
+                ec3.download_button("🖨️ PDF", gerar_pdf_escala(_rdf, _cafe_nome, _semana_lbl), "escala.pdf", "application/pdf")
+            else:
+                ec3.info("🔒 PDF — Pro")
 
     if col_btn_reset.button("🔄 Resetar Aba"):
         for _key in ('roster_df', 'constraints_warnings'):
@@ -616,43 +657,46 @@ with aba3:
 
         st.divider()
         st.subheader("💾 Histórico de Escalas")
-        col_salvar, col_historico = st.columns([2, 3])
+        if not check_feature_gate(TENANT_ID, "roster_history"):
+            st.info("🔒 O histórico de escalas está disponível apenas no plano Pro. Faça upgrade no sidebar para desbloquear.")
+        else:
+            col_salvar, col_historico = st.columns([2, 3])
 
-        with col_salvar:
-            st.write("**Salvar escala atual**")
-            semana_label = st.text_input("Rótulo da semana", placeholder="ex: Semana 03/11", key="semana_label_input")
-            if st.button("💾 Salvar Escala", key="btn_salvar_roster"):
-                if not semana_label.strip():
-                    st.warning("Digite um rótulo para identificar a semana.")
-                else:
-                    dados_json = roster_editado.to_json(orient="records", force_ascii=False)
-                    salvar_roster(TENANT_ID, semana_label.strip(), dados_json)
-                    st.session_state['_last_semana_label'] = semana_label.strip()
-                    st.session_state['roster_v'] += 1
-                    st.success(f"Escala '{semana_label}' salva!")
-                    st.rerun()
-
-        with col_historico:
-            st.write("**Escalas salvas**")
-            df_rosters = _cached_rosters(TENANT_ID, st.session_state['roster_v'])
-            if df_rosters.empty:
-                st.info("Nenhuma escala salva ainda.")
-            else:
-                for _, r_row in df_rosters.iterrows():
-                    r_col1, r_col2, r_col3 = st.columns([3, 2, 1])
-                    r_col1.write(f"**{r_row['semana']}**")
-                    r_col2.caption(r_row['criado_em'][:16])
-                    btn_load = r_col3.button("📂", key=f"load_{r_row['id']}", help="Carregar")
-                    btn_del = r_col3.button("🗑️", key=f"del_{r_row['id']}", help="Apagar")
-                    if btn_load:
-                        dados = get_roster_by_id(TENANT_ID, int(r_row['id']))
-                        if dados:
-                            st.session_state['roster_df'] = pd.read_json(dados, orient="records")
-                            st.rerun()
-                    if btn_del:
-                        deletar_roster(TENANT_ID, int(r_row['id']))
+            with col_salvar:
+                st.write("**Salvar escala atual**")
+                semana_label = st.text_input("Rótulo da semana", placeholder="ex: Semana 03/11", key="semana_label_input")
+                if st.button("💾 Salvar Escala", key="btn_salvar_roster"):
+                    if not semana_label.strip():
+                        st.warning("Digite um rótulo para identificar a semana.")
+                    else:
+                        dados_json = roster_editado.to_json(orient="records", force_ascii=False)
+                        salvar_roster(TENANT_ID, semana_label.strip(), dados_json)
+                        st.session_state['_last_semana_label'] = semana_label.strip()
                         st.session_state['roster_v'] += 1
+                        st.success(f"Escala '{semana_label}' salva!")
                         st.rerun()
+
+            with col_historico:
+                st.write("**Escalas salvas**")
+                df_rosters = _cached_rosters(TENANT_ID, st.session_state['roster_v'])
+                if df_rosters.empty:
+                    st.info("Nenhuma escala salva ainda.")
+                else:
+                    for _, r_row in df_rosters.iterrows():
+                        r_col1, r_col2, r_col3 = st.columns([3, 2, 1])
+                        r_col1.write(f"**{r_row['semana']}**")
+                        r_col2.caption(r_row['criado_em'][:16])
+                        btn_load = r_col3.button("📂", key=f"load_{r_row['id']}", help="Carregar")
+                        btn_del = r_col3.button("🗑️", key=f"del_{r_row['id']}", help="Apagar")
+                        if btn_load:
+                            dados = get_roster_by_id(TENANT_ID, int(r_row['id']))
+                            if dados:
+                                st.session_state['roster_df'] = pd.read_json(dados, orient="records")
+                                st.rerun()
+                        if btn_del:
+                            deletar_roster(TENANT_ID, int(r_row['id']))
+                            st.session_state['roster_v'] += 1
+                            st.rerun()
 
 # ------------------------------------------
 # ABA 4: ANÁLISE
@@ -660,7 +704,9 @@ with aba3:
 with aba4:
     st.header("📊 Análise da Semana")
 
-    if 'roster_df' not in st.session_state:
+    if not check_feature_gate(TENANT_ID, "analytics"):
+        st.info("🔒 Analytics está disponível apenas no plano Pro. Faça upgrade no sidebar para desbloquear.")
+    elif 'roster_df' not in st.session_state:
         st.info("Gere ou carregue uma escala na Aba 3 primeiro.")
     else:
         _df_an = st.session_state['roster_df']
