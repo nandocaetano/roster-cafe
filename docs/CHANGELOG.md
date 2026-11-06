@@ -2,6 +2,41 @@
 
 ---
 
+## 2026-11-06 — Fix: Warning UI Flood & Qua Duplicate Slot
+
+### Fixed
+- `logic.py`: WTI break warnings collapsed from 1 line per shift (30+ total) into 2 summary lines: one for >6h shifts (mandatory 30-min break) and one for >4.5h–6h shifts (recommended 15-min break)
+- `logic.py`: Floating point false positive `39.00h > 39.00h` — tolerance changed from `1e-9` to `0.05h` (3 min), so solver assignments at exactly the contract maximum no longer fire the "limite excedido" warning
+- `app.py`: Duplicate `07:00 - 14:00` slot in Quarta-feira `turnos_padrao` replaced with `08:00 - 16:00` (matching all other weekdays)
+- `app.py`: CP-SAT solver status line moved out of the warnings expander and displayed as a standalone `st.info()` banner
+
+### Changed
+- `app.py`: Unused `import json` removed
+
+### Files Modified
+- `app.py`
+- `logic.py`
+
+---
+
+## 2026-11-06 — Feat: OR-Tools CP-SAT Solver
+
+### Added
+- `logic.py`: Full rewrite of `gerar_escala_automatica` using Google OR-Tools CP-SAT solver
+  - Boolean variable matrix `x[e, d, s]` and `unassigned[d, s]` for every employee/day/shift triple
+  - Hard constraints: coverage (C1), availability (C2), 1 shift/day (C3), max contract hours in minutes (C4), keyholder on closing (C5), WTI clopening 11h rest (C6), novato max 1 per opening/closing block per day (C7)
+  - Objective: `BIG_PENALTY(100k) × unassigned + Σ(over + under)` per employee vs target hours
+  - Solver time limit: 10 seconds (`max_time_in_seconds`)
+  - Returns `(pd.DataFrame, list[str])` — signature unchanged, drop-in replacement
+- `requirements.txt`: `ortools>=9.8.0`
+- 8 demo employees inserted into Supabase tenant_id=1 for UI testing (Cristina, Franco, Maria, João, Sara, Liam, Pedro, Natalie)
+
+### Files Modified
+- `logic.py`
+- `requirements.txt`
+
+---
+
 ## 2026-11-06 — Perf: DB Caching & Session Guard
 
 ### Changed

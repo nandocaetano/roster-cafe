@@ -28,10 +28,9 @@
 
 | File | Last Change |
 |---|---|
-| `app.py` | `@st.cache_data` wrappers (`_cached_cafe`, `_cached_funcionarios`, `_cached_rosters`); `init_db()` guarded with `session_state['db_initialized']`; `equipe_v`/`roster_v` version counters incremented after every write to bust cache |
-| `database.py` | Full rewrite for dual-backend (psycopg2 + sqlite3); `_PG`/`_P`/`_get_conn()`/`_cnt()`/`_fetchdf()` helpers; `nivel` column; SERIAL/AUTOINCREMENT; `RETURNING id`; `EMPLOYEE_LIMIT=20` |
-| `logic.py` | Urgency-based 4-key sort (restricted avail → closing_count balance → urgency ratio → min-hours deficit); `closing_count` tracking; `_remaining_avail_days()` helper; novato constraint (max 1 novato per opening/closing block per day); 08:00-16:00 auto-drop on staff shortage |
-| `requirements.txt` | Added `psycopg2-binary>=2.9.0` |
+| `logic.py` | OR-Tools CP-SAT solver replaces greedy scheduler; boolean var matrix x[e,d,s]; hard constraints (coverage, availability, 1-shift/day, max hours, keyholder, clopening 11h, novato); BIG_PENALTY objective; WTI break warnings summarised (2 lines total instead of 30+); floating point tolerance fixed (0.05h instead of 1e-9) |
+| `app.py` | Duplicate `07:00–14:00` Qua slot removed (replaced with `08:00–16:00`); CP-SAT solver status shown as `st.info()` banner outside warnings expander; warnings re-categorised (erros / avisos / infos); unused `import json` removed |
+| `requirements.txt` | Added `ortools>=9.8.0` |
 
 ---
 
@@ -55,6 +54,7 @@ app_escala/
 
 - **No password reset flow** — forgotten passwords must be manually reset via Supabase SQL Editor. No self-service or admin UI exists yet.
 - **Budget thresholds (290/300/305h) hardcoded** — these are Balsbridge-specific numbers global to all tenants. Multi-tenancy design gap, not critical yet.
+- **Credentials rotation pending** — Supabase DB password and admin@cafe.com password should be rotated (noted previous session, still pending).
 
 ---
 
@@ -62,7 +62,7 @@ app_escala/
 
 1. **Phase 8 — Stripe Billing:** Integrate Stripe Checkout for monthly plans; add `Subscriptions` table (tenant_id, plano, validade, stripe_customer_id); gate PDF/Analytics/history behind paid plan.
 2. **Add password reset UI** — superadmin can set a new password for any user in the same tenant; needed for the Natalie / Balsbridge credential situation.
-3. **Update `docs/ARCHITECTURE.md`** — add Rosters table schema, `nivel` column, dual-backend section, 5-tab module map, new session state keys, caching strategy.
+3. **Update `docs/ARCHITECTURE.md`** — add Rosters table schema, `nivel` column, dual-backend section, 5-tab module map, new session state keys, caching strategy, CP-SAT solver overview.
 
 ---
 
