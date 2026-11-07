@@ -37,7 +37,7 @@ def pode_trabalhar(nome, turno_str, dia, config_semana):
     return True
 
 
-def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_horas: float = 2.0) -> tuple:
+def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_horas: float = 2.0, slot_config: dict = None) -> tuple:
     """Generate a constraint-compliant weekly roster via OR-Tools CP-SAT solver."""
     from ortools.sat.python import cp_model
 
@@ -111,6 +111,16 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
     employees = [n for n, d in config_semana.items() if bool(d.get("vai_trabalhar", True))]
     days = list(turnos_padrao)
 
+    # Build slot headcount and priority from slot_config
+    # slot_config: {(day, shift): {"headcount": int, "priority": "essential"|"optional"}}
+    _slot_hc: dict = {}
+    _slot_opt: dict = {}
+    for d in days:
+        for s in turnos_padrao[d]:
+            _cfg_s = (slot_config or {}).get((d, s), {})
+            _slot_hc[d, s] = max(1, int(_cfg_s.get("headcount", 1)))
+            _slot_opt[d, s] = _cfg_s.get("priority", "essential") == "optional"
+
     if not employees:
         records = [{"Dia": d, "Horário": s, "Funcionário": "A Preencher"}
                    for d in days for s in turnos_padrao[d]]
@@ -170,15 +180,15 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
 
     for d in days:
         for s in turnos_padrao[d]:
-            unassigned[d, s] = model.NewBoolVar(f"unassigned|{d}|{s}")
+            unassigned[d, s] = model.NewIntVar(0, _slot_hc[d, s], f"unassigned|{d}|{s}")
 
     # ── HARD CONSTRAINTS ─────────────────────────────────────────────────────
 
-    # C1: Coverage — exactly 1 employee OR explicitly unassigned
+    # C1: Coverage — exactly headcount employees (shortfall tracked in unassigned)
     for d in days:
         for s in turnos_padrao[d]:
             model.Add(
-                sum(x[e, d, s] for e in employees) + unassigned[d, s] == 1
+                sum(x[e, d, s] for e in employees) + unassigned[d, s] == _slot_hc[d, s]
             )
 
     # C2: Availability — forbid unavailable assignments
@@ -240,10 +250,13 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
 
     # ── OBJECTIVE ────────────────────────────────────────────────────────────
 
-    BIG_PENALTY = 100_000  # strongly prefer filling every shift
+    BIG_PENALTY      = 100_000  # essential slots — solver strongly avoids leaving unfilled
+    OPTIONAL_PENALTY = 1_000    # optional slots — dropped first when understaffed
 
-    unassigned_cost = sum(BIG_PENALTY * unassigned[d, s]
-                          for d in days for s in turnos_padrao[d])
+    unassigned_cost = sum(
+        (OPTIONAL_PENALTY if _slot_opt[d, s] else BIG_PENALTY) * unassigned[d, s]
+        for d in days for s in turnos_padrao[d]
+    )
 
     # Deviation from target hours (absolute value via over/under split)
     over_vars  = {}
@@ -300,7 +313,22 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
         fairness_cost_terms.append(FAIRNESS_WEIGHT * spread)
     fairness_cost = sum(fairness_cost_terms) if fairness_cost_terms else 0
 
-    model.Minimize(unassigned_cost + hour_deviation_cost + preference_cost + fairness_cost)
+    # Soft: short shifts (<6h) prefer part-timers — penalise full-timers when a part-timer is available
+    PARTTIME_AFFINITY = 500
+    _parttimers = contract_groups.get("Part-time", [])
+    _fulltimers  = contract_groups.get("Full-time", [])
+    _affinity_terms = []
+    for d in days:
+        for s in turnos_padrao[d]:
+            if duration_min(s) >= 6 * 60:
+                continue
+            if any(is_available(e, d, s) for e in _parttimers):
+                for e in _fulltimers:
+                    if is_available(e, d, s):
+                        _affinity_terms.append(PARTTIME_AFFINITY * x[e, d, s])
+    parttime_affinity_cost = sum(_affinity_terms) if _affinity_terms else 0
+
+    model.Minimize(unassigned_cost + hour_deviation_cost + preference_cost + fairness_cost + parttime_affinity_cost)
 
     # ── SOLVE ────────────────────────────────────────────────────────────────
 
@@ -312,12 +340,14 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
     if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         for d in days:
             for s in turnos_padrao[d]:
-                assigned = "A Preencher"
-                for e in employees:
-                    if solver.Value(x[e, d, s]) == 1:
-                        assigned = e
-                        break
-                records.append({"Dia": d, "Horário": s, "Funcionário": assigned})
+                assigned_emps = [e for e in employees if solver.Value(x[e, d, s]) == 1]
+                shortfall = solver.Value(unassigned[d, s])
+                for e in assigned_emps:
+                    records.append({"Dia": d, "Horário": s, "Funcionário": e})
+                for _ in range(shortfall):
+                    records.append({"Dia": d, "Horário": s, "Funcionário": "A Preencher"})
+                if not assigned_emps and shortfall == 0:
+                    records.append({"Dia": d, "Horário": s, "Funcionário": "A Preencher"})
     else:
         warnings.append(
             "CP-SAT: modelo infeasível com as constraints actuais — "
@@ -329,12 +359,15 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
 
     # ── POST-SOLVE WARNINGS ──────────────────────────────────────────────────
 
-    # Unassigned shifts
+    # Unassigned shifts (deduplicate by slot — headcount > 1 may produce multiple A Preencher rows)
+    _warned_slots: set = set()
     for row in records:
         if row["Funcionário"] == "A Preencher":
             d, s = row["Dia"], row["Horário"]
-            reason = "nenhum keyholder elegível" if s in closing_shifts_by_day[d] else "nenhum funcionário elegível"
-            warnings.append(f"{d} - {s}: turno não atribuído ({reason}).")
+            if (d, s) not in _warned_slots:
+                reason = "nenhum keyholder elegível" if s in closing_shifts_by_day[d] else "nenhum funcionário elegível"
+                warnings.append(f"{d} - {s}: turno não atribuído ({reason}).")
+                _warned_slots.add((d, s))
 
     if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
         return pd.DataFrame(records, columns=output_columns), warnings
@@ -410,23 +443,24 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
             warnings.append(f"{d} - {s}: regra de fechamento sem keyholder.")
 
     # Clopening cross-day post-solve verification
-    schedule_map = {(r["Dia"], r["Horário"]): r["Funcionário"] for r in records}
+    schedule_map: dict = {}
+    for r in records:
+        if r["Funcionário"] != "A Preencher":
+            schedule_map.setdefault((r["Dia"], r["Horário"]), []).append(r["Funcionário"])
     for i, d in enumerate(days[:-1]):
         next_d = days[i + 1]
         for s_close in closing_shifts_by_day[d]:
-            worker = schedule_map.get((d, s_close), "A Preencher")
-            if worker == "A Preencher":
-                continue
-            for s_open in opening_shifts_by_day[next_d]:
-                if schedule_map.get((next_d, s_open)) == worker:
-                    t_close = parse_times(s_close)
-                    t_open  = parse_times(s_open)
-                    if t_close and t_open:
-                        gap = (24 * 60 - t_close[1]) + t_open[0]
-                        if gap < 11 * 60:
-                            warnings.append(
-                                f"{worker}: clopening inválido entre {d} e {next_d}."
-                            )
+            for worker in schedule_map.get((d, s_close), []):
+                for s_open in opening_shifts_by_day[next_d]:
+                    if worker in schedule_map.get((next_d, s_open), []):
+                        t_close = parse_times(s_close)
+                        t_open  = parse_times(s_open)
+                        if t_close and t_open:
+                            gap = (24 * 60 - t_close[1]) + t_open[0]
+                            if gap < 11 * 60:
+                                warnings.append(
+                                    f"{worker}: clopening inválido entre {d} e {next_d}."
+                                )
 
     # Solver status note
     if status == cp_model.OPTIMAL:
@@ -482,3 +516,126 @@ def gerar_pdf_escala(roster_df, cafe_nome: str = "Café", semana_label: str = ""
 
     result = pdf.output(dest='S')
     return result.encode('latin-1') if isinstance(result, str) else bytes(result)
+
+
+def gerar_excel_escala(roster_df: pd.DataFrame, config_semana: dict = None,
+                        cafe_nome: str = "Café", semana_label: str = "") -> bytes:
+    """Excel export with two sheets: shift grid + per-employee hour summary (Nati's layout)."""
+    import io as _io
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+        from openpyxl.utils import get_column_letter
+    except ImportError:
+        return b""
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Escala"
+    ws_res = wb.create_sheet("Resumo de Horas")
+
+    days = list(dict.fromkeys(roster_df["Dia"].tolist()))
+
+    day_data: dict = {d: [] for d in days}
+    for _, row in roster_df.iterrows():
+        day_data[row["Dia"]].append((row["Horário"], row["Funcionário"]))
+
+    DAY_FILL   = PatternFill("solid", fgColor="2D2D2D")
+    SHIFT_FILL = PatternFill("solid", fgColor="4A6FA5")
+    ALT_FILL   = PatternFill("solid", fgColor="EAF2FB")
+    WHT_FILL   = PatternFill("solid", fgColor="FFFFFF")
+    HDR_FILL   = PatternFill("solid", fgColor="3A5F8C")
+    white_bold = Font(bold=True, color="FFFFFF")
+    center     = Alignment(horizontal="center", vertical="center")
+
+    def _border():
+        s = Side(style="thin", color="CCCCCC")
+        return Border(left=s, right=s, top=s, bottom=s)
+
+    # ── Sheet 1: Shift grid ──────────────────────────────────────────────────
+    total_cols_ws = max(1, 1 + len(days) * 3)
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=total_cols_ws)
+    tc = ws.cell(row=1, column=1, value=f"{cafe_nome} — Escala da Semana")
+    tc.font = Font(bold=True, size=14); tc.alignment = center
+    if semana_label:
+        ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=total_cols_ws)
+        ws.cell(row=2, column=1, value=semana_label).alignment = center
+
+    HDR_ROW, SUB_ROW, DATA_START = 3, 4, 5
+    ws.column_dimensions["A"].width = 3
+
+    for i, day in enumerate(days):
+        col_sh = 2 + i * 3
+        col_st = col_sh + 1
+        ws.merge_cells(start_row=HDR_ROW, start_column=col_sh,
+                       end_row=HDR_ROW, end_column=col_st)
+        dc = ws.cell(row=HDR_ROW, column=col_sh, value=day.upper())
+        dc.font = white_bold; dc.fill = DAY_FILL; dc.alignment = center
+        for col, lbl in ((col_sh, "Turno"), (col_st, "Colaborador")):
+            sc2 = ws.cell(row=SUB_ROW, column=col, value=lbl)
+            sc2.font = white_bold; sc2.fill = SHIFT_FILL; sc2.alignment = center
+        ws.column_dimensions[get_column_letter(col_sh)].width = 24
+        ws.column_dimensions[get_column_letter(col_st)].width = 22
+        ws.column_dimensions[get_column_letter(col_st + 1)].width = 2
+
+        for r_idx, (shift, name) in enumerate(day_data[day]):
+            rn = DATA_START + r_idx
+            bg = ALT_FILL if r_idx % 2 == 0 else WHT_FILL
+            for col, val in ((col_sh, shift), (col_st, name)):
+                cell = ws.cell(row=rn, column=col, value=val)
+                cell.fill = bg; cell.border = _border()
+
+    # ── Sheet 2: Employee hour summary ───────────────────────────────────────
+    hours_lookup: dict = {}
+    for _, row in roster_df.iterrows():
+        name = row["Funcionário"]
+        if name == "A Preencher":
+            continue
+        h = calcular_horas_turno(str(row["Horário"]))
+        key = (name, row["Dia"])
+        hours_lookup[key] = hours_lookup.get(key, 0.0) + h
+
+    if config_semana:
+        emps = [n for n, d in config_semana.items() if d.get("vai_trabalhar", True)]
+    else:
+        seen: set = set()
+        emps = []
+        for n in roster_df["Funcionário"]:
+            if n != "A Preencher" and n not in seen:
+                seen.add(n); emps.append(n)
+
+    ws_res.merge_cells(start_row=1, start_column=1, end_row=1, end_column=len(days) + 2)
+    res_title = ws_res.cell(row=1, column=1, value=f"{cafe_nome} — Resumo de Horas")
+    res_title.font = Font(bold=True, size=13); res_title.alignment = center
+
+    ws_res.cell(row=2, column=1, value="Colaborador").font = white_bold
+    ws_res.cell(row=2, column=1).fill = HDR_FILL
+    ws_res.cell(row=2, column=1).alignment = center
+    ws_res.column_dimensions["A"].width = 24
+    for i, day in enumerate(days):
+        c = ws_res.cell(row=2, column=2 + i, value=day)
+        c.font = white_bold; c.fill = HDR_FILL; c.alignment = center
+        ws_res.column_dimensions[get_column_letter(2 + i)].width = 10
+    tot_col = 2 + len(days)
+    ws_res.cell(row=2, column=tot_col, value="Total").font = white_bold
+    ws_res.cell(row=2, column=tot_col).fill = HDR_FILL
+    ws_res.cell(row=2, column=tot_col).alignment = center
+    ws_res.column_dimensions[get_column_letter(tot_col)].width = 10
+
+    for r_idx, emp in enumerate(emps):
+        rn = 3 + r_idx
+        bg = ALT_FILL if r_idx % 2 == 0 else WHT_FILL
+        ws_res.cell(row=rn, column=1, value=emp).fill = bg
+        total = 0.0
+        for i, day in enumerate(days):
+            h = hours_lookup.get((emp, day), 0.0)
+            cell = ws_res.cell(row=rn, column=2 + i, value=round(h, 2) if h else "")
+            cell.fill = bg; cell.border = _border(); cell.alignment = center
+            total += h
+        tc3 = ws_res.cell(row=rn, column=tot_col, value=round(total, 2))
+        tc3.fill = bg; tc3.border = _border(); tc3.alignment = center
+        tc3.font = Font(bold=True)
+
+    buf = _io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()

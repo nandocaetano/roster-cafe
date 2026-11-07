@@ -22,7 +22,7 @@ from database import (
     get_roster_by_id,
     deletar_roster,
 )
-from logic import calcular_horas_turno, gerar_escala_automatica, gerar_pdf_escala
+from logic import calcular_horas_turno, gerar_escala_automatica, gerar_pdf_escala, gerar_excel_escala
 from billing_logic import (
     is_pro,
     get_employee_limit,
@@ -528,9 +528,43 @@ with aba3:
         "Dom": ["07:30 - 14:00", "07:30 - 15:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
     }
 
+    # Initialize slot_config once: 08:00-16:00 is optional by default (dropped first when understaffed)
+    if 'slot_config' not in st.session_state:
+        _sc_init: dict = {}
+        for _d_init, _t_init in turnos_padrao.items():
+            for _s_init in _t_init:
+                _prio = "optional" if "08:00 - 16:00" in _s_init else "essential"
+                _sc_init[(_d_init, _s_init)] = {"headcount": 1, "priority": _prio}
+        st.session_state['slot_config'] = _sc_init
+
     df_equipe_atual = _cached_funcionarios(TENANT_ID, st.session_state.get('equipe_v', 0))
     lista_nomes = df_equipe_atual['nome'].tolist() if not df_equipe_atual.empty else []
     lista_nomes.append("Someone (Outra Loja)")
+
+    with st.expander("⚙️ Headcount e Prioridade por Turno", expanded=False):
+        st.caption("Defina quantas pessoas precisas por turno. 'Opcional' = eliminado primeiro quando a equipa está curta.")
+        _sc_ui = st.session_state['slot_config']
+        _day_tabs_list = list(turnos_padrao.keys())
+        _tab_objects = st.tabs(_day_tabs_list)
+        for _tab_obj, _d_ui in zip(_tab_objects, _day_tabs_list):
+            with _tab_obj:
+                for _s_ui in turnos_padrao[_d_ui]:
+                    _key_ui = (_d_ui, _s_ui)
+                    _cur_ui = _sc_ui.get(_key_ui, {"headcount": 1, "priority": "essential"})
+                    _cu1, _cu2, _cu3 = st.columns([4, 2, 2])
+                    _cu1.write(_s_ui)
+                    _new_hc = _cu2.number_input(
+                        "P", min_value=1, max_value=6, value=_cur_ui["headcount"],
+                        key=f"sc_hc_{_d_ui}_{_s_ui}", label_visibility="collapsed"
+                    )
+                    _new_opt = _cu3.toggle(
+                        "Opcional", value=(_cur_ui["priority"] == "optional"),
+                        key=f"sc_opt_{_d_ui}_{_s_ui}"
+                    )
+                    _sc_ui[_key_ui] = {
+                        "headcount": int(_new_hc),
+                        "priority": "optional" if _new_opt else "essential"
+                    }
 
     col_btn_vazio, col_btn_auto, col_btn_reset = st.columns(3)
 
@@ -549,7 +583,10 @@ with aba3:
             st.error("Erro: Vá na Aba 2 e clique em 'Confirmar Horas da Semana' primeiro.")
         else:
             margem = st.session_state.get('margem_horas', 2.0)
-            df_escala, constraints_warnings = gerar_escala_automatica(config_semana, turnos_padrao, margem)
+            df_escala, constraints_warnings = gerar_escala_automatica(
+                config_semana, turnos_padrao, margem,
+                slot_config=st.session_state.get('slot_config')
+            )
             st.session_state['roster_df'] = df_escala
             st.session_state['constraints_warnings'] = constraints_warnings
             st.rerun()
@@ -560,9 +597,8 @@ with aba3:
             _semana_lbl = st.session_state.get('_last_semana_label', '')
             ec1, ec2, ec3 = st.columns(3)
             ec1.download_button("📄 CSV", _rdf.to_csv(index=False).encode('utf-8'), "escala.csv", "text/csv")
-            _xls = io.BytesIO()
-            _rdf.to_excel(_xls, index=False, engine='openpyxl')
-            ec2.download_button("📊 Excel", _xls.getvalue(), "escala.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            _xls_nati = gerar_excel_escala(_rdf, st.session_state.get('config_semana'), _cafe_nome, _semana_lbl)
+            ec2.download_button("📊 Excel", _xls_nati, "escala.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             if check_feature_gate(TENANT_ID, "pdf_export"):
                 ec3.download_button("🖨️ PDF", gerar_pdf_escala(_rdf, _cafe_nome, _semana_lbl), "escala.pdf", "application/pdf")
             else:
