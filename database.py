@@ -1,5 +1,6 @@
 """Database layer: SQLite (local dev) or PostgreSQL via DATABASE_URL (Supabase/cloud)."""
 import hashlib
+import json
 import os
 import sqlite3
 import pandas as pd
@@ -8,6 +9,17 @@ from datetime import datetime
 DB_NAME = 'roster_cafe.db'
 _PG = bool(os.environ.get('DATABASE_URL'))   # True on Streamlit Cloud with secret set
 _P  = '%s' if _PG else '?'                  # SQL parameter placeholder
+
+SHIFT_DAYS = ("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
+DEFAULT_SHIFT_TEMPLATES = {
+    "Seg": [("07:00", "12:00", False), ("07:00", "14:00", False), ("07:30", "15:00", False), ("08:00", "16:00", False), ("09:00", "18:15", True), ("12:00", "18:15", True), ("14:00", "18:15", True)],
+    "Ter": [("07:00", "12:00", False), ("07:00", "14:00", False), ("07:30", "15:00", False), ("08:00", "16:00", False), ("09:00", "18:15", True), ("12:00", "18:15", True), ("14:00", "18:15", True)],
+    "Qua": [("06:30", "12:00", False), ("07:00", "14:00", False), ("07:30", "15:00", False), ("08:00", "16:00", False), ("09:00", "18:15", True), ("12:00", "18:15", True), ("14:00", "18:15", True)],
+    "Qui": [("07:00", "12:00", False), ("07:00", "14:00", False), ("07:30", "15:00", False), ("08:00", "16:00", False), ("09:00", "18:15", True), ("12:00", "18:15", True), ("14:00", "18:15", True)],
+    "Sex": [("07:00", "12:00", False), ("07:00", "14:00", False), ("07:30", "15:00", False), ("08:00", "16:00", False), ("09:00", "18:15", True), ("12:00", "18:15", True), ("14:00", "18:15", True)],
+    "Sáb": [("07:30", "14:00", False), ("07:30", "15:00", False), ("09:00", "18:15", True), ("12:00", "18:15", True), ("14:00", "18:15", True)],
+    "Dom": [("07:30", "14:00", False), ("07:30", "15:00", False), ("09:00", "18:15", True), ("12:00", "18:15", True), ("14:00", "18:15", True)],
+}
 
 
 # ──────────────────────────────────────────────────────────────────
@@ -126,6 +138,29 @@ def init_db():
                 criado_em              TEXT    NOT NULL DEFAULT (NOW()::TEXT)
             )
         ''')
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS ShiftTemplates (
+                id          SERIAL PRIMARY KEY,
+                tenant_id   INTEGER NOT NULL REFERENCES Cafes(id),
+                dia         TEXT NOT NULL,
+                hora_inicio TEXT NOT NULL,
+                hora_fim    TEXT NOT NULL,
+                fechamento  BOOLEAN NOT NULL DEFAULT FALSE,
+                headcount   INTEGER NOT NULL DEFAULT 1,
+                prioridade  TEXT NOT NULL DEFAULT 'essential',
+                ativo       BOOLEAN NOT NULL DEFAULT TRUE,
+                criado_em   TEXT NOT NULL DEFAULT (NOW()::TEXT)
+            )
+        ''')
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS WeeklySetup (
+                id          SERIAL PRIMARY KEY,
+                tenant_id   INTEGER NOT NULL REFERENCES Cafes(id),
+                semana_key  TEXT NOT NULL,
+                dados_json  TEXT NOT NULL,
+                criado_em   TEXT NOT NULL DEFAULT (NOW()::TEXT)
+            )
+        ''')
         # Safe migrations (PG 9.6+ supports IF NOT EXISTS)
         cur.execute('''
             ALTER TABLE Funcionarios
@@ -192,6 +227,29 @@ def init_db():
                 stripe_customer_id     TEXT,
                 stripe_subscription_id TEXT,
                 criado_em              TEXT    NOT NULL DEFAULT (datetime('now'))
+            )
+        ''')
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS ShiftTemplates (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id   INTEGER NOT NULL REFERENCES Cafes(id),
+                dia         TEXT NOT NULL,
+                hora_inicio TEXT NOT NULL,
+                hora_fim    TEXT NOT NULL,
+                fechamento  BOOLEAN NOT NULL DEFAULT 0,
+                headcount   INTEGER NOT NULL DEFAULT 1,
+                prioridade  TEXT NOT NULL DEFAULT 'essential',
+                ativo       BOOLEAN NOT NULL DEFAULT 1,
+                criado_em   TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        ''')
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS WeeklySetup (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id   INTEGER NOT NULL REFERENCES Cafes(id),
+                semana_key  TEXT NOT NULL,
+                dados_json  TEXT NOT NULL,
+                criado_em   TEXT NOT NULL DEFAULT (datetime('now'))
             )
         ''')
         try:
@@ -397,6 +455,187 @@ def desativar_funcionario(tenant_id, id_func):
     )
     conn.commit()
     conn.close()
+
+
+# ──────────────────────────────────────────────────────────────────
+# Shift templates & weekly setup
+# ──────────────────────────────────────────────────────────────────
+
+def _shift_text(hora_inicio, hora_fim, fechamento=False):
+    suffix = " (Fechamento)" if fechamento else ""
+    return f"{hora_inicio} - {hora_fim}{suffix}"
+
+
+def get_shift_templates(tenant_id):
+    conn = _get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        f"""SELECT id, dia, hora_inicio, hora_fim, fechamento, headcount, prioridade, ativo
+            FROM ShiftTemplates
+            WHERE tenant_id = {_P} AND ativo = TRUE
+            ORDER BY CASE dia WHEN 'Seg' THEN 1 WHEN 'Ter' THEN 2 WHEN 'Qua' THEN 3
+                              WHEN 'Qui' THEN 4 WHEN 'Sex' THEN 5 WHEN 'Sáb' THEN 6 WHEN 'Dom' THEN 7 ELSE 8 END,
+                     hora_inicio, hora_fim, id""",
+        (tenant_id,),
+    )
+    df = _fetchdf(cur)
+    conn.close()
+    return df
+
+
+def save_shift_templates(tenant_id, rows):
+    if hasattr(rows, "to_dict"):
+        rows = rows.to_dict("records")
+    conn = _get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute(f"DELETE FROM ShiftTemplates WHERE tenant_id = {_P}", (tenant_id,))
+        for row in rows:
+            dia = str(row.get("dia", row.get("Dia", ""))).strip()
+            inicio = str(row.get("hora_inicio", row.get("Início", ""))).strip()
+            fim = str(row.get("hora_fim", row.get("Fim", ""))).strip()
+            if dia not in SHIFT_DAYS or not inicio or not fim:
+                continue
+            fechamento = bool(row.get("fechamento", row.get("Fechamento", False)))
+            headcount = max(1, min(6, int(row.get("headcount", row.get("Pessoas", 1)) or 1)))
+            prioridade = str(row.get("prioridade", "optional" if row.get("Opcional", False) else "essential"))
+            prioridade = "optional" if prioridade == "optional" else "essential"
+            ativo = bool(row.get("ativo", row.get("Ativo", True)))
+            cur.execute(
+                f"""INSERT INTO ShiftTemplates
+                    (tenant_id, dia, hora_inicio, hora_fim, fechamento, headcount, prioridade, ativo, criado_em)
+                    VALUES ({_P},{_P},{_P},{_P},{_P},{_P},{_P},{_P},{_P})""",
+                (tenant_id, dia, inicio, fim, fechamento, headcount, prioridade, ativo, datetime.utcnow().isoformat()),
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def seed_shift_templates(tenant_id):
+    if not get_shift_templates(tenant_id).empty:
+        return get_shift_templates(tenant_id)
+    rows = []
+    for dia in SHIFT_DAYS:
+        for inicio, fim, fechamento in DEFAULT_SHIFT_TEMPLATES[dia]:
+            rows.append({
+                "dia": dia,
+                "hora_inicio": inicio,
+                "hora_fim": fim,
+                "fechamento": fechamento,
+                "headcount": 1,
+                "prioridade": "optional" if inicio == "08:00" and fim == "16:00" else "essential",
+                "ativo": True,
+            })
+    save_shift_templates(tenant_id, rows)
+    return get_shift_templates(tenant_id)
+
+
+def build_turnos_padrao(tenant_id):
+    templates = get_shift_templates(tenant_id)
+    if templates.empty:
+        templates = seed_shift_templates(tenant_id)
+    result = {day: [] for day in SHIFT_DAYS}
+    for _, row in templates.iterrows():
+        result.setdefault(row["dia"], []).append(
+            _shift_text(row["hora_inicio"], row["hora_fim"], bool(row["fechamento"]))
+        )
+    return {day: shifts for day, shifts in result.items() if shifts}
+
+
+def build_slot_config(tenant_id):
+    templates = get_shift_templates(tenant_id)
+    if templates.empty:
+        templates = seed_shift_templates(tenant_id)
+    config = {}
+    for _, row in templates.iterrows():
+        shift = _shift_text(row["hora_inicio"], row["hora_fim"], bool(row["fechamento"]))
+        config[(row["dia"], shift)] = {
+            "headcount": max(1, min(6, int(row["headcount"]))),
+            "priority": "optional" if row["prioridade"] == "optional" else "essential",
+        }
+    return config
+
+
+def get_weekly_setup(tenant_id, semana_key=None):
+    conn = _get_conn()
+    cur = conn.cursor()
+    if semana_key:
+        cur.execute(
+            f"""SELECT dados_json FROM WeeklySetup
+                WHERE tenant_id = {_P} AND semana_key = {_P}
+                ORDER BY criado_em DESC LIMIT 1""",
+            (tenant_id, semana_key),
+        )
+    else:
+        cur.execute(
+            f"""SELECT dados_json FROM WeeklySetup
+                WHERE tenant_id = {_P}
+                ORDER BY criado_em DESC LIMIT 1""",
+            (tenant_id,),
+        )
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        return None
+    raw = row["dados_json"] if _PG else row[0]
+    try:
+        return json.loads(raw)
+    except (TypeError, json.JSONDecodeError):
+        return None
+
+
+def save_weekly_setup(tenant_id, semana_key, overrides):
+    conn = _get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        f"""INSERT INTO WeeklySetup (tenant_id, semana_key, dados_json, criado_em)
+            VALUES ({_P},{_P},{_P},{_P})""",
+        (tenant_id, str(semana_key).strip(), json.dumps(overrides, ensure_ascii=False), datetime.utcnow().isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def build_config_semana(tenant_id, overrides=None):
+    employees = get_funcionarios_ativos(tenant_id)
+    overrides = overrides or {}
+    employee_overrides = overrides.get("employees", overrides)
+    config = {}
+    for _, row in employees.iterrows():
+        nome = row["nome"]
+        dias = {
+            "Seg": row.get("d_seg", "Indisponível"),
+            "Ter": row.get("d_ter", "Indisponível"),
+            "Qua": row.get("d_qua", "Indisponível"),
+            "Qui": row.get("d_qui", "Indisponível"),
+            "Sex": row.get("d_sex", "Indisponível"),
+            "Sáb": row.get("d_sab", "Indisponível"),
+            "Dom": row.get("d_dom", "Indisponível"),
+        }
+        config[nome] = {
+            "vai_trabalhar": True,
+            "horas_alvo": int(row.get("horas_max", 0) or 0),
+            "horas_min": float(row.get("horas_min", 0) or 0),
+            "horas_max": float(row.get("horas_max", 0) or 0),
+            "cargo": row.get("cargo", ""),
+            "tipo_contrato": str(row.get("tipo_contrato", "Full-time") or "Full-time"),
+            "nivel": str(row.get("nivel", "experiente") or "experiente"),
+            "preferencia_turno": str(row.get("preferencia_turno", "Sem preferência") or "Sem preferência"),
+            "disponibilidade": dias,
+            "dias_folga": [],
+            "dias_ferias": [],
+            "dias_treinamento": [],
+            "horas_treinamento": 0.0,
+        }
+        allowed = {"vai_trabalhar", "horas_alvo", "dias_folga", "dias_ferias", "dias_treinamento", "horas_treinamento"}
+        for key, value in (employee_overrides.get(nome, {}) or {}).items():
+            if key in allowed:
+                config[nome][key] = value
+    return config
 
 
 # ──────────────────────────────────────────────────────────────────

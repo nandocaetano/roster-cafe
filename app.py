@@ -21,6 +21,14 @@ from database import (
     get_rosters,
     get_roster_by_id,
     deletar_roster,
+    get_shift_templates,
+    save_shift_templates,
+    seed_shift_templates,
+    build_turnos_padrao,
+    build_slot_config,
+    get_weekly_setup,
+    save_weekly_setup,
+    build_config_semana,
 )
 from logic import calcular_horas_turno, gerar_escala_automatica, gerar_pdf_escala, gerar_excel_escala
 from billing_logic import (
@@ -296,7 +304,10 @@ st.title("☕ Gerenciador de Escalas - Cafe")
 if st.session_state.pop("_upgrade_msg", False):
     st.success("🎉 Pagamento confirmado! O teu plano Roster Café Pro está ativo.")
 
-aba1, aba2, aba3, aba4, aba5 = st.tabs(["👥 Gestão do Time", "⚙️ Setup da Semana", "📅 Rascunho e Aprovação", "📊 Análise", "📖 Ajuda"])
+aba1, aba_config, aba2, aba3, aba4, aba5 = st.tabs([
+    "👥 Gestão do Time", "🕒 Configurações", "⚙️ Setup da Semana",
+    "📅 Rascunho e Aprovação", "📊 Análise", "📖 Ajuda",
+])
 
 lista_cargos_oficiais = ["Manager", "Assistant Manager", "Head Barista", "Barista"]
 
@@ -418,6 +429,82 @@ with aba1:
                 st.rerun()
 
 # ------------------------------------------
+# ABA CONFIG: TURNOS E CAPACIDADE
+# ------------------------------------------
+with aba_config:
+    st.header("🕒 Configurações de Turnos")
+    _templates = get_shift_templates(TENANT_ID)
+    if _templates.empty:
+        _templates = seed_shift_templates(TENANT_ID)
+
+    _template_rows = []
+    for _, _row in _templates.iterrows():
+        _template_rows.append({
+            "Dia": _row["dia"],
+            "Início": _row["hora_inicio"],
+            "Fim": _row["hora_fim"],
+            "Fechamento": bool(_row["fechamento"]),
+            "Pessoas": int(_row["headcount"]),
+            "Opcional": _row["prioridade"] == "optional",
+            "Ativo": bool(_row["ativo"]),
+        })
+
+    _edited_templates = st.data_editor(
+        pd.DataFrame(_template_rows),
+        column_config={
+            "Dia": st.column_config.SelectboxColumn("Dia", options=["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"], required=True),
+            "Início": st.column_config.TextColumn("Início", help="Formato HH:MM"),
+            "Fim": st.column_config.TextColumn("Fim", help="Formato HH:MM"),
+            "Fechamento": st.column_config.CheckboxColumn("Fechamento"),
+            "Pessoas": st.column_config.NumberColumn("Pessoas", min_value=1, max_value=6, step=1, format="%d"),
+            "Opcional": st.column_config.CheckboxColumn("Opcional"),
+            "Ativo": st.column_config.CheckboxColumn("Ativo"),
+        },
+        num_rows="dynamic",
+        hide_index=True,
+        use_container_width=True,
+        key="shift_templates_editor",
+    )
+    if st.button("💾 Salvar Configuração de Turnos", type="primary"):
+        _rows_to_save = []
+        _template_errors = []
+        for _, _row in _edited_templates.iterrows():
+            _day = _row.get("Dia")
+            _start = _row.get("Início")
+            _end = _row.get("Fim")
+            _active = _row.get("Ativo", True)
+            if pd.isna(_day) or pd.isna(_start) or pd.isna(_end) or pd.isna(_active) or not bool(_active):
+                continue
+            _day, _start, _end = str(_day).strip(), str(_start).strip(), str(_end).strip()
+            if _day not in ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]:
+                _template_errors.append(f"Dia inválido: {_day}")
+                continue
+            if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", _start) or not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", _end):
+                _template_errors.append(f"Horário inválido: {_start}–{_end}")
+                continue
+            _rows_to_save.append({
+                "dia": _day,
+                "hora_inicio": _start,
+                "hora_fim": _end,
+                "fechamento": bool(_row.get("Fechamento", False)) if not pd.isna(_row.get("Fechamento", False)) else False,
+                "headcount": max(1, min(6, int(_row.get("Pessoas", 1)) if not pd.isna(_row.get("Pessoas", 1)) else 1)),
+                "prioridade": "optional" if (not pd.isna(_row.get("Opcional", False)) and bool(_row.get("Opcional", False))) else "essential",
+                "ativo": True,
+            })
+        if _template_errors:
+            for _error in _template_errors:
+                st.error(_error)
+        elif not _rows_to_save:
+            st.error("Guarda pelo menos um turno ativo.")
+        else:
+            save_shift_templates(TENANT_ID, _rows_to_save)
+            st.session_state.pop("turnos_padrao", None)
+            st.session_state.pop("slot_config", None)
+            st.session_state.pop("roster_df", None)
+            st.success("Configuração de turnos guardada.")
+            st.rerun()
+
+# ------------------------------------------
 # ABA 2: SETUP DA SEMANA
 # ------------------------------------------
 with aba2:
@@ -426,13 +513,29 @@ with aba2:
 
     with col_setup:
         if not df_equipe.empty:
+            if "weekly_setup_loaded" not in st.session_state:
+                _saved_setup = get_weekly_setup(TENANT_ID)
+                st.session_state["weekly_setup_loaded"] = True
+                if _saved_setup:
+                    st.session_state["weekly_setup_overrides"] = _saved_setup.get("employees", {})
+                    st.session_state["margem_horas"] = float(_saved_setup.get("margem_horas", 2.0))
+                    st.session_state["semana_key"] = str(_saved_setup.get("semana_key", ""))
+                    st.session_state["config_semana"] = build_config_semana(TENANT_ID, _saved_setup)
+
+            _weekly_overrides = st.session_state.get("weekly_setup_overrides", {})
             total_horas_planejadas = 0
             dias_semana_opts = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
             with st.form("form_setup_semana"):
                 st.write("Defina quem entra na escala esta semana e ajuste as metas de horas.")
+                semana_key = st.text_input(
+                    "Rótulo da semana",
+                    value=st.session_state.get("semana_key", ""),
+                    placeholder="ex: Semana 45",
+                    key="semana_key_input",
+                )
                 margem_horas = st.number_input(
                     "Margem de horas tolerada (± alvo)", min_value=0.0, max_value=10.0,
-                    value=2.0, step=0.5, key="margem_horas_input",
+                    value=float(st.session_state.get("margem_horas", 2.0)), step=0.5, key="margem_horas_input",
                     help="Alerta se as horas reais saírem desta margem do alvo."
                 )
                 st.divider()
@@ -451,14 +554,15 @@ with aba2:
                         dias_str = "Indisponível todos os dias"
 
                     c_info.write(f"**{row['nome']}** ({row['cargo']})  \n*Disp: {dias_str}*")
-                    vai_trabalhar = c_check.checkbox("Escalar", key=f"chk_{row['nome']}", value=True)
-                    horas_alvo = c_horas.number_input("Horas Alvo", min_value=0, max_value=60, value=int(row['horas_max']), key=f"hrs_{row['nome']}")
+                    _override = _weekly_overrides.get(row['nome'], {})
+                    vai_trabalhar = c_check.checkbox("Escalar", key=f"chk_{row['nome']}", value=bool(_override.get("vai_trabalhar", True)))
+                    horas_alvo = c_horas.number_input("Horas Alvo", min_value=0, max_value=60, value=int(_override.get("horas_alvo", row['horas_max'])), key=f"hrs_{row['nome']}")
 
                     c_folga, c_ferias, c_treino, c_htreino = st.columns([2, 2, 2, 1])
-                    dias_folga_sel = c_folga.multiselect("🏖️ Folga", dias_semana_opts, default=[], key=f"folga_{row['nome']}")
-                    dias_ferias_sel = c_ferias.multiselect("✈️ Férias", dias_semana_opts, default=[], key=f"ferias_{row['nome']}")
-                    dias_treino_sel = c_treino.multiselect("📚 Treinamento", dias_semana_opts, default=[], key=f"treino_{row['nome']}")
-                    horas_treino = c_htreino.number_input("H. Treino", min_value=0, max_value=40, value=0, key=f"htreino_{row['nome']}", help="Total horas de treinamento esta semana.")
+                    dias_folga_sel = c_folga.multiselect("🏖️ Folga", dias_semana_opts, default=list(_override.get("dias_folga", [])), key=f"folga_{row['nome']}")
+                    dias_ferias_sel = c_ferias.multiselect("✈️ Férias", dias_semana_opts, default=list(_override.get("dias_ferias", [])), key=f"ferias_{row['nome']}")
+                    dias_treino_sel = c_treino.multiselect("📚 Treinamento", dias_semana_opts, default=list(_override.get("dias_treinamento", [])), key=f"treino_{row['nome']}")
+                    horas_treino = c_htreino.number_input("H. Treino", min_value=0, max_value=40, value=float(_override.get("horas_treinamento", 0)), key=f"htreino_{row['nome']}", help="Total horas de treinamento esta semana.")
 
                     if vai_trabalhar:
                         total_horas_planejadas += horas_alvo
@@ -494,9 +598,26 @@ with aba2:
                         for c in conflitos:
                             st.warning(f"⚠️ Conflito: {c}")
                     else:
-                        st.session_state['config_semana'] = inputs_semana
-                        st.session_state['margem_horas'] = margem_horas
-                        st.success("Setup salvo! Vá para a Aba 3 gerar a escala.")
+                        _overrides_to_save = {
+                            "semana_key": semana_key.strip(),
+                            "margem_horas": float(margem_horas),
+                            "employees": {
+                                nome: {
+                                    key: cfg[key]
+                                    for key in ("vai_trabalhar", "horas_alvo", "dias_folga", "dias_ferias", "dias_treinamento", "horas_treinamento")
+                                }
+                                for nome, cfg in inputs_semana.items()
+                            },
+                        }
+                        if not _overrides_to_save["semana_key"]:
+                            st.warning("Digite um rótulo para identificar a semana.")
+                        else:
+                            save_weekly_setup(TENANT_ID, _overrides_to_save["semana_key"], _overrides_to_save)
+                            st.session_state["weekly_setup_overrides"] = _overrides_to_save["employees"]
+                            st.session_state["semana_key"] = _overrides_to_save["semana_key"]
+                            st.session_state['config_semana'] = build_config_semana(TENANT_ID, _overrides_to_save)
+                            st.session_state['margem_horas'] = margem_horas
+                            st.success("Setup salvo na base de dados. Vá para a Aba 3 gerar a escala.")
 
             st.subheader("📊 Status do Budget")
             progresso = total_horas_planejadas / 305.0 if total_horas_planejadas <= 305 else 1.0
@@ -518,7 +639,7 @@ with aba2:
 with aba3:
     st.header("📅 Escala da Semana")
 
-    turnos_padrao = {
+    _fallback_turnos_padrao = {
         "Seg": ["07:00 - 12:00", "07:00 - 14:00", "07:30 - 15:00", "08:00 - 16:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
         "Ter": ["07:00 - 12:00", "07:00 - 14:00", "07:30 - 15:00", "08:00 - 16:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
         "Qua": ["06:30 - 12:00", "07:00 - 14:00", "07:30 - 15:00", "08:00 - 16:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
@@ -528,43 +649,27 @@ with aba3:
         "Dom": ["07:30 - 14:00", "07:30 - 15:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
     }
 
-    # Initialize slot_config once: 08:00-16:00 is optional by default (dropped first when understaffed)
-    if 'slot_config' not in st.session_state:
-        _sc_init: dict = {}
-        for _d_init, _t_init in turnos_padrao.items():
-            for _s_init in _t_init:
-                _prio = "optional" if "08:00 - 16:00" in _s_init else "essential"
-                _sc_init[(_d_init, _s_init)] = {"headcount": 1, "priority": _prio}
-        st.session_state['slot_config'] = _sc_init
+    if "turnos_padrao" not in st.session_state:
+        _db_turnos = build_turnos_padrao(TENANT_ID)
+        st.session_state["turnos_padrao"] = _db_turnos or _fallback_turnos_padrao
+    if "slot_config" not in st.session_state:
+        _db_slots = build_slot_config(TENANT_ID)
+        if _db_slots:
+            st.session_state["slot_config"] = _db_slots
+        else:
+            st.session_state["slot_config"] = {
+                (_d_init, _s_init): {
+                    "headcount": 1,
+                    "priority": "optional" if "08:00 - 16:00" in _s_init else "essential",
+                }
+                for _d_init, _t_init in _fallback_turnos_padrao.items()
+                for _s_init in _t_init
+            }
+    turnos_padrao = st.session_state["turnos_padrao"]
 
     df_equipe_atual = _cached_funcionarios(TENANT_ID, st.session_state.get('equipe_v', 0))
     lista_nomes = df_equipe_atual['nome'].tolist() if not df_equipe_atual.empty else []
     lista_nomes.append("Someone (Outra Loja)")
-
-    with st.expander("⚙️ Headcount e Prioridade por Turno", expanded=False):
-        st.caption("Defina quantas pessoas precisas por turno. 'Opcional' = eliminado primeiro quando a equipa está curta.")
-        _sc_ui = st.session_state['slot_config']
-        _day_tabs_list = list(turnos_padrao.keys())
-        _tab_objects = st.tabs(_day_tabs_list)
-        for _tab_obj, _d_ui in zip(_tab_objects, _day_tabs_list):
-            with _tab_obj:
-                for _s_ui in turnos_padrao[_d_ui]:
-                    _key_ui = (_d_ui, _s_ui)
-                    _cur_ui = _sc_ui.get(_key_ui, {"headcount": 1, "priority": "essential"})
-                    _cu1, _cu2, _cu3 = st.columns([4, 2, 2])
-                    _cu1.write(_s_ui)
-                    _new_hc = _cu2.number_input(
-                        "P", min_value=1, max_value=6, value=_cur_ui["headcount"],
-                        key=f"sc_hc_{_d_ui}_{_s_ui}", label_visibility="collapsed"
-                    )
-                    _new_opt = _cu3.toggle(
-                        "Opcional", value=(_cur_ui["priority"] == "optional"),
-                        key=f"sc_opt_{_d_ui}_{_s_ui}"
-                    )
-                    _sc_ui[_key_ui] = {
-                        "headcount": int(_new_hc),
-                        "priority": "optional" if _new_opt else "essential"
-                    }
 
     col_btn_vazio, col_btn_auto, col_btn_reset = st.columns(3)
 

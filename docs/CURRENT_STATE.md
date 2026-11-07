@@ -6,7 +6,7 @@
 
 ## Active Phase
 
-**Phase 8 — Billing & Subscription (Stripe)** *(in progress — full checkout flow tested end-to-end; webhook updating DB correctly; launch package pending)*
+**Phase 9 — Persistência de Configurações** *(in progress — ShiftTemplates and WeeklySetup implemented; deployment validation pending)*
 
 **Add-ons A+B — Fairness Score + Preference Weighting** *(complete — merged into solver)*
 
@@ -23,6 +23,7 @@
 | 5 | Weekly Overrides + Export + Analytics — Folga/Férias/Treinamento, margem, CSV/Excel/PDF, Roster History, Tab 4 | ✅ Complete |
 | 6 | RBAC & Commercial Limits — superadmin, registro bloqueado, limite 20 funcionários, login UI card, Aba 5 Ajuda | ✅ Complete |
 | 7 | Persistent Database (Supabase/PostgreSQL) — psycopg2 dual-backend, DATABASE_URL secret, live on Streamlit Cloud | ✅ Complete |
+| 9 | Persistent Shift Configuration — ShiftTemplates, WeeklySetup, editable shifts/headcount, tenant-scoped persistence | 🚧 In progress |
 
 ---
 
@@ -30,9 +31,12 @@
 
 | File | Last Change |
 |---|---|
-| `app.py` | Fixed DATABASE_URL missing from Streamlit Secrets (was using ephemeral SQLite); added ?upgraded=1 post-payment redirect handling with session banner |
-| `billing_logic.py` | Fixed Stripe checkout price: €39.90 one-time setup + €20/month recurring; updated product names to "Roster Café" branding |
-| `supabase/functions/stripe-webhook/index.ts` | Fixed table name capitalisation: "Subscriptions" → "subscriptions" (PostgreSQL normalises to lowercase); redeployed to production |
+| `logic.py` | Solver redesign: variable headcount per slot, optional slot priority, part-time affinity for short shifts, multi-row solution extraction, `gerar_excel_escala()` added |
+| `database.py` | Added tenant-scoped ShiftTemplates and WeeklySetup persistence, default seeding, and solver configuration builders |
+| `app.py` | Added Configurações tab; weekly setup loads/saves overrides; Tab 3 loads persisted shift templates and headcount |
+| `docs/CURRENT_STATE.md` | Phase 9 status, validation notes, and next steps |
+| `docs/ARCHITECTURE.md` | Added persistent configuration flow and six-tab map |
+| `docs/CHANGELOG.md` | Added Phase 9 implementation entry |
 
 ---
 
@@ -40,8 +44,8 @@
 
 ```
 app_escala/
-├── app.py          # Streamlit UI — 5 tabs + auth gate + sidebar + @st.cache_data wrappers
-├── database.py     # Dual-backend CRUD (psycopg2 when DATABASE_URL set, sqlite3 otherwise)
+├── app.py          # Streamlit UI — 6 tabs + auth gate + sidebar + @st.cache_data wrappers
+├── database.py     # Dual-backend CRUD plus tenant-scoped configuration persistence
 ├── logic.py        # Pure Python — shift math, availability, urgency scheduler, PDF export
 ├── requirements.txt
 └── docs/           # This Second Brain
@@ -57,10 +61,16 @@ app_escala/
 - **Credentials rotation (manual action required)** — Supabase DB password and admin@cafe.com password need to be rotated.
 - **Budget thresholds (290/300/305h) hardcoded** — Balsbridge-specific, multi-tenancy gap, not critical yet.
 - **Stripe test mode** — all keys are test keys; must switch to live keys before accepting real payments.
+- **Phase 9 verification** — SQLite persistence smoke test passed; production Supabase validation follows deployment.
 
 ---
 
 ## Next Immediate Steps
+
+**Solver / Features remaining:**
+1. **Date-specific headcount overrides** — allow manager to increase headcount for a specific date (e.g. Christmas Eve) on top of the weekly template. UI in Tab 3 or Tab 2.
+2. **Demand Prediction Alerts** — future epic for alerts based on local holidays, concerts, gigs, or sports matches that suggest increased staff capacity.
+3. **Push to Streamlit Cloud** — `git push origin master` to deploy the new persistence layer + UI.
 
 **Launch Package (all to do before going live):**
 1. **Register domain** — `madfrog.ie` via Blacknight or Namecheap (~€25/year); OR deploy to `roster-cafe.pages.dev` free first.

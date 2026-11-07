@@ -7,16 +7,17 @@
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │                           app.py                                  │
-│  Streamlit UI — 5 tabs + auth gate + sidebar                      │
+│  Streamlit UI — 6 tabs + auth gate + sidebar                      │
 │                                                                    │
 │  • Auth gate (Login)                                               │
 │  • Sidebar: cafe name, email, role, logout                         │
 │           superadmin: Registrar Novo Cafe, Reset de Password       │
 │  • Tab 1 — Gestão do Time  (employee CRUD + availability)          │
-│  • Tab 2 — Setup da Semana (weekly overrides: folga/férias/treino) │
-│  • Tab 3 — Rascunho e Aprovação (roster editor + history + export) │
-│  • Tab 4 — Análise (coverage metrics + hours chart)                │
-│  • Tab 5 — Ajuda (documented rules + workflow guide)               │
+│  • Tab 2 — Configurações (editable shifts + headcount)             │
+│  • Tab 3 — Setup da Semana (weekly overrides: folga/férias/treino) │
+│  • Tab 4 — Rascunho e Aprovação (roster editor + history + export) │
+│  • Tab 5 — Análise (coverage metrics + hours chart)                │
+│  • Tab 6 — Ajuda (documented rules + workflow guide)               │
 │                                                                    │
 │  Caching: @st.cache_data wrappers with version-counter bust        │
 │    _cached_cafe(cafe_id, _v)         ttl=300s                      │
@@ -58,6 +59,14 @@
 
 ---
 
+### Persistent configuration flow
+
+`ShiftTemplates` is the tenant-scoped source of truth for active shift labels, editable start/end times, closing flags, headcount, and optional priority. The Configurações tab replaces the current tenant's rows in one transaction. When a tenant has no rows, `seed_shift_templates()` inserts the existing defaults.
+
+`WeeklySetup` stores the latest tenant-scoped weekly override payload under a user-provided `semana_key`. `build_config_semana()` loads active employees from `Funcionarios` and applies only allowed weekly override fields, keeping employee master data in the database.
+
+Tab 4 derives `turnos_padrao` and `slot_config` from `ShiftTemplates` before calling `gerar_escala_automatica()`. The solver signature and CP-SAT internals remain unchanged.
+
 ## Dual-Backend Strategy
 
 | Environment | DB | Connection |
@@ -85,6 +94,12 @@ For local dev, copy `.env.example` to `.env` and fill in `DATABASE_URL` if testi
 | created_at | TEXT | ISO-8601 UTC timestamp |
 
 **Seed row:** `id=1, name="Default Cafe", admin_email="admin@cafe.com"`
+
+### `ShiftTemplates`
+Tenant-scoped active shift definitions used by the solver and Configurações tab. Each row stores `dia`, `hora_inicio`, `hora_fim`, `fechamento`, `headcount`, `prioridade`, and `ativo`.
+
+### `WeeklySetup`
+Tenant-scoped snapshots of weekly setup overrides. `semana_key` identifies the saved week and `dados_json` stores weekly override values; employee master data remains in `Funcionarios`.
 
 ---
 

@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-11-07 — Phase 9: Persistent shift and weekly configuration
+
+### Added
+- `ShiftTemplates` table and dual-backend CRUD with tenant scoping, default seeding, editable times, closing flags, headcount, and optional priority.
+- `WeeklySetup` table and helpers to save weekly overrides without duplicating employee master data.
+- `🕒 Configurações` tab for editing active shifts and required headcount.
+
+### Changed
+- Weekly setup now loads the latest saved tenant configuration and persists a labelled week on confirmation.
+- Roster generation loads `turnos_padrao` and `slot_config` from `ShiftTemplates`, preserving the solver API and fallback defaults.
+- Removed the Tab 3 headcount expander because headcount configuration now lives in Configurações.
+
+### Files Modified
+- `database.py`
+- `app.py`
+- `docs/CURRENT_STATE.md`
+- `docs/ARCHITECTURE.md`
+
+---
+
 ## 2026-11-06 — Landing page exploration: style + layout + serif redesign
 
 ### Added
