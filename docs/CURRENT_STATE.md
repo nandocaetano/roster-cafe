@@ -6,7 +6,7 @@
 
 ## Active Phase
 
-**Phase 8 — Billing & Subscription (Stripe)** *(in progress — billing gates + webhook built; Stripe test mode configured under Mad Frog; deploy + secrets pending)*
+**Phase 8 — Billing & Subscription (Stripe)** *(in progress — full checkout flow tested end-to-end; webhook updating DB correctly; launch package pending)*
 
 **Add-ons A+B — Fairness Score + Preference Weighting** *(complete — merged into solver)*
 
@@ -30,13 +30,9 @@
 
 | File | Last Change |
 |---|---|
-| `scratchpad/landing-uv.html` | Hallmark Ultraviolet night redesign: counter hero (11h/4.5h/6h WTI thresholds), Feature Stack shape, violet-black ground. sloplint 0 FAIL 0 WARN 2 REFLEX(waived). Artifact: https://claude.ai/artifact/KfYXFggHrDdyUeN27BszSn |
-| `scratchpad/styleboard.html` | NEW — 4-tile style comparison (Night/Ultraviolet, Espresso, Sage, Stark) for user to pick visual direction. Artifact: https://claude.ai/artifact/NhwUu4sQ7Xy1uu32LNbESN |
-| `scratchpad/layouts.html` | NEW — 4-tile layout comparison in Night colourway (Números, Split, Manifesto, Feature Grid). Artifact: https://claude.ai/artifact/3Hv4annZVTYwSGpi5daPB8 |
-| `scratchpad/landing-manifesto.html` | NEW — Full Manifesto landing page (Night colourway): giant display headline hero → Steps → Product → Pricing → FAQ → Close band → Footer. Ireland-wide messaging, speed/ease focus. Artifact: https://claude.ai/artifact/9kYxxnNN46N6a4tumTNcSy |
-| `scratchpad/landing-serif.html` | NEW — Serif editorial landing (Night violet/black): Playfair Display question headline with italic violet accent, trust bar, structured editorial sections. Same content angle. Artifact: https://claude.ai/artifact/19E1avKjVQKtnC67LGjdZA |
-| `tokens.css` | NEW — Hallmark Ultraviolet scaffold output (lavender light tokens; night overrides inline in page files) |
-| `base.css` | NEW — Hallmark scaffold base styles |
+| `app.py` | Fixed DATABASE_URL missing from Streamlit Secrets (was using ephemeral SQLite); added ?upgraded=1 post-payment redirect handling with session banner |
+| `billing_logic.py` | Fixed Stripe checkout price: €39.90 one-time setup + €20/month recurring; updated product names to "Roster Café" branding |
+| `supabase/functions/stripe-webhook/index.ts` | Fixed table name capitalisation: "Subscriptions" → "subscriptions" (PostgreSQL normalises to lowercase); redeployed to production |
 
 ---
 
@@ -58,24 +54,20 @@ app_escala/
 
 ## Blockers
 
-- **`STRIPE_SECRET_KEY` not configured** — add to Streamlit Cloud Secrets before checkout works. UI shows a friendly warning when missing.
-- **`APP_URL` not configured** — add `APP_URL = https://your-actual-app.streamlit.app` to Streamlit Cloud Secrets for Stripe success/cancel redirect URLs.
-- **Supabase `Subscriptions` table** — `init_db()` creates it via `CREATE TABLE IF NOT EXISTS`, so it will auto-create on next cold start in Supabase. No manual SQL needed.
 - **Credentials rotation (manual action required)** — Supabase DB password and admin@cafe.com password need to be rotated.
 - **Budget thresholds (290/300/305h) hardcoded** — Balsbridge-specific, multi-tenancy gap, not critical yet.
+- **Stripe test mode** — all keys are test keys; must switch to live keys before accepting real payments.
 
 ---
 
 ## Next Immediate Steps
 
-1. **Deploy landing page** — `public/index.html` (serif) is ready; connect repo to Cloudflare Pages, set `public/` as root, point `madfrog.ie` DNS to it.
-2. **Set up Zoho Mail free** — custom domain email `@madfrog.ie`; add MX records in Cloudflare DNS; use webmail only (free tier, no IMAP).
-3. **Deploy Edge Function** — `supabase functions deploy stripe-webhook` (requires Supabase CLI + `supabase link`).
-4. **Add Stripe secrets** — Streamlit Cloud: `STRIPE_SECRET_KEY` + `APP_URL`. Supabase Edge Functions: `STRIPE_WEBHOOK_SECRET` + `STRIPE_SECRET_KEY`.
-5. **Register webhook in Stripe** — Dashboard → Developers → Webhooks → `https://nbggytkbrxqhnqvtvbpl.supabase.co/functions/v1/stripe-webhook`. Events: `checkout.session.completed`, `customer.subscription.deleted`.
-6. **billing_logic.py** — replace free/pro model with trial/paid (`plano = 'trial'` with `validade`).
-7. **License key flow** — implement `LicenseKeys` table + activation step in registration flow.
-8. **Credentials rotation (manual)** — rotate Supabase DB password + admin@cafe.com via Password Reset UI.
+**Launch Package (all to do before going live):**
+1. **Register domain** — `madfrog.ie` via Blacknight or Namecheap (~€25/year); OR deploy to `roster-cafe.pages.dev` free first.
+2. **Deploy landing page** — connect `nandocaetano/roster-cafe` to Cloudflare Pages, `public/` as root.
+3. **Zoho Mail free** — custom domain email `@madfrog.ie`; add MX records in Cloudflare DNS.
+4. **Switch Stripe to live mode** — replace `sk_test_...` keys with live keys in Streamlit Secrets and Supabase Edge Function secrets; re-register webhook with live endpoint.
+5. **Credentials rotation** — rotate Supabase DB password + admin@cafe.com via Password Reset UI.
 
 ---
 

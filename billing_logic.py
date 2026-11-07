@@ -91,7 +91,7 @@ def create_stripe_checkout_session(tenant_id, success_url, cancel_url):
                 "price_data": {
                     "currency": "eur",
                     "unit_amount": 3990,  # €39.90
-                    "product_data": {"name": "Roster Café — Setup"},
+                    "product_data": {"name": "Roster Café — Configuração inicial"},
                 },
                 "quantity": 1,
             },
@@ -100,7 +100,7 @@ def create_stripe_checkout_session(tenant_id, success_url, cancel_url):
                     "currency": "eur",
                     "unit_amount": 2000,  # €20.00/mês
                     "recurring": {"interval": "month"},
-                    "product_data": {"name": "Roster Café Pro — Mensal"},
+                    "product_data": {"name": "Roster Café Pro — Subscrição Mensal"},
                 },
                 "quantity": 1,
             },
