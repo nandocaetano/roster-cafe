@@ -8,8 +8,6 @@
 
 **Phase 8 — Billing & Subscription (Stripe)** *(in progress — full checkout flow tested end-to-end; webhook updating DB correctly; launch package pending)*
 
-**Schedule export & capacity controls** *(implemented — Nati reference layout adopted; editable shifts/headcount; dynamic Excel export; demand alerts remain future work)*
-
 **Add-ons A+B — Fairness Score + Preference Weighting** *(complete — merged into solver)*
 
 ---
@@ -35,9 +33,6 @@
 | `app.py` | Fixed DATABASE_URL missing from Streamlit Secrets (was using ephemeral SQLite); added ?upgraded=1 post-payment redirect handling with session banner |
 | `billing_logic.py` | Fixed Stripe checkout price: €39.90 one-time setup + €20/month recurring; updated product names to "Roster Café" branding |
 | `supabase/functions/stripe-webhook/index.ts` | Fixed table name capitalisation: "Subscriptions" → "subscriptions" (PostgreSQL normalises to lowercase); redeployed to production |
-| `logic.py` | Added dynamic headcount coverage, part-time preference for short shifts, five-day soft target, and Nati-style Excel export with per-shift and weekly hours |
-| `app.py` | Added editable weekly shift start/end, closing flags, per-shift headcount, and dynamic Excel export wiring |
-| `docs/ROADMAP.md` | Added future Demand Prediction Alerts epic |
 
 ---
 
@@ -66,8 +61,6 @@ app_escala/
 ---
 
 ## Next Immediate Steps
-
-**Future Epic — Demand Prediction Alerts (not implemented):** suggest higher staffing capacity for local holidays, concerts, gigs, and sports matches; manager approval remains required.
 
 **Launch Package (all to do before going live):**
 1. **Register domain** — `madfrog.ie` via Blacknight or Namecheap (~€25/year); OR deploy to `roster-cafe.pages.dev` free first.

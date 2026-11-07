@@ -79,14 +79,6 @@ Support cafes with multiple branches, each with autonomous rosters and a local m
 - [ ] Superadmin sees aggregate view across all locations
 - [ ] **Origin:** ERPNext branch-scoped manager RBAC + ShiftType per branch
 
-### Epic futuro — Demand Prediction Alerts
-Sugerir reforço de capacidade com base em sinais externos e eventos locais.
-
-- [ ] Alertas para feriados locais, concertos, gigs e jogos desportivos próximos
-- [ ] Sugestão de aumento de headcount por dia/turno, sempre sujeita a aprovação do manager
-- [ ] Histórico da recomendação e motivo apresentado no setup semanal
-- [ ] Não implementar previsão automática nesta fase; apenas manter o epic no roadmap
-
 ---
 
 ## Add-ons Premium (REA-Derived)

@@ -1,4 +1,5 @@
 """Streamlit UI for Gerador de Escalas — imports all logic from database.py and logic.py."""
+import io
 import os
 import re
 import streamlit as st
@@ -21,12 +22,7 @@ from database import (
     get_roster_by_id,
     deletar_roster,
 )
-from logic import (
-    calcular_horas_turno,
-    gerar_escala_automatica,
-    gerar_excel_escala,
-    gerar_pdf_escala,
-)
+from logic import calcular_horas_turno, gerar_escala_automatica, gerar_pdf_escala
 from billing_logic import (
     is_pro,
     get_employee_limit,
@@ -563,88 +559,6 @@ with aba3:
         "Dom": ["07:30 - 14:00", "07:30 - 15:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
     }
 
-    if "turnos_config" not in st.session_state:
-        st.session_state["turnos_config"] = turnos_padrao
-    if "headcount_por_turno" not in st.session_state:
-        st.session_state["headcount_por_turno"] = {
-            (day, shift): 1
-            for day, shifts in turnos_padrao.items()
-            for shift in shifts
-        }
-
-    turnos_padrao = st.session_state["turnos_config"]
-    headcount_por_turno = st.session_state["headcount_por_turno"]
-
-    with st.expander("⚙️ Turnos e headcount por dia", expanded=False):
-        st.caption("Edita início, fim, fechamento e número de pessoas necessárias. Cada linha ativa cria um turno.")
-        editor_rows = []
-        for day, shifts in turnos_padrao.items():
-            for shift in shifts:
-                times = re.findall(r"(\d{1,2}:\d{2})", str(shift))
-                editor_rows.append({
-                    "Dia": day,
-                    "Início": times[0] if len(times) == 2 else "07:00",
-                    "Fim": times[1] if len(times) == 2 else "15:00",
-                    "Fechamento": "Fechamento" in str(shift),
-                    "Headcount": int(headcount_por_turno.get((day, shift), 1)),
-                    "Ativo": True,
-                })
-        turnos_editados = st.data_editor(
-            pd.DataFrame(editor_rows),
-            column_config={
-                "Dia": st.column_config.SelectboxColumn("Dia", options=["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"], required=True),
-                "Início": st.column_config.TextColumn("Início", help="Formato HH:MM"),
-                "Fim": st.column_config.TextColumn("Fim", help="Formato HH:MM"),
-                "Fechamento": st.column_config.CheckboxColumn("Fechamento"),
-                "Headcount": st.column_config.NumberColumn("Pessoas", min_value=1, max_value=20, step=1, format="%d"),
-                "Ativo": st.column_config.CheckboxColumn("Ativo"),
-            },
-            num_rows="dynamic",
-            hide_index=True,
-            use_container_width=True,
-            key="turnos_editor",
-        )
-        if st.button("Aplicar turnos e headcount", key="aplicar_turnos"):
-            novos_turnos = {day: [] for day in ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]}
-            novo_headcount = {}
-            erros_turnos = []
-            for _, shift_row in turnos_editados.iterrows():
-                active_value = shift_row.get("Ativo", True)
-                if pd.isna(active_value) or not bool(active_value):
-                    continue
-                day = str(shift_row.get("Dia", "")).strip()
-                start = str(shift_row.get("Início", "")).strip()
-                end = str(shift_row.get("Fim", "")).strip()
-                if day not in novos_turnos:
-                    erros_turnos.append(f"Dia inválido: {day or '(vazio)'}.")
-                    continue
-                if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", start) or not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", end):
-                    erros_turnos.append(f"{day}: horário inválido ({start}–{end}).")
-                    continue
-                shift = f"{start} - {end}"
-                closing_value = shift_row.get("Fechamento", False)
-                if not pd.isna(closing_value) and bool(closing_value):
-                    shift += " (Fechamento)"
-                if shift in novos_turnos[day]:
-                    erros_turnos.append(f"{day}: turno duplicado ({shift}).")
-                    continue
-                novos_turnos[day].append(shift)
-                try:
-                    novo_headcount[(day, shift)] = max(1, int(shift_row.get("Headcount", 1)))
-                except (TypeError, ValueError):
-                    novo_headcount[(day, shift)] = 1
-            if erros_turnos:
-                for erro in erros_turnos:
-                    st.error(erro)
-            elif not any(novos_turnos.values()):
-                st.error("Adiciona pelo menos um turno ativo.")
-            else:
-                st.session_state["turnos_config"] = novos_turnos
-                st.session_state["headcount_por_turno"] = novo_headcount
-                st.session_state.pop("roster_df", None)
-                st.success("Turnos e headcount atualizados. Gera a escala novamente.")
-                st.rerun()
-
     df_equipe_atual = _cached_funcionarios(TENANT_ID, st.session_state.get('equipe_v', 0))
     lista_nomes = df_equipe_atual['nome'].tolist() if not df_equipe_atual.empty else []
     lista_nomes.append("Someone (Outra Loja)")
@@ -656,7 +570,6 @@ with aba3:
             {"Dia": dia, "Horário": turno, "Funcionário": "A Preencher"}
             for dia, turnos in turnos_padrao.items()
             for turno in turnos
-            for _ in range(int(headcount_por_turno.get((dia, turno), 1)))
         ]
         st.session_state['roster_df'] = pd.DataFrame(linhas_roster)
         st.rerun()
@@ -667,12 +580,7 @@ with aba3:
             st.error("Erro: Vá na Aba 2 e clique em 'Confirmar Horas da Semana' primeiro.")
         else:
             margem = st.session_state.get('margem_horas', 2.0)
-            df_escala, constraints_warnings = gerar_escala_automatica(
-                config_semana,
-                turnos_padrao,
-                margem,
-                headcount_por_turno,
-            )
+            df_escala, constraints_warnings = gerar_escala_automatica(config_semana, turnos_padrao, margem)
             st.session_state['roster_df'] = df_escala
             st.session_state['constraints_warnings'] = constraints_warnings
             st.rerun()
@@ -683,13 +591,9 @@ with aba3:
             _semana_lbl = st.session_state.get('_last_semana_label', '')
             ec1, ec2, ec3 = st.columns(3)
             ec1.download_button("📄 CSV", _rdf.to_csv(index=False).encode('utf-8'), "escala.csv", "text/csv")
-            _xls = gerar_excel_escala(
-                _rdf,
-                _cafe_nome,
-                _semana_lbl,
-                st.session_state.get("headcount_por_turno", {}),
-            )
-            ec2.download_button("📊 Excel", _xls, "escala.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            _xls = io.BytesIO()
+            _rdf.to_excel(_xls, index=False, engine='openpyxl')
+            ec2.download_button("📊 Excel", _xls.getvalue(), "escala.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             if check_feature_gate(TENANT_ID, "pdf_export"):
                 ec3.download_button("🖨️ PDF", gerar_pdf_escala(_rdf, _cafe_nome, _semana_lbl), "escala.pdf", "application/pdf")
             else:
