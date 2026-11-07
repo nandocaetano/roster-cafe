@@ -64,6 +64,22 @@ def _cached_rosters(tenant_id, _v=0):
     """Cache roster list for 30 s; _v is incremented on save/delete."""
     return get_rosters(tenant_id)
 
+
+def _trial_expired(tenant_id):
+    """Return True when a non-Pro tenant is beyond the 15-day trial."""
+    if is_pro(tenant_id):
+        return False
+    cafe = _cached_cafe(tenant_id)
+    created_at = (cafe or {}).get("created_at") if isinstance(cafe, dict) else None
+    if not created_at:
+        return False
+    try:
+        started = created_at if isinstance(created_at, datetime.datetime) else datetime.datetime.fromisoformat(str(created_at).replace("Z", "+00:00"))
+        now = datetime.datetime.now(started.tzinfo) if started.tzinfo else datetime.datetime.now()
+        return now - started > datetime.timedelta(days=15)
+    except (TypeError, ValueError, OverflowError):
+        return False
+
 # ==========================================
 # UI HELPERS
 # ==========================================
@@ -530,6 +546,9 @@ with aba_config:
 # ABA 2: SETUP DA SEMANA
 # ------------------------------------------
 with aba2:
+    if _trial_expired(TENANT_ID):
+        st.warning("⏰ O teu trial de 15 dias terminou. Faz upgrade para continuar a gerar escalas.")
+        st.stop()
     st.header("Seleção Semanal e Budget")
     esp_esq, col_setup, esp_dir = st.columns([1, 4, 1])
 
@@ -575,16 +594,24 @@ with aba2:
                     if not dias_str:
                         dias_str = "Indisponível todos os dias"
 
-                    c_info.write(f"**{row['nome']}** ({row['cargo']})  \n*Disp: {dias_str}*")
                     _override = _weekly_overrides.get(row['nome'], {})
-                    vai_trabalhar = c_check.checkbox("Escalar", key=f"chk_{row['nome']}", value=bool(_override.get("vai_trabalhar", True)))
-                    horas_alvo = c_horas.number_input("Horas Alvo", min_value=0, max_value=60, value=int(_override.get("horas_alvo", row['horas_max'])), key=f"hrs_{row['nome']}")
+                    _vai_trabalhar_default = bool(_override.get("vai_trabalhar", True))
+                    c_info.write(f"**{row['nome']}** ({row['cargo']})  \n*Disp: {dias_str}*" if _vai_trabalhar_default else f"**{row['nome']}**")
+                    vai_trabalhar = c_check.checkbox("Escalar", key=f"chk_{row['nome']}", value=_vai_trabalhar_default)
 
-                    c_folga, c_ferias, c_treino, c_htreino = st.columns([2, 2, 2, 1])
-                    dias_folga_sel = c_folga.multiselect("🏖️ Folga", dias_semana_opts, default=list(_override.get("dias_folga", [])), key=f"folga_{row['nome']}")
-                    dias_ferias_sel = c_ferias.multiselect("✈️ Férias", dias_semana_opts, default=list(_override.get("dias_ferias", [])), key=f"ferias_{row['nome']}")
-                    dias_treino_sel = c_treino.multiselect("📚 Treinamento", dias_semana_opts, default=list(_override.get("dias_treinamento", [])), key=f"treino_{row['nome']}")
-                    horas_treino = c_htreino.number_input("H. Treino", min_value=0, max_value=40, value=float(_override.get("horas_treinamento", 0)), key=f"htreino_{row['nome']}", help="Total horas de treinamento esta semana.")
+                    if vai_trabalhar:
+                        horas_alvo = c_horas.number_input("Horas Alvo", min_value=0, max_value=60, value=int(_override.get("horas_alvo", row['horas_max'])), key=f"hrs_{row['nome']}")
+                        c_folga, c_ferias, c_treino, c_htreino = st.columns([2, 2, 2, 1])
+                        dias_folga_sel = c_folga.multiselect("🏖️ Folga", dias_semana_opts, default=list(_override.get("dias_folga", [])), key=f"folga_{row['nome']}")
+                        dias_ferias_sel = c_ferias.multiselect("✈️ Férias", dias_semana_opts, default=list(_override.get("dias_ferias", [])), key=f"ferias_{row['nome']}")
+                        dias_treino_sel = c_treino.multiselect("📚 Treinamento", dias_semana_opts, default=list(_override.get("dias_treinamento", [])), key=f"treino_{row['nome']}")
+                        horas_treino = c_htreino.number_input("H. Treino", min_value=0, max_value=40, value=float(_override.get("horas_treinamento", 0)), key=f"htreino_{row['nome']}", help="Total horas de treinamento esta semana.")
+                    else:
+                        horas_alvo = int(_override.get("horas_alvo", row['horas_max']))
+                        dias_folga_sel = list(_override.get("dias_folga", []))
+                        dias_ferias_sel = list(_override.get("dias_ferias", []))
+                        dias_treino_sel = list(_override.get("dias_treinamento", []))
+                        horas_treino = float(_override.get("horas_treinamento", 0))
 
                     if vai_trabalhar:
                         total_horas_planejadas += horas_alvo
@@ -701,6 +728,9 @@ with aba2:
 # ABA 3: ROSTER E PAINEL DE HORAS
 # ------------------------------------------
 with aba3:
+    if _trial_expired(TENANT_ID):
+        st.warning("⏰ O teu trial de 15 dias terminou. Faz upgrade para continuar a gerar escalas.")
+        st.stop()
     st.header("📅 Escala da Semana")
 
     _fallback_turnos_padrao = {
