@@ -52,7 +52,7 @@ serve(async (req: Request) => {
       const sub = await stripe.subscriptions.retrieve(subscriptionId);
       const validade = new Date(sub.current_period_end * 1000).toISOString();
 
-      const { error } = await supabase.from("Subscriptions").insert({
+      const { error } = await supabase.from("subscriptions").insert({
         tenant_id: tenantId,
         plano: "pro",
         validade,
@@ -73,7 +73,7 @@ serve(async (req: Request) => {
       // Fallback: look up by stripe_subscription_id stored in Subscriptions table
       if (!tenantId) {
         const { data } = await supabase
-          .from("Subscriptions")
+          .from("subscriptions")
           .select("tenant_id")
           .eq("stripe_subscription_id", sub.id)
           .order("criado_em", { ascending: false })
@@ -87,7 +87,7 @@ serve(async (req: Request) => {
         return new Response("Could not resolve tenant", { status: 400 });
       }
 
-      const { error } = await supabase.from("Subscriptions").insert({
+      const { error } = await supabase.from("subscriptions").insert({
         tenant_id: tenantId,
         plano: "free",
         criado_em: new Date().toISOString(),
