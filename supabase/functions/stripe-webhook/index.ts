@@ -2,8 +2,8 @@
  * Stripe webhook handler — Supabase Edge Function
  *
  * Events handled:
- *   checkout.session.completed  → INSERT pro subscription row
- *   customer.subscription.deleted → INSERT free row (downgrade)
+ *   checkout.session.completed  → UPSERT pro subscription row
+ *   customer.subscription.deleted → downgrade the tenant to free
  *
  * Required secrets (Supabase Dashboard → Project Settings → Edge Functions):
  *   STRIPE_SECRET_KEY       — Stripe secret key
@@ -13,8 +13,8 @@
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@12.18.0?target=deno&no-check";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.0";
+import Stripe from "stripe";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") ?? "", {
   apiVersion: "2023-10-16",
@@ -35,8 +35,9 @@ serve(async (req: Request) => {
   try {
     event = await stripe.webhooks.constructEventAsync(body, sig, webhookSecret);
   } catch (err) {
-    console.error("Signature verification failed:", err.message);
-    return new Response(`Webhook Error: ${err.message}`, { status: 400 });
+    const message = err instanceof Error ? err.message : "Invalid signature";
+    console.error("Signature verification failed:", message);
+    return new Response(`Webhook Error: ${message}`, { status: 400 });
   }
 
   try {
@@ -48,17 +49,18 @@ serve(async (req: Request) => {
         return new Response("Missing tenant_id in session metadata", { status: 400 });
       }
 
-      const subscriptionId = session.subscription as string;
-      const sub = await stripe.subscriptions.retrieve(subscriptionId);
-      const validade = new Date(sub.current_period_end * 1000).toISOString();
+      const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
+      const customerId = typeof session.customer === "string" ? session.customer : null;
+      const validade = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
 
-      const { error } = await supabase.from("subscriptions").insert({
+      const { error } = await supabase.from("subscriptions").upsert({
         tenant_id: tenantId,
         plano: "pro",
         validade,
+        stripe_customer_id: customerId,
         stripe_subscription_id: subscriptionId,
         criado_em: new Date().toISOString(),
-      });
+      }, { onConflict: "tenant_id" });
       if (error) throw error;
       console.log(`Tenant ${tenantId} → Pro, valid until ${validade}`);
     }
@@ -87,11 +89,10 @@ serve(async (req: Request) => {
         return new Response("Could not resolve tenant", { status: 400 });
       }
 
-      const { error } = await supabase.from("subscriptions").insert({
-        tenant_id: tenantId,
-        plano: "free",
-        criado_em: new Date().toISOString(),
-      });
+      const { error } = await supabase
+        .from("subscriptions")
+        .update({ plano: "free", validade: null })
+        .eq("tenant_id", tenantId);
       if (error) throw error;
       console.log(`Tenant ${tenantId} → Free (subscription cancelled)`);
     }
