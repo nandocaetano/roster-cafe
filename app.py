@@ -164,49 +164,18 @@ if st.session_state['user'] is None:
     _, col_login, _ = st.columns([3, 2, 3])
     with col_login:
         st.markdown("<h2 style='text-align:center;margin-bottom:4px'>☕ Gerenciador de Escalas</h2>", unsafe_allow_html=True)
-        signup_requested = st.query_params.get("signup") == "1"
-        if signup_requested:
-            st.markdown("<p style='text-align:center;color:#a78bfa;margin-bottom:1.2rem'>Começa o teu trial de 7 dias</p>", unsafe_allow_html=True)
-            with st.form("form_signup"):
-                cafe_nome = st.text_input("Nome do café", placeholder="The Daily Grind")
-                email_signup = st.text_input("Email", placeholder="voce@cafe.com")
-                senha_signup = st.text_input("Senha", type="password", placeholder="Mínimo 6 caracteres")
-                senha_conf = st.text_input("Confirmar senha", type="password")
-                if st.form_submit_button("Criar conta", use_container_width=True):
-                    email_signup = email_signup.strip().lower()
-                    if not cafe_nome.strip() or not email_signup or not senha_signup:
-                        st.error("Preenche todos os campos.")
-                    elif len(senha_signup) < 6:
-                        st.error("A senha deve ter pelo menos 6 caracteres.")
-                    elif senha_signup != senha_conf:
-                        st.error("As senhas não coincidem.")
-                    else:
-                        try:
-                            tenant_id = criar_cafe(cafe_nome.strip(), email_signup)
-                            create_user(tenant_id, email_signup, senha_signup, role="admin")
-                            user = verify_credentials(email_signup, senha_signup)
-                            st.session_state['user'] = user
-                            st.session_state['tenant_id'] = tenant_id
-                            st.query_params.clear()
-                            st.rerun()
-                        except Exception as exc:
-                            st.error(f"Não foi possível criar a conta: {exc}")
-            if st.button("Já tenho conta", use_container_width=True):
-                st.query_params.clear()
-                st.rerun()
-        else:
-            st.markdown("<p style='text-align:center;color:#a78bfa;margin-bottom:1.2rem'>Acesso à Plataforma</p>", unsafe_allow_html=True)
-            with st.form("form_login"):
-                email_login = st.text_input("Email", placeholder="voce@cafe.com")
-                senha_login = st.text_input("Senha", type="password", placeholder="••••••••")
-                if st.form_submit_button("Entrar", use_container_width=True):
-                    user = verify_credentials(email_login, senha_login)
-                    if user:
-                        st.session_state['user'] = user
-                        st.session_state['tenant_id'] = user['tenant_id']
-                        st.rerun()
-                    else:
-                        st.error("Email ou senha incorretos.")
+        st.markdown("<p style='text-align:center;color:#a78bfa;margin-bottom:1.2rem'>Acesso à Plataforma</p>", unsafe_allow_html=True)
+        with st.form("form_login"):
+            email_login = st.text_input("Email", placeholder="voce@cafe.com")
+            senha_login = st.text_input("Senha", type="password", placeholder="••••••••")
+            if st.form_submit_button("Entrar", use_container_width=True):
+                user = verify_credentials(email_login, senha_login)
+                if user:
+                    st.session_state['user'] = user
+                    st.session_state['tenant_id'] = user['tenant_id']
+                    st.rerun()
+                else:
+                    st.error("Email ou senha incorretos.")
 
     st.stop()
 
