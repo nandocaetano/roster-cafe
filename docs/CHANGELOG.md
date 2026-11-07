@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-11-07 — Phase 8: Webhook deployed + permissions config
+
+### Added
+- Supabase Edge Function `stripe-webhook` deployed para produção (projeto `nbggytkbrxqhnqvtvbpl`)
+- Permissões globais no Claude Code (`~/.claude/settings.json`) para `supabase functions deploy/logs *` sem prompt
+- `autoMode.allow` rules para o mesmo conjunto de comandos
+
+### Changed
+- `docs/CURRENT_STATE.md` — Next Steps actualizados com instruções detalhadas pós-deploy
+
+### Pending (manual — requer acção do utilizador)
+- Registar endpoint no Stripe Dashboard + copiar `STRIPE_WEBHOOK_SECRET`
+- Adicionar secrets à Edge Function no Supabase Dashboard
+- Criar repo GitHub `escala-landing` + push + Cloudflare Pages
+- Switch Stripe live mode (HITL)
+
+### Files Modified
+- `docs/CURRENT_STATE.md`
+
+---
+
 ## 2026-11-07 — Phase 9 complete: Date-specific headcount overrides
 
 ### Added

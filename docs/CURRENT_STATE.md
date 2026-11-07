@@ -12,8 +12,11 @@
 - ✅ Trial paywall guard (aba2 + aba3, 15 dias, _trial_expired())
 - ✅ Stripe checkout corrigido: sem setup fee, trial_period_days=15
 - ✅ upsert_subscription() helper adicionado a billing_logic.py
-- 🔄 Webhook Supabase Edge Function (Codex a trabalhar)
-- ⏳ Deploy landing page (Cloudflare Pages)
+- ✅ Webhook Supabase Edge Function deployed (`stripe-webhook` → projeto `nbggytkbrxqhnqvtvbpl`)
+- ✅ `escala-landing` git init + commit (Codex concluiu)
+- ⏳ Registar endpoint no Stripe Dashboard + copiar `STRIPE_WEBHOOK_SECRET`
+- ⏳ Adicionar secrets à Edge Function (`STRIPE_WEBHOOK_SECRET` + `STRIPE_SECRET_KEY`)
+- ⏳ Deploy landing page (Cloudflare Pages — precisa de repo GitHub primeiro)
 - ⏳ Switch Stripe para live mode (requer aprovação explícita — HITL)
 
 ---
@@ -39,7 +42,8 @@
 |---|---|
 | `app.py` | UX audit: tab order, full-width CTA, export expander, mensagens corrigidas, Histórico→aba4, paywall guard |
 | `billing_logic.py` | Remove setup fee, add trial_period_days=15, add upsert_subscription() |
-| `supabase/functions/stripe-webhook/index.ts` | Stripe webhook Edge Function (Codex — pendente) |
+| `supabase/functions/stripe-webhook/index.ts` | Stripe webhook Edge Function — deployed ✅ |
+| `~/.claude/settings.json` | Permissions + autoMode.allow para `supabase functions deploy/logs *` |
 
 ---
 
@@ -69,10 +73,15 @@ app_escala/
 
 ## Next Immediate Steps
 
-1. **Deploy Stripe webhook** — `supabase functions deploy stripe-webhook`; registar endpoint no Stripe Dashboard com `STRIPE_WEBHOOK_SECRET`
-2. **Deploy landing page** — push `escala-landing` para GitHub; conectar a Cloudflare Pages com build command `npm run build`, output `dist/`
-3. **Switch Stripe para live mode** — substituir `sk_test_...` por live keys em Streamlit Secrets + Supabase secrets (requer aprovação explícita — HITL)
-4. **Credentials rotation** — rodar password Supabase DB + admin@cafe.com
+1. **Stripe Dashboard** → Developers → Webhooks → Add endpoint:
+   - URL: `https://nbggytkbrxqhnqvtvbpl.supabase.co/functions/v1/stripe-webhook`
+   - Eventos: `checkout.session.completed` + `customer.subscription.deleted`
+   - Copia o `STRIPE_WEBHOOK_SECRET` gerado
+2. **Supabase Dashboard** → Edge Functions → stripe-webhook → Secrets → adiciona `STRIPE_WEBHOOK_SECRET` + `STRIPE_SECRET_KEY`
+3. **GitHub** — cria repo `escala-landing`, depois: `git remote add origin <url> && git push -u origin main`
+4. **Cloudflare Pages** — conecta ao repo GitHub, build: `npm run build`, output: `dist/`
+5. **Switch Stripe para live mode** — substituir `sk_test_...` por live keys (requer aprovação explícita — HITL)
+6. **Credentials rotation** — rodar password Supabase DB + admin@cafe.com (requer aprovação)
 
 ---
 
