@@ -6,9 +6,15 @@
 
 ## Active Phase
 
-**Phase 9 — Persistência de Configurações** *(complete — ShiftTemplates, WeeklySetup, and DateHeadcountOverrides shipped and live)*
+**Phase 8 — Stripe Billing & Launch Prep** *(in progress)*
 
-**Add-ons A+B — Fairness Score + Preference Weighting** *(complete — merged into solver)*
+- ✅ UX audit completo (ux-menu-architect) — tab order, CTA primário, mensagens, Histórico separado
+- ✅ Trial paywall guard (aba2 + aba3, 15 dias, _trial_expired())
+- ✅ Stripe checkout corrigido: sem setup fee, trial_period_days=15
+- ✅ upsert_subscription() helper adicionado a billing_logic.py
+- 🔄 Webhook Supabase Edge Function (Codex a trabalhar)
+- ⏳ Deploy landing page (Cloudflare Pages)
+- ⏳ Switch Stripe para live mode (requer aprovação explícita — HITL)
 
 ---
 
@@ -31,8 +37,9 @@
 
 | File | Last Change |
 |---|---|
-| `database.py` | Added DateHeadcountOverrides table (dual-backend), get/save/delete CRUD with UNIQUE constraint |
-| `app.py` | Added date headcount override expander in aba2; slot_config patch in aba3 before solver call |
+| `app.py` | UX audit: tab order, full-width CTA, export expander, mensagens corrigidas, Histórico→aba4, paywall guard |
+| `billing_logic.py` | Remove setup fee, add trial_period_days=15, add upsert_subscription() |
+| `supabase/functions/stripe-webhook/index.ts` | Stripe webhook Edge Function (Codex — pendente) |
 
 ---
 
@@ -62,16 +69,10 @@ app_escala/
 
 ## Next Immediate Steps
 
-1. **Register domain** — `madfrog.ie` via Blacknight or Namecheap (~€25/year)
-2. **Deploy landing page** — connect `nandocaetano/roster-cafe` to Cloudflare Pages, `public/` as root
-3. **Switch Stripe to live mode** — replace test keys with live keys (requires user approval — financial action)
-
-**Launch Package (all to do before going live):**
-1. **Register domain** — `madfrog.ie` via Blacknight or Namecheap (~€25/year); OR deploy to `roster-cafe.pages.dev` free first.
-2. **Deploy landing page** — connect `nandocaetano/roster-cafe` to Cloudflare Pages, `public/` as root.
-3. **Zoho Mail free** — custom domain email `@madfrog.ie`; add MX records in Cloudflare DNS.
-4. **Switch Stripe to live mode** — replace `sk_test_...` keys with live keys in Streamlit Secrets and Supabase Edge Function secrets; re-register webhook with live endpoint.
-5. **Credentials rotation** — rotate Supabase DB password + admin@cafe.com via Password Reset UI.
+1. **Deploy Stripe webhook** — `supabase functions deploy stripe-webhook`; registar endpoint no Stripe Dashboard com `STRIPE_WEBHOOK_SECRET`
+2. **Deploy landing page** — push `escala-landing` para GitHub; conectar a Cloudflare Pages com build command `npm run build`, output `dist/`
+3. **Switch Stripe para live mode** — substituir `sk_test_...` por live keys em Streamlit Secrets + Supabase secrets (requer aprovação explícita — HITL)
+4. **Credentials rotation** — rodar password Supabase DB + admin@cafe.com
 
 ---
 
