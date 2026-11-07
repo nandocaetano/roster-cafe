@@ -87,27 +87,57 @@ def create_stripe_checkout_session(tenant_id, success_url, cancel_url):
         mode="subscription",
         line_items=[
             {
-                # One-time setup fee — billed on the first invoice only
-                "price_data": {
-                    "currency": "eur",
-                    "unit_amount": 3990,  # €39.90
-                    "product_data": {"name": "Roster Café — Configuração inicial"},
-                },
-                "quantity": 1,
-            },
-            {
                 "price_data": {
                     "currency": "eur",
                     "unit_amount": 2000,  # €20.00/mês
                     "recurring": {"interval": "month"},
-                    "product_data": {"name": "Roster Café Pro — Subscrição Mensal"},
+                    "product_data": {"name": "Escala Pro — Subscrição Mensal"},
                 },
                 "quantity": 1,
             },
         ],
         metadata={"tenant_id": str(tenant_id)},
-        subscription_data={"metadata": {"tenant_id": str(tenant_id)}},
+        subscription_data={
+            "trial_period_days": 15,
+            "metadata": {"tenant_id": str(tenant_id)},
+        },
         success_url=success_url,
         cancel_url=cancel_url,
     )
     return session.url
+
+
+def upsert_subscription(tenant_id, plano, validade, stripe_customer_id=None, stripe_subscription_id=None):
+    """Insert or update the tenant subscription record."""
+    conn = _get_conn()
+    try:
+        cur = conn.cursor()
+        if _PG:
+            cur.execute(
+                """
+                INSERT INTO Subscriptions (tenant_id, plano, validade, stripe_customer_id, stripe_subscription_id)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (tenant_id) DO UPDATE
+                  SET plano = EXCLUDED.plano,
+                      validade = EXCLUDED.validade,
+                      stripe_customer_id = COALESCE(EXCLUDED.stripe_customer_id, Subscriptions.stripe_customer_id),
+                      stripe_subscription_id = COALESCE(EXCLUDED.stripe_subscription_id, Subscriptions.stripe_subscription_id)
+                """,
+                (tenant_id, plano, validade, stripe_customer_id, stripe_subscription_id),
+            )
+        else:
+            cur.execute(
+                """
+                INSERT INTO Subscriptions (tenant_id, plano, validade, stripe_customer_id, stripe_subscription_id)
+                VALUES (?, ?, ?, ?, ?)
+                ON CONFLICT (tenant_id) DO UPDATE
+                  SET plano = excluded.plano,
+                      validade = excluded.validade,
+                      stripe_customer_id = COALESCE(excluded.stripe_customer_id, Subscriptions.stripe_customer_id),
+                      stripe_subscription_id = COALESCE(excluded.stripe_subscription_id, Subscriptions.stripe_subscription_id)
+                """,
+                (tenant_id, plano, validade, stripe_customer_id, stripe_subscription_id),
+            )
+        conn.commit()
+    finally:
+        conn.close()
