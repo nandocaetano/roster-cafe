@@ -270,7 +270,7 @@ stored = f"{salt.hex()}:{hash}"
 | Free | 10 | Scheduler, CSV/Excel export, Tabs 1–2–5 |
 | Pro (€20/mês) | 20 | + PDF export, Analytics (Tab 4), Roster History (Tab 3) |
 
-**Setup fee:** €39.90 one-time (Stripe Checkout, `mode="subscription"` with setup intent).
+**Setup fee:** None (removido — trial 15 dias com cartão + €20/mês directo).
 
 ### Stripe Webhook — Supabase Edge Function
 
