@@ -161,6 +161,17 @@ def init_db():
                 criado_em   TEXT NOT NULL DEFAULT (NOW()::TEXT)
             )
         ''')
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS DateHeadcountOverrides (
+                id            SERIAL PRIMARY KEY,
+                tenant_id     INTEGER NOT NULL REFERENCES Cafes(id),
+                override_date TEXT NOT NULL,
+                shift_label   TEXT NOT NULL,
+                headcount     INTEGER NOT NULL,
+                criado_em     TEXT NOT NULL,
+                UNIQUE (tenant_id, override_date, shift_label)
+            )
+        ''')
         # Safe migrations (PG 9.6+ supports IF NOT EXISTS)
         cur.execute('''
             ALTER TABLE Funcionarios
@@ -250,6 +261,17 @@ def init_db():
                 semana_key  TEXT NOT NULL,
                 dados_json  TEXT NOT NULL,
                 criado_em   TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        ''')
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS DateHeadcountOverrides (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id     INTEGER NOT NULL REFERENCES Cafes(id),
+                override_date TEXT NOT NULL,
+                shift_label   TEXT NOT NULL,
+                headcount     INTEGER NOT NULL,
+                criado_em     TEXT NOT NULL,
+                UNIQUE (tenant_id, override_date, shift_label)
             )
         ''')
         try:
@@ -692,6 +714,72 @@ def deletar_roster(tenant_id: int, roster_id: int):
     cur.execute(
         f"DELETE FROM Rosters WHERE id = {_P} AND tenant_id = {_P}",
         (roster_id, tenant_id),
+    )
+    conn.commit()
+    conn.close()
+
+
+# ──────────────────────────────────────────────────────────────────
+# Date-Specific Headcount Overrides CRUD
+# ──────────────────────────────────────────────────────────────────
+
+def get_date_headcount_overrides(tenant_id: int, week_dates: list) -> list:
+    """Return all headcount overrides for the given tenant where override_date is in week_dates.
+    Each item is a dict with keys: id, override_date, shift_label, headcount.
+    """
+    if not week_dates:
+        return []
+    conn = _get_conn()
+    cur = conn.cursor()
+    placeholders = ','.join([_P] * len(week_dates))
+    cur.execute(
+        f"SELECT id, override_date, shift_label, headcount FROM DateHeadcountOverrides "
+        f"WHERE tenant_id = {_P} AND override_date IN ({placeholders}) "
+        f"ORDER BY override_date, shift_label",
+        (tenant_id, *week_dates),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def save_date_headcount_override(tenant_id: int, override_date: str, shift_label: str, headcount: int):
+    """Upsert a date-specific headcount override.
+    For PostgreSQL: uses INSERT ... ON CONFLICT DO UPDATE.
+    For SQLite: DELETE existing + INSERT (simpler than upsert).
+    """
+    conn = _get_conn()
+    cur = conn.cursor()
+    now = datetime.utcnow().isoformat()
+    if _PG:
+        cur.execute(
+            f"""INSERT INTO DateHeadcountOverrides (tenant_id, override_date, shift_label, headcount, criado_em)
+                VALUES ({_P},{_P},{_P},{_P},{_P})
+                ON CONFLICT (tenant_id, override_date, shift_label)
+                DO UPDATE SET headcount = EXCLUDED.headcount, criado_em = EXCLUDED.criado_em""",
+            (tenant_id, override_date, shift_label, headcount, now),
+        )
+    else:
+        cur.execute(
+            f"DELETE FROM DateHeadcountOverrides WHERE tenant_id = {_P} AND override_date = {_P} AND shift_label = {_P}",
+            (tenant_id, override_date, shift_label),
+        )
+        cur.execute(
+            f"""INSERT INTO DateHeadcountOverrides (tenant_id, override_date, shift_label, headcount, criado_em)
+                VALUES ({_P},{_P},{_P},{_P},{_P})""",
+            (tenant_id, override_date, shift_label, headcount, now),
+        )
+    conn.commit()
+    conn.close()
+
+
+def delete_date_headcount_override(tenant_id: int, override_date: str, shift_label: str):
+    """Delete a date-specific headcount override identified by (tenant_id, override_date, shift_label)."""
+    conn = _get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        f"DELETE FROM DateHeadcountOverrides WHERE tenant_id = {_P} AND override_date = {_P} AND shift_label = {_P}",
+        (tenant_id, override_date, shift_label),
     )
     conn.commit()
     conn.close()

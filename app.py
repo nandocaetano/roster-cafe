@@ -1,4 +1,5 @@
 """Streamlit UI for Gerador de Escalas — imports all logic from database.py and logic.py."""
+import datetime
 import io
 import os
 import re
@@ -29,6 +30,9 @@ from database import (
     get_weekly_setup,
     save_weekly_setup,
     build_config_semana,
+    get_date_headcount_overrides,
+    save_date_headcount_override,
+    delete_date_headcount_override,
 )
 from logic import calcular_horas_turno, gerar_escala_automatica, gerar_pdf_escala, gerar_excel_escala
 from billing_logic import (
@@ -630,6 +634,48 @@ with aba2:
                 st.warning(f"Total: {total_horas_planejadas}h (Margem de erro).")
             else:
                 st.error(f"Total: {total_horas_planejadas}h (Estourado).")
+
+            with st.expander("📅 Exceções de headcount por data", expanded=False):
+                _dho_wkmap = {0: "Seg", 1: "Ter", 2: "Qua", 3: "Qui", 4: "Sex", 5: "Sáb", 6: "Dom"}
+                _dho_date = st.date_input("Data", value=datetime.date.today(), key="dho_date")
+                _dho_wd = _dho_wkmap[_dho_date.weekday()]
+                _dho_all_turnos = st.session_state.get("turnos_padrao") or build_turnos_padrao(TENANT_ID)
+                _dho_shifts = _dho_all_turnos.get(_dho_wd, [])
+                if _dho_shifts:
+                    _dho_shift_sel = st.selectbox("Turno", _dho_shifts, key="dho_shift")
+                    _dho_hc = st.number_input("Headcount override", min_value=1, max_value=20, value=1, step=1, key="dho_hc")
+                    if st.button("💾 Salvar override", key="dho_save"):
+                        save_date_headcount_override(TENANT_ID, _dho_date.strftime("%Y-%m-%d"), _dho_shift_sel, int(_dho_hc))
+                        st.success("Override guardado.")
+                        st.rerun()
+                else:
+                    st.info(f"Nenhum turno configurado para {_dho_wd}. Configure os turnos na aba Configurações.")
+                # Derive 7 dates for the ISO week containing the selected date
+                _dho_week_start = _dho_date - datetime.timedelta(days=_dho_date.weekday())
+                _dho_week_dates = [
+                    (_dho_week_start + datetime.timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)
+                ]
+                _dho_existing = get_date_headcount_overrides(TENANT_ID, _dho_week_dates)
+                if _dho_existing:
+                    st.write("**Overrides para a semana selecionada:**")
+                    st.dataframe(
+                        pd.DataFrame([
+                            {"Data": r["override_date"], "Turno": r["shift_label"], "Headcount": r["headcount"]}
+                            for r in _dho_existing
+                        ]),
+                        hide_index=True,
+                        use_container_width=True,
+                    )
+                    for _dho_r in _dho_existing:
+                        _dho_rc1, _dho_rc2, _dho_rc3, _dho_rc4 = st.columns([2, 3, 1, 1])
+                        _dho_rc1.caption(_dho_r["override_date"])
+                        _dho_rc2.caption(_dho_r["shift_label"])
+                        _dho_rc3.caption(str(_dho_r["headcount"]))
+                        if _dho_rc4.button("🗑️", key=f"dho_del_{_dho_r['id']}"):
+                            delete_date_headcount_override(TENANT_ID, _dho_r["override_date"], _dho_r["shift_label"])
+                            st.rerun()
+                else:
+                    st.caption("Nenhum override para a semana selecionada.")
         else:
             st.warning("Cadastre os funcionários na Aba 1 primeiro.")
 
@@ -688,9 +734,27 @@ with aba3:
             st.error("Erro: Vá na Aba 2 e clique em 'Confirmar Horas da Semana' primeiro.")
         else:
             margem = st.session_state.get('margem_horas', 2.0)
+            # patch slot_config with any date-specific overrides
+            _base_sc = st.session_state.get('slot_config') or {}
+            _patched_sc = dict(_base_sc)  # shallow copy — don't mutate session state
+            _weekday_map = {0: "Seg", 1: "Ter", 2: "Qua", 3: "Qui", 4: "Sex", 5: "Sáb", 6: "Dom"}
+            _today = datetime.date.today()
+            _week_start = st.session_state.get(
+                "semana_inicio_date", _today - datetime.timedelta(days=_today.weekday())
+            )
+            _week_dates = [
+                (_week_start + datetime.timedelta(days=i)).strftime("%Y-%m-%d") for i in range(7)
+            ]
+            _dho_rows = get_date_headcount_overrides(TENANT_ID, _week_dates)
+            for _row in _dho_rows:
+                _wd = _weekday_map[datetime.date.fromisoformat(_row["override_date"]).weekday()]
+                _key = (_wd, _row["shift_label"])
+                if _key in _patched_sc:
+                    _patched_sc[_key] = dict(_patched_sc[_key])  # don't mutate nested dict
+                    _patched_sc[_key]["headcount"] = _row["headcount"]
             df_escala, constraints_warnings = gerar_escala_automatica(
                 config_semana, turnos_padrao, margem,
-                slot_config=st.session_state.get('slot_config')
+                slot_config=_patched_sc
             )
             st.session_state['roster_df'] = df_escala
             st.session_state['constraints_warnings'] = constraints_warnings
