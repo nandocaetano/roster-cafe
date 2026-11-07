@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-11-07 — Phase 9 complete: Date-specific headcount overrides
+
+### Added
+- `DateHeadcountOverrides` table in both PostgreSQL and SQLite branches of `init_db()`, with `UNIQUE (tenant_id, override_date, shift_label)` constraint.
+- Three CRUD functions in `database.py`: `get_date_headcount_overrides`, `save_date_headcount_override`, `delete_date_headcount_override`, following the existing dual-backend pattern.
+- "📅 Exceções de headcount por data" expander in aba2 (Setup da Semana): pick a date, pick a shift, set headcount override, save/delete; existing overrides displayed per week.
+- `slot_config` patching in aba3 before solver call: fetches overrides for the week, shallow-copies and patches headcount values without mutating session state.
+
+### Files Modified
+- `database.py`
+- `app.py`
+
+---
+
 ## 2026-11-07 — Phase 9: Persistent shift and weekly configuration
 
 ### Added

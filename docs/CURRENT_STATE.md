@@ -6,7 +6,7 @@
 
 ## Active Phase
 
-**Phase 9 — Persistência de Configurações** *(in progress — ShiftTemplates and WeeklySetup implemented; deployment validation pending)*
+**Phase 9 — Persistência de Configurações** *(complete — ShiftTemplates, WeeklySetup, and DateHeadcountOverrides shipped and live)*
 
 **Add-ons A+B — Fairness Score + Preference Weighting** *(complete — merged into solver)*
 
@@ -23,7 +23,7 @@
 | 5 | Weekly Overrides + Export + Analytics — Folga/Férias/Treinamento, margem, CSV/Excel/PDF, Roster History, Tab 4 | ✅ Complete |
 | 6 | RBAC & Commercial Limits — superadmin, registro bloqueado, limite 20 funcionários, login UI card, Aba 5 Ajuda | ✅ Complete |
 | 7 | Persistent Database (Supabase/PostgreSQL) — psycopg2 dual-backend, DATABASE_URL secret, live on Streamlit Cloud | ✅ Complete |
-| 9 | Persistent Shift Configuration — ShiftTemplates, WeeklySetup, editable shifts/headcount, tenant-scoped persistence | 🚧 In progress |
+| 9 | Persistent Shift Configuration — ShiftTemplates, WeeklySetup, editable shifts/headcount, tenant-scoped persistence | ✅ Complete |
 
 ---
 
@@ -31,12 +31,8 @@
 
 | File | Last Change |
 |---|---|
-| `logic.py` | Solver redesign: variable headcount per slot, optional slot priority, part-time affinity for short shifts, multi-row solution extraction, `gerar_excel_escala()` added |
-| `database.py` | Added tenant-scoped ShiftTemplates and WeeklySetup persistence, default seeding, and solver configuration builders |
-| `app.py` | Added Configurações tab; weekly setup loads/saves overrides; Tab 3 loads persisted shift templates and headcount |
-| `docs/CURRENT_STATE.md` | Phase 9 status, validation notes, and next steps |
-| `docs/ARCHITECTURE.md` | Added persistent configuration flow and six-tab map |
-| `docs/CHANGELOG.md` | Added Phase 9 implementation entry |
+| `database.py` | Added DateHeadcountOverrides table (dual-backend), get/save/delete CRUD with UNIQUE constraint |
+| `app.py` | Added date headcount override expander in aba2; slot_config patch in aba3 before solver call |
 
 ---
 
@@ -61,16 +57,14 @@ app_escala/
 - **Credentials rotation (manual action required)** — Supabase DB password and admin@cafe.com password need to be rotated.
 - **Budget thresholds (290/300/305h) hardcoded** — Balsbridge-specific, multi-tenancy gap, not critical yet.
 - **Stripe test mode** — all keys are test keys; must switch to live keys before accepting real payments.
-- **Phase 9 verification** — SQLite persistence smoke test passed; production Supabase validation follows deployment.
 
 ---
 
 ## Next Immediate Steps
 
-**Solver / Features remaining:**
-1. **Date-specific headcount overrides** — allow manager to increase headcount for a specific date (e.g. Christmas Eve) on top of the weekly template. UI in Tab 3 or Tab 2.
-2. **Demand Prediction Alerts** — future epic for alerts based on local holidays, concerts, gigs, or sports matches that suggest increased staff capacity.
-3. **Push to Streamlit Cloud** — `git push origin master` to deploy the new persistence layer + UI.
+1. **Register domain** — `madfrog.ie` via Blacknight or Namecheap (~€25/year)
+2. **Deploy landing page** — connect `nandocaetano/roster-cafe` to Cloudflare Pages, `public/` as root
+3. **Switch Stripe to live mode** — replace test keys with live keys (requires user approval — financial action)
 
 **Launch Package (all to do before going live):**
 1. **Register domain** — `madfrog.ie` via Blacknight or Namecheap (~€25/year); OR deploy to `roster-cafe.pages.dev` free first.
