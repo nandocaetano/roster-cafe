@@ -125,7 +125,7 @@ def render_availability_selector(prefix, defaults=None):
 # ==========================================
 # APP SETUP
 # ==========================================
-st.set_page_config(page_title="Gerador de Escalas", layout="wide")
+st.set_page_config(page_title="Escala", page_icon="⬡", layout="wide")
 
 # Run init_db only once per browser session — not on every Streamlit rerun.
 # On Supabase, every _get_conn() is a network round-trip (~200-400 ms);
@@ -219,6 +219,10 @@ with st.sidebar:
     st.write(f"👤 {_user['email']}")
     st.write(f"🔖 {_user['role'].capitalize()}")
     st.divider()
+    _semana_ativa = st.session_state.get("semana_key", "")
+    if _semana_ativa:
+        st.caption(f"📋 **Semana:** {_semana_ativa}")
+        st.divider()
     if _user.get('role') == 'superadmin':
         if 'nc_k' not in st.session_state:
             st.session_state['nc_k'] = 0
@@ -286,7 +290,7 @@ with st.sidebar:
                     "- 💾 Histórico de Escalas\n"
                     "- 👥 Até 20 funcionários"
                 )
-                st.markdown("**€39.90** setup + **€20/mês**")
+                st.markdown("**€20/mês** · 15-day free trial · cancel anytime")
                 if st.button("🚀 Upgrade Agora", key="btn_upgrade", type="primary"):
                     try:
                         _base = os.environ.get("APP_URL", "https://your-app.streamlit.app")
@@ -304,13 +308,27 @@ with st.sidebar:
         st.session_state['tenant_id'] = None
         st.rerun()
 
-st.title("☕ Gerenciador de Escalas - Cafe")
+st.markdown('''<div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+  <svg width="28" height="32" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="24,4 41.32,14 41.32,34 24,44 6.68,34 6.68,14" fill="rgba(139,92,246,0.2)" stroke="#a78bfa" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="24,12 34.39,18 34.39,30 24,36 13.61,30 13.61,18" fill="none" stroke="rgba(167,139,250,0.4)" stroke-width="1" stroke-linejoin="round"/>
+  </svg>
+  <span style="font-size:28px;font-weight:700;letter-spacing:-0.04em;color:#f6f4ff">escala</span>
+</div>''', unsafe_allow_html=True)
+st.markdown('''<style>
+[data-testid="stAppViewContainer"] { background: #0a0a0f; }
+[data-testid="stHeader"] { background: rgba(10,10,15,0.9) !important; backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.08); }
+[data-testid="stSidebar"] { background: #111018 !important; border-right: 1px solid rgba(255,255,255,0.07); }
+.stTabs [data-baseweb="tab-list"] { background: transparent; border-bottom: 1px solid rgba(255,255,255,0.1); gap: 4px; }
+.stTabs [data-baseweb="tab"] { background: transparent; color: #9892ae; border: none; border-radius: 8px 8px 0 0; padding: 10px 18px; font-weight: 500; font-size: 13px; }
+.stTabs [aria-selected="true"] { background: rgba(139,92,246,0.15) !important; color: #a78bfa !important; border-bottom: 2px solid #8b5cf6; }
+button[kind="primary"] { background: linear-gradient(90deg,#7c3aed,#9c5cf7) !important; border: none !important; }
+</style>''', unsafe_allow_html=True)
 if st.session_state.pop("_upgrade_msg", False):
     st.success("🎉 Pagamento confirmado! O teu plano Roster Café Pro está ativo.")
 
-aba1, aba_config, aba2, aba3, aba4, aba5 = st.tabs([
-    "👥 Gestão do Time", "🕒 Configurações", "⚙️ Setup da Semana",
-    "📅 Rascunho e Aprovação", "📊 Análise", "📖 Ajuda",
+aba2, aba3, aba1, aba_config, aba4, aba5 = st.tabs([
+    "⚙️ Setup da Semana", "📅 Rota da Semana", "👥 Team", "🕒 Templates", "📊 Histórico", "📖 Ajuda",
 ])
 
 lista_cargos_oficiais = ["Manager", "Assistant Manager", "Head Barista", "Barista"]
@@ -621,7 +639,7 @@ with aba2:
                             st.session_state["semana_key"] = _overrides_to_save["semana_key"]
                             st.session_state['config_semana'] = build_config_semana(TENANT_ID, _overrides_to_save)
                             st.session_state['margem_horas'] = margem_horas
-                            st.success("Setup salvo na base de dados. Vá para a Aba 3 gerar a escala.")
+                            st.success("Setup salvo! Vai à aba '📅 Rota da Semana' para gerar a escala.")
 
             st.subheader("📊 Status do Budget")
             progresso = total_horas_planejadas / 305.0 if total_horas_planejadas <= 305 else 1.0
@@ -677,7 +695,7 @@ with aba2:
                 else:
                     st.caption("Nenhum override para a semana selecionada.")
         else:
-            st.warning("Cadastre os funcionários na Aba 1 primeiro.")
+            st.warning("Cadastra os funcionários na aba '👥 Team' primeiro.")
 
 # ------------------------------------------
 # ABA 3: ROSTER E PAINEL DE HORAS
@@ -717,21 +735,10 @@ with aba3:
     lista_nomes = df_equipe_atual['nome'].tolist() if not df_equipe_atual.empty else []
     lista_nomes.append("Someone (Outra Loja)")
 
-    col_btn_vazio, col_btn_auto, col_btn_reset = st.columns(3)
-
-    if col_btn_vazio.button("🗑️ Gerar Esqueleto Vazio"):
-        linhas_roster = [
-            {"Dia": dia, "Horário": turno, "Funcionário": "A Preencher"}
-            for dia, turnos in turnos_padrao.items()
-            for turno in turnos
-        ]
-        st.session_state['roster_df'] = pd.DataFrame(linhas_roster)
-        st.rerun()
-
-    if col_btn_auto.button("🤖 Gerar Escala Automática", type="primary"):
+    if st.button("🤖 Gerar Escala Automática", type="primary", use_container_width=True):
         config_semana = st.session_state.get('config_semana', {})
         if not config_semana:
-            st.error("Erro: Vá na Aba 2 e clique em 'Confirmar Horas da Semana' primeiro.")
+            st.error("Vai à aba '⚙️ Setup da Semana' e clica em 'Confirmar Horas da Semana' primeiro.")
         else:
             margem = st.session_state.get('margem_horas', 2.0)
             # patch slot_config with any date-specific overrides
@@ -760,8 +767,19 @@ with aba3:
             st.session_state['constraints_warnings'] = constraints_warnings
             st.rerun()
 
+    col_btn_vazio, col_btn_reset = st.columns([5, 1])
+
+    if col_btn_vazio.button("🗑️ Esqueleto manual"):
+        linhas_roster = [
+            {"Dia": dia, "Horário": turno, "Funcionário": "A Preencher"}
+            for dia, turnos in turnos_padrao.items()
+            for turno in turnos
+        ]
+        st.session_state['roster_df'] = pd.DataFrame(linhas_roster)
+        st.rerun()
+
     if 'roster_df' in st.session_state:
-        with st.expander("⬇️ Exportar Escala"):
+        with st.expander("⬇️ Exportar Escala", expanded=True):
             _rdf = st.session_state['roster_df']
             _semana_lbl = st.session_state.get('_last_semana_label', '')
             ec1, ec2, ec3 = st.columns(3)
@@ -773,7 +791,7 @@ with aba3:
             else:
                 ec3.info("🔒 PDF — Pro")
 
-    if col_btn_reset.button("🔄 Resetar Aba"):
+    if col_btn_reset.button("🔄", help="Resetar escala"):
         for _key in ('roster_df', 'constraints_warnings'):
             st.session_state.pop(_key, None)
         st.rerun()
@@ -869,58 +887,58 @@ with aba3:
                         st.info(w)
 
         st.divider()
-        st.subheader("💾 Histórico de Escalas")
-        if not check_feature_gate(TENANT_ID, "roster_history"):
-            st.info("🔒 O histórico de escalas está disponível apenas no plano Pro. Faça upgrade no sidebar para desbloquear.")
-        else:
-            col_salvar, col_historico = st.columns([2, 3])
-
-            with col_salvar:
-                st.write("**Salvar escala atual**")
-                semana_label = st.text_input("Rótulo da semana", placeholder="ex: Semana 03/11", key="semana_label_input")
-                if st.button("💾 Salvar Escala", key="btn_salvar_roster"):
-                    if not semana_label.strip():
-                        st.warning("Digite um rótulo para identificar a semana.")
-                    else:
-                        dados_json = roster_editado.to_json(orient="records", force_ascii=False)
-                        salvar_roster(TENANT_ID, semana_label.strip(), dados_json)
-                        st.session_state['_last_semana_label'] = semana_label.strip()
-                        st.session_state['roster_v'] += 1
-                        st.success(f"Escala '{semana_label}' salva!")
-                        st.rerun()
-
-            with col_historico:
-                st.write("**Escalas salvas**")
-                df_rosters = _cached_rosters(TENANT_ID, st.session_state['roster_v'])
-                if df_rosters.empty:
-                    st.info("Nenhuma escala salva ainda.")
+        if check_feature_gate(TENANT_ID, "roster_history"):
+            _sal_col1, _sal_col2 = st.columns([4, 1])
+            semana_label = _sal_col1.text_input("", placeholder="Nome da semana (ex: Semana 03/11)", key="semana_label_input", label_visibility="collapsed")
+            if _sal_col2.button("💾 Guardar", key="btn_salvar_roster"):
+                if not semana_label.strip():
+                    st.warning("Dá um nome à semana antes de guardar.")
                 else:
-                    for _, r_row in df_rosters.iterrows():
-                        r_col1, r_col2, r_col3 = st.columns([3, 2, 1])
-                        r_col1.write(f"**{r_row['semana']}**")
-                        r_col2.caption(r_row['criado_em'][:16])
-                        btn_load = r_col3.button("📂", key=f"load_{r_row['id']}", help="Carregar")
-                        btn_del = r_col3.button("🗑️", key=f"del_{r_row['id']}", help="Apagar")
-                        if btn_load:
-                            dados = get_roster_by_id(TENANT_ID, int(r_row['id']))
-                            if dados:
-                                st.session_state['roster_df'] = pd.read_json(dados, orient="records")
-                                st.rerun()
-                        if btn_del:
-                            deletar_roster(TENANT_ID, int(r_row['id']))
-                            st.session_state['roster_v'] += 1
-                            st.rerun()
+                    dados_json = roster_editado.to_json(orient="records", force_ascii=False)
+                    salvar_roster(TENANT_ID, semana_label.strip(), dados_json)
+                    st.session_state['_last_semana_label'] = semana_label.strip()
+                    st.session_state['roster_v'] += 1
+                    st.success(f"Escala '{semana_label}' guardada! Ver histórico completo na aba '📊 Histórico'.")
+                    st.rerun()
+        else:
+            st.caption("🔒 Guardar no histórico — disponível no plano Pro.")
 
 # ------------------------------------------
 # ABA 4: ANÁLISE
 # ------------------------------------------
 with aba4:
-    st.header("📊 Análise da Semana")
+    st.header("📊 Histórico & Análise")
 
+    st.subheader("💾 Escalas guardadas")
+    if not check_feature_gate(TENANT_ID, "roster_history"):
+        st.info("🔒 O histórico de escalas está disponível apenas no plano Pro.")
+    else:
+        df_rosters = _cached_rosters(TENANT_ID, st.session_state['roster_v'])
+        if df_rosters.empty:
+            st.info("Nenhuma escala guardada ainda. Gera uma escala e guarda-a na aba '📅 Rota da Semana'.")
+        else:
+            for _, r_row in df_rosters.iterrows():
+                r_col1, r_col2, r_col3 = st.columns([3, 2, 1])
+                r_col1.write(f"**{r_row['semana']}**")
+                r_col2.caption(r_row['criado_em'][:16])
+                btn_load = r_col3.button("📂", key=f"hist_load_{r_row['id']}", help="Carregar")
+                btn_del = r_col3.button("🗑️", key=f"hist_del_{r_row['id']}", help="Apagar")
+                if btn_load:
+                    dados = get_roster_by_id(TENANT_ID, int(r_row['id']))
+                    if dados:
+                        st.session_state['roster_df'] = pd.read_json(dados, orient="records")
+                        st.rerun()
+                if btn_del:
+                    deletar_roster(TENANT_ID, int(r_row['id']))
+                    st.session_state['roster_v'] += 1
+                    st.rerun()
+
+    st.divider()
+    st.subheader("📈 Análise da Semana")
     if not check_feature_gate(TENANT_ID, "analytics"):
-        st.info("🔒 Analytics está disponível apenas no plano Pro. Faça upgrade no sidebar para desbloquear.")
+        st.info("🔒 Analytics está disponível apenas no plano Pro. Faz upgrade no sidebar para desbloquear.")
     elif 'roster_df' not in st.session_state:
-        st.info("Gere ou carregue uma escala na Aba 3 primeiro.")
+        st.info("Gera ou carrega uma escala na aba '📅 Rota da Semana' primeiro.")
     else:
         _df_an = st.session_state['roster_df']
         _cfg_an = st.session_state.get('config_semana', {})
@@ -958,7 +976,7 @@ with aba4:
                 else:
                     st.info("Nenhuma hora atribuída ainda.")
             else:
-                st.caption("Configure a semana na Aba 2 para ver comparativo com alvo.")
+                st.caption("Faz o setup na aba '⚙️ Setup da Semana' para ver comparativo com alvo.")
 
         with col_c2:
             st.write("📅 **Cobertura por Dia**")
