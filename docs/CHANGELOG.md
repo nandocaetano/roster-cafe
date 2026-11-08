@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-11-08 — Phase 8: Checkout End-to-End Desbloqueado
+
+### Fixed
+- `supabase/functions/create-checkout/index.ts`: removido parâmetro `payment_method_types` descontinuado pelo Stripe; re-deployada com `--no-verify-jwt` (a função estava exigindo JWT de uma landing page pública).
+- `STRIPE_SECRET_KEY` no Supabase Secrets estava salvo com aspas — corrigido manualmente.
+- Price IDs adicionados ao Supabase Secrets (`STRIPE_PRICE_STARTER/STANDARD/PLUS` + anuais).
+
+### Result
+- Checkout modal → Stripe Checkout funcionando de ponta a ponta.
+- Pronto para teste end-to-end com Nati.
+
+### Files Modified
+- `supabase/functions/create-checkout/index.ts`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## 2026-11-08 — Phase 8: Modal Bug Fix, Permissions & SaaS Bootstrap Kit
 
 ### Fixed

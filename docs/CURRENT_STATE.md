@@ -40,6 +40,10 @@
 - ✅ Edge Function create-checkout — nova função para landing page iniciar checkout com nome do café
 - ✅ Landing page atualizada — modal com nome do café + seletor de tier + Stripe checkout real (substitui mailto:)
 - ✅ Modal bug corrigido e deployado — `display:none` em vez de `hidden`, closeModal corrigido (Cloudflare Workers v9b769bd4)
+- ✅ `create-checkout` re-deployada com `--no-verify-jwt` (antes exigia JWT, landing pública não autenticada)
+- ✅ `payment_method_types` removido do `create-checkout` (parâmetro descontinuado pelo Stripe)
+- ✅ `STRIPE_SECRET_KEY` no Supabase corrigido (estava salvo com aspas, agora sem)
+- ✅ Checkout end-to-end funcionando — modal → Stripe Checkout abre corretamente
 - ✅ `.claude/settings.local.json` — permissões `npx wrangler *` e `npm run *` adicionadas (local, não commitado)
 - ✅ SaaS Bootstrap Kit criado — Artifact com prompt mestre + estrutura completa do ambiente Maestri para reusar em novos projetos
 - ⏳ **[PRÉ-LAUNCH] Price IDs em falta no Supabase** — STRIPE_PRICE_* precisam ser adicionados como secrets na Edge Function
@@ -68,10 +72,9 @@
 
 | File | Last Change |
 |---|---|
-| `escala-landing/src/pages/index.astro` | Modal bug fix: `display:none` substitui `hidden`, closeModal corrigido; deployado a Cloudflare Workers |
-| `.claude/settings.local.json` | Permissões `npx wrangler *` e `npm run *` adicionadas (arquivo local, não rastreado por git) |
-| `docs/CURRENT_STATE.md` | Atualizado com estado actual desta sessão |
-| `docs/CHANGELOG.md` | Nova entrada de sessão adicionada |
+| `supabase/functions/create-checkout/index.ts` | Removido `payment_method_types` (descontinuado pelo Stripe); re-deployada com `--no-verify-jwt` |
+| `docs/CURRENT_STATE.md` | Atualizado com estado atual |
+| `docs/CHANGELOG.md` | Nova entrada adicionada |
 
 ---
 
@@ -93,7 +96,6 @@ app_escala/
 
 ## Blockers
 
-- **[PRÉ-LAUNCH] Price IDs em falta no Supabase** — `create-checkout` Edge Function precisa de STRIPE_PRICE_STARTER/STANDARD/PLUS/+ANNUAL como secrets no Supabase.
 - **[PRÉ-LAUNCH] Resend DNS a propagar** — domínio madfrog.ie ainda em verificação; email funciona quando verificado (nameservers Reg365 → Cloudflare pendentes).
 - **Credentials rotation (manual action required)** — Supabase DB password and admin email password need to be rotated.
 - **Budget thresholds (290/300/305h) hardcoded** — Balsbridge-specific, multi-tenancy gap, not critical yet.
@@ -103,12 +105,10 @@ app_escala/
 
 ## Next Immediate Steps
 
-1. **Adicionar price IDs ao Supabase** — `STRIPE_PRICE_STARTER/STANDARD/PLUS/+ANNUAL` como Edge Function secrets (Supabase Dashboard → Edge Functions → create-checkout → Secrets)
-2. **Re-deploy landing page** — `cd escala-landing && npx wrangler deploy` após adicionar os price IDs
-3. **Confirmar Resend DNS** — verificar em resend.com/domains que madfrog.ie ficou verde (auto depois que Cloudflare NS propagar)
-4. **Teste end-to-end com Nati** — escala.madfrog.ie → nome do café → Stripe test card `4242 4242 4242 4242` → welcome email → login → primeira escala
-5. **Switch Stripe para live mode** — substituir sk_test por live keys (HITL, requer aprovação explícita)
-6. **Credentials rotation** — Supabase DB password + admin email (HITL, requer aprovação)
+1. **Teste end-to-end com Nati** — escala.madfrog.ie → nome do café → Stripe test card `4242 4242 4242 4242` → credenciais (via Supabase se email ainda não chegar) → login → primeira escala
+2. **Confirmar Resend DNS** — verificar em resend.com/domains que madfrog.ie ficou verde (aguardando propagação dos NS Reg365 → Cloudflare)
+3. **Switch Stripe para live mode** — substituir sk_test por live keys (HITL, requer aprovação explícita)
+4. **Credentials rotation** — Supabase DB password + admin email (HITL, requer aprovação)
 
 ---
 

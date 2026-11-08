@@ -38,7 +38,6 @@ Deno.serve(async (req: Request) => {
     const cancelUrl = Deno.env.get("LANDING_URL") ?? "https://escala.madfrog.ie";
     const form = new URLSearchParams();
     form.set("mode", "subscription");
-    form.set("payment_method_types[0]", "card");
     form.set("line_items[0][price]", priceId);
     form.set("line_items[0][quantity]", "1");
     form.set("subscription_data[trial_period_days]", "15");
