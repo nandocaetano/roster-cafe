@@ -304,8 +304,7 @@ if _user.get('role') != 'superadmin' and get_subscription(TENANT_ID).get('plano'
       <p>Choose a plan to generate compliant rotas. Card required, cancel anytime.</p>
     </div>
     """, unsafe_allow_html=True)
-    _cafe_name_input = st.text_input("Your café name", placeholder="e.g. Balsbridge Coffee", key="new_cafe_name")
-    _render_plan_cards(0, "trial_wall_upgrade", "Start trial", cafe_name=_cafe_name_input)
+    _render_plan_cards(TENANT_ID, "trial_wall_upgrade", "Start trial")
     st.stop()
 
 # Version counters — incremented after each write so @st.cache_data misses and re-fetches.
