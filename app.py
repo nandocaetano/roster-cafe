@@ -634,7 +634,7 @@ with aba2:
                         dias_folga_sel = c_folga.multiselect("🏖️ Day Off", dias_semana_opts, default=list(_override.get("dias_folga", [])), key=f"folga_{row['nome']}")
                         dias_ferias_sel = c_ferias.multiselect("✈️ Holiday", dias_semana_opts, default=list(_override.get("dias_ferias", [])), key=f"ferias_{row['nome']}")
                         dias_treino_sel = c_treino.multiselect("📚 Training", dias_semana_opts, default=list(_override.get("dias_treinamento", [])), key=f"treino_{row['nome']}")
-                        horas_treino = c_htreino.number_input("Training h.", min_value=0, max_value=40, value=float(_override.get("horas_treinamento", 0)), key=f"htreino_{row['nome']}", help="Total training hours this week.")
+                        horas_treino = c_htreino.number_input("Training h.", min_value=0.0, max_value=40.0, value=float(_override.get("horas_treinamento", 0)), key=f"htreino_{row['nome']}", help="Total training hours this week.")
                     else:
                         horas_alvo = int(_override.get("horas_alvo", row['horas_max']))
                         dias_folga_sel = list(_override.get("dias_folga", []))
