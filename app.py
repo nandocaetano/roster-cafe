@@ -306,7 +306,7 @@ with st.sidebar:
                     "- 💾 Histórico de Escalas\n"
                     "- 👥 Até 20 funcionários"
                 )
-                st.markdown("**€20/mês** · 15-day free trial · cancel anytime")
+                st.markdown("**€20/mês** · 15 dias de trial gratuito · cancela quando quiseres")
                 if st.button("🚀 Upgrade Agora", key="btn_upgrade", type="primary"):
                     try:
                         _base = os.environ.get("APP_URL", "https://your-app.streamlit.app")
@@ -315,7 +315,7 @@ with st.sidebar:
                         )
                         st.markdown(f"[➡️ Ir para pagamento]({url})")
                     except KeyError:
-                        st.warning("Stripe não configurado. Adicione `STRIPE_SECRET_KEY` nas Streamlit Cloud Secrets.")
+                        st.warning("Pagamentos temporariamente indisponíveis. Tenta novamente em breve ou contacta o suporte.")
                     except Exception as _se:
                         st.error(f"Erro ao iniciar checkout: {_se}")
     st.divider()
@@ -344,7 +344,7 @@ if st.session_state.pop("_upgrade_msg", False):
     st.success("🎉 Pagamento confirmado! O teu plano Roster Café Pro está ativo.")
 
 aba2, aba3, aba1, aba_config, aba4, aba5 = st.tabs([
-    "⚙️ Setup da Semana", "📅 Rota da Semana", "👥 Team", "🕒 Templates", "📊 Histórico", "📖 Ajuda",
+    "⚙️ Setup da Semana", "📅 Rota da Semana", "👥 Equipa", "🕒 Turnos", "📊 Histórico", "📖 Ajuda",
 ])
 
 lista_cargos_oficiais = ["Manager", "Assistant Manager", "Head Barista", "Barista"]
@@ -353,7 +353,7 @@ lista_cargos_oficiais = ["Manager", "Assistant Manager", "Head Barista", "Barist
 # ABA 1: GESTÃO DO TIME
 # ------------------------------------------
 with aba1:
-    st.header("Equipe Atual")
+    st.header("Equipa Atual")
     df_equipe = _cached_funcionarios(TENANT_ID, st.session_state['equipe_v'])
 
     espaco_esq, col_tabela, espaco_dir = st.columns([1, 6, 1])
@@ -367,6 +367,7 @@ with aba1:
             st.dataframe(df_equipe[_cols_tabela], use_container_width=True)
         else:
             st.info("Nenhum funcionário cadastrado ainda.")
+            st.button("➕ Adicionar primeiro funcionário", key="cta_add_first", type="primary")
 
     st.divider()
     col1, col_espaco, col2 = st.columns([4, 1, 4])
@@ -400,7 +401,7 @@ with aba1:
         if st.button("Cadastrar", key=f"novo_btn_{_nk}") and nome_novo:
             _cur_count = len(df_equipe) if not df_equipe.empty else 0
             if _cur_count >= _emp_limit:
-                st.error(f"License Limit Reached: O seu plano atual suporta no máximo {_emp_limit} funcionários. Faça upgrade para Pro no sidebar.")
+                st.error(f"Limite do plano atingido: o teu plano atual suporta até {_emp_limit} funcionários ativos. Faz upgrade para Pro no sidebar para adicionar mais.")
             else:
                 try:
                     adicionar_funcionario(TENANT_ID, nome_novo, cargo_novo, contrato_novo, h_min_nova, h_max_nova, dias_selecionados, nivel_novo, pref_novo)
@@ -410,7 +411,7 @@ with aba1:
                     st.rerun()
                 except ValueError as _ve:
                     if "limite_funcionarios" in str(_ve):
-                        st.error(f"License Limit Reached: Limite de {_emp_limit} funcionários atingido.")
+                        st.error(f"Limite do plano atingido: o teu plano suporta até {_emp_limit} funcionários ativos. Faz upgrade para Pro no sidebar.")
                     else:
                         st.error(f"Erro ao cadastrar: {_ve}")
 
@@ -547,7 +548,7 @@ with aba_config:
 # ------------------------------------------
 with aba2:
     if _trial_expired(TENANT_ID):
-        st.warning("⏰ O teu trial de 15 dias terminou. Faz upgrade para continuar a gerar escalas.")
+        st.warning("⏰ O teu trial de 15 dias terminou. Faz upgrade para Pro — poupa 3h por semana em escalas, por €20/mês.")
         st.stop()
     st.header("Seleção Semanal e Budget")
     esp_esq, col_setup, esp_dir = st.columns([1, 4, 1])
@@ -722,14 +723,14 @@ with aba2:
                 else:
                     st.caption("Nenhum override para a semana selecionada.")
         else:
-            st.warning("Cadastra os funcionários na aba '👥 Team' primeiro.")
+            st.warning("Cadastra os funcionários na aba '👥 Equipa' primeiro.")
 
 # ------------------------------------------
 # ABA 3: ROSTER E PAINEL DE HORAS
 # ------------------------------------------
 with aba3:
     if _trial_expired(TENANT_ID):
-        st.warning("⏰ O teu trial de 15 dias terminou. Faz upgrade para continuar a gerar escalas.")
+        st.warning("⏰ O teu trial de 15 dias terminou. Faz upgrade para Pro — poupa 3h por semana em escalas, por €20/mês.")
         st.stop()
     st.header("📅 Escala da Semana")
 
@@ -931,7 +932,7 @@ with aba3:
                     st.success(f"Escala '{semana_label}' guardada! Ver histórico completo na aba '📊 Histórico'.")
                     st.rerun()
         else:
-            st.caption("🔒 Guardar no histórico — disponível no plano Pro.")
+            st.caption("🔒 Guardar no histórico de escalas — disponível no plano Pro. Faz upgrade no sidebar.")
 
 # ------------------------------------------
 # ABA 4: ANÁLISE
@@ -941,7 +942,7 @@ with aba4:
 
     st.subheader("💾 Escalas guardadas")
     if not check_feature_gate(TENANT_ID, "roster_history"):
-        st.info("🔒 O histórico de escalas está disponível apenas no plano Pro.")
+        st.info("🔒 O Histórico de Escalas guarda todas as semanas para auditoria e comparação — disponível no plano Pro. Faz upgrade no sidebar.")
     else:
         df_rosters = _cached_rosters(TENANT_ID, st.session_state['roster_v'])
         if df_rosters.empty:
@@ -966,7 +967,7 @@ with aba4:
     st.divider()
     st.subheader("📈 Análise da Semana")
     if not check_feature_gate(TENANT_ID, "analytics"):
-        st.info("🔒 Analytics está disponível apenas no plano Pro. Faz upgrade no sidebar para desbloquear.")
+        st.info("🔒 O painel de Analytics mostra cobertura, gaps e horas por funcionário — disponível no plano Pro. Faz upgrade no sidebar.")
     elif 'roster_df' not in st.session_state:
         st.info("Gera ou carrega uma escala na aba '📅 Rota da Semana' primeiro.")
     else:
@@ -1218,4 +1219,5 @@ Não é obrigatório por lei mas é boa prática para o bem-estar da equipa.
     _f3.success("**3️⃣ Aba 3**\nGera a escala automática. Revê os avisos. Ajusta manualmente se necessário. Exporta.")
     _f4.success("**4️⃣ Aba 4**\nConfirma que a cobertura está a 100% e as horas estão equilibradas.")
 
-    st.info("💡 **Limite de licença:** O plano atual suporta até **20 funcionários ativos** por café. Contacta o suporte se precisares de expandir.")
+    if not _is_pro:
+        st.info("💡 **No plano Pro** podes ter até **20 funcionários ativos** por café. Faz upgrade no sidebar.")
