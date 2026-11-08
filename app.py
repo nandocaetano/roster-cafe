@@ -170,41 +170,78 @@ if 'user' not in st.session_state:
 # ------------------------------------------
 if st.session_state['user'] is None:
     st.markdown("""
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
     [data-testid="stAppViewContainer"] > .main {
-        background: linear-gradient(135deg, #1a0a3e 0%, #3b1278 55%, #6b2fa0 100%);
+        background: #0d0a1a;
         min-height: 100vh;
     }
     [data-testid="stHeader"] { background: transparent !important; }
     [data-testid="stDecoration"] { display: none; }
     [data-testid="stToolbar"] { display: none; }
     section[data-testid="stMain"] [data-testid="stForm"] {
-        background: rgba(18, 15, 35, 0.96);
-        border-radius: 18px;
+        background: rgba(20, 14, 42, 0.97);
+        border-radius: 20px;
         padding: 2.5rem 2.2rem 2rem 2.2rem;
-        border: 1px solid rgba(140, 90, 200, 0.25);
-        box-shadow: 0 28px 72px rgba(0, 0, 0, 0.55);
+        border: 1px solid rgba(139, 92, 246, 0.2);
+        box-shadow: 0 0 0 1px rgba(139,92,246,0.06), 0 32px 80px rgba(0,0,0,0.6);
     }
     [data-testid="stFormSubmitButton"] > button {
-        background: linear-gradient(90deg, #7c3aed, #9c5cf7) !important;
+        background: linear-gradient(90deg, #6d28d9, #8b5cf6) !important;
         color: white !important;
         border: none !important;
-        border-radius: 8px !important;
+        border-radius: 10px !important;
+        font-family: 'Outfit', sans-serif !important;
         font-weight: 600 !important;
-        letter-spacing: 0.4px;
+        font-size: 15px !important;
+        letter-spacing: 0.3px;
+        padding: 0.6rem 0 !important;
         transition: opacity 0.15s;
     }
-    [data-testid="stFormSubmitButton"] > button:hover {
-        opacity: 0.88;
+    [data-testid="stFormSubmitButton"] > button:hover { opacity: 0.85; }
+    .login-brand {
+        text-align: center;
+        margin-bottom: 1.8rem;
+    }
+    .login-hex {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 52px; height: 52px;
+        background: linear-gradient(135deg, #6d28d9, #8b5cf6);
+        border-radius: 14px;
+        font-size: 26px;
+        margin-bottom: 12px;
+        box-shadow: 0 4px 20px rgba(139,92,246,0.4);
+    }
+    .login-wordmark {
+        font-family: 'Outfit', sans-serif;
+        font-weight: 700;
+        font-size: 28px;
+        letter-spacing: -0.04em;
+        color: #f0ecff;
+        display: block;
+        margin-bottom: 4px;
+    }
+    .login-tagline {
+        font-family: 'Outfit', sans-serif;
+        font-size: 13px;
+        color: #7c6fa8;
+        letter-spacing: 0.02em;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
     _, col_login, _ = st.columns([3, 2, 3])
     with col_login:
-        st.markdown("<h2 style='text-align:center;margin-bottom:4px'>☕ escala</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align:center;color:#a78bfa;margin-bottom:1.2rem'>Sign in to your account</p>", unsafe_allow_html=True)
+        st.markdown("""
+        <div class="login-brand">
+            <div class="login-hex">⬡</div>
+            <span class="login-wordmark">escala</span>
+            <span class="login-tagline">Café rota management · Dublin</span>
+        </div>
+        """, unsafe_allow_html=True)
         with st.form("form_login"):
             email_login = st.text_input("Email", placeholder="you@cafe.com")
             senha_login = st.text_input("Password", type="password", placeholder="••••••••")
