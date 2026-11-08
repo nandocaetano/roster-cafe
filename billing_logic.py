@@ -120,7 +120,7 @@ def check_feature_gate(tenant_id, feature: str):
     return feature not in {"pdf_export", "analytics", "roster_history"}
 
 
-def create_stripe_checkout_session(tenant_id, tier, success_url, cancel_url, interval="month"):
+def create_stripe_checkout_session(tenant_id, tier, success_url, cancel_url, interval="month", cafe_name=""):
     import stripe
 
     if tier not in TIER_PRICES_CENTS or interval not in ("month", "year"):
@@ -150,7 +150,7 @@ def create_stripe_checkout_session(tenant_id, tier, success_url, cancel_url, int
     session = stripe.checkout.Session.create(
         mode="subscription",
         line_items=[line_item],
-        metadata={"tenant_id": str(tenant_id), "tier": tier},
+        metadata={"tenant_id": str(tenant_id), "tier": tier, "cafe_name": cafe_name},
         subscription_data=subscription_data,
         success_url=success_url,
         cancel_url=cancel_url,

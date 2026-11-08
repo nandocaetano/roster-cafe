@@ -83,7 +83,7 @@ def _trial_expired(tenant_id):
         return False
 
 
-def _render_plan_cards(tenant_id, key_prefix, button_prefix):
+def _render_plan_cards(tenant_id, key_prefix, button_prefix, cafe_name=""):
     """Render the three self-serve monthly plans and start checkout."""
     _plan_options = [
         ("starter", "Starter", "€19/mo", "Up to 10 staff"),
@@ -103,7 +103,7 @@ def _render_plan_cards(tenant_id, key_prefix, button_prefix):
             if st.button(f"{button_prefix} — {_plan_price}", key=f"{key_prefix}_{_plan_tier}", type="primary", use_container_width=True):
                 try:
                     _base = os.environ.get("APP_URL", "https://your-app.streamlit.app")
-                    _url = create_stripe_checkout_session(tenant_id, _plan_tier, f"{_base}?upgraded=1", _base)
+                    _url = create_stripe_checkout_session(tenant_id, _plan_tier, f"{_base}?upgraded=1", _base, cafe_name=cafe_name)
                     st.markdown(f"[➡️ Continue to checkout]({_url})")
                 except KeyError:
                     st.warning("Payments temporarily unavailable. Please try again later or contact support.")
@@ -304,7 +304,8 @@ if _user.get('role') != 'superadmin' and get_subscription(TENANT_ID).get('plano'
       <p>Choose a plan to generate compliant rotas. Card required, cancel anytime.</p>
     </div>
     """, unsafe_allow_html=True)
-    _render_plan_cards(TENANT_ID, "trial_wall_upgrade", "Start trial")
+    _cafe_name_input = st.text_input("Your café name", placeholder="e.g. Balsbridge Coffee", key="new_cafe_name")
+    _render_plan_cards(0, "trial_wall_upgrade", "Start trial", cafe_name=_cafe_name_input)
     st.stop()
 
 # Version counters — incremented after each write so @st.cache_data misses and re-fetches.

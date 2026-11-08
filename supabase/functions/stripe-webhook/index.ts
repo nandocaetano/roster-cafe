@@ -41,19 +41,64 @@ serve(async (req: Request) => {
   }
 
   try {
-    // ── Payment confirmed → upgrade to Pro ──────────────────────────────────
+    // ── Payment confirmed → create tenant or upgrade an existing tenant ─────
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
-      const tenantId = parseInt(session.metadata?.tenant_id ?? "0", 10);
-      if (!tenantId) {
-        return new Response("Missing tenant_id in session metadata", { status: 400 });
+      let tenantId = parseInt(session.metadata?.tenant_id ?? "0", 10) || 0;
+      const customerEmail = session.customer_details?.email ?? session.customer_email ?? null;
+      const cafeName = session.metadata?.cafe_name?.trim() || "New Cafe";
+
+      if (tenantId <= 0) {
+        if (!customerEmail) {
+          console.error("New checkout has no customer email; account creation skipped");
+        } else {
+          const { data: cafe, error: cafeError } = await supabase
+            .from("cafes")
+            .insert({ name: cafeName, admin_email: customerEmail, created_at: new Date().toISOString() })
+            .select("id")
+            .single();
+          if (cafeError) throw cafeError;
+
+          tenantId = cafe.id;
+          const password = crypto.randomUUID().slice(0, 12);
+          const enc = new TextEncoder();
+          const salt = crypto.getRandomValues(new Uint8Array(16));
+          const passwordBytes = enc.encode(password);
+          const hashInput = new Uint8Array(salt.length + passwordBytes.length);
+          hashInput.set(salt);
+          hashInput.set(passwordBytes, salt.length);
+          const hashBuffer = await crypto.subtle.digest("SHA-256", hashInput);
+          const toHex = (bytes: Uint8Array) => Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
+          const passwordHash = `${toHex(salt)}:${toHex(new Uint8Array(hashBuffer))}`;
+
+          const { error: userError } = await supabase.from("users").insert({
+            tenant_id: tenantId,
+            email: customerEmail,
+            password_hash: passwordHash,
+            role: "admin",
+            created_at: new Date().toISOString(),
+          });
+          if (userError) throw userError;
+
+          // Credentials are stored for the onboarding flow; failure here must not fail Stripe delivery.
+          const { error: credentialsError } = await supabase.from("pendingcredentials").insert({
+            email: customerEmail,
+            temp_password: password,
+            cafe_id: tenantId,
+            used: false,
+            created_at: new Date().toISOString(),
+          });
+          if (credentialsError) {
+            console.error("Pending credentials storage failed:", credentialsError);
+          }
+        }
       }
 
       const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
       const customerId = typeof session.customer === "string" ? session.customer : null;
       const tier = session.metadata?.tier ?? "starter";
 
-      const { error } = await supabase.from("Subscriptions").insert({
+      const { error } = await supabase.from("subscriptions").insert({
         tenant_id: tenantId,
         plano: tier,
         validade: null,
@@ -86,10 +131,12 @@ serve(async (req: Request) => {
 
       if (!tenantId) {
         console.error(`Could not resolve tenant_id for subscription ${sub.id}`);
-        return new Response("Could not resolve tenant", { status: 400 });
+        return new Response(JSON.stringify({ received: true, warning: "Could not resolve tenant" }), {
+          headers: { "Content-Type": "application/json" },
+        });
       }
 
-      const { error } = await supabase.from("Subscriptions").insert({
+      const { error } = await supabase.from("subscriptions").insert({
         tenant_id: tenantId,
         plano: "free",
         validade: null,
@@ -100,7 +147,9 @@ serve(async (req: Request) => {
     }
   } catch (err) {
     console.error("Error processing webhook:", err);
-    return new Response("Internal server error", { status: 500 });
+    return new Response(JSON.stringify({ received: true, warning: "Webhook processing failed" }), {
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   return new Response(JSON.stringify({ received: true }), {
