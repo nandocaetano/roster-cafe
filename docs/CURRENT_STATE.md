@@ -25,8 +25,16 @@
 - ✅ Landing page deployed (escala-landing.caetanolasko.workers.dev + escala.madfrog.ie configurado)
 - ✅ Hero headline aprovado: "Your roster done in minutes!" + subtítulo Irish law
 - ✅ Pricing page: 4 cards com toggle Mensal/Anual, 2 meses grátis messaging
-- ⏳ Re-deploy Edge Function (index.ts foi modificado — `supabase functions deploy stripe-webhook --project-ref nbggytkbrxqhnqvtvbpl`)
-- ⏳ Adicionar STRIPE_SECRET_KEY ao Streamlit Cloud secrets (necessário para billing_logic.py chamar Stripe API)
+- ✅ Re-deploy Edge Function — deployed e confirmado
+- ✅ Adicionar STRIPE_SECRET_KEY ao Streamlit Cloud secrets — confirmado
+- ✅ Login redesign — ⬡ hex mark, Outfit 700, dark card, tagline Dublin
+- ✅ StreamlitMixedNumericTypesError corrigido (training hours input, app.py:674)
+- ✅ Prod DB tables criadas manualmente no SQL Editor (shifttemplates, weeklysetup, dateheadcountoverrides — lowercase)
+- ✅ Admin user reset com credenciais novas
+- ⏳ **[CRÍTICO-1] Paywall gate** — tenant sem subscription Stripe acessa app 15 dias grátis sem cartão; implementar paywall na primeira entrada
+- ⏳ **[CRÍTICO-2] Preços errados na UI** — sidebar mostra Starter €20/Standard €35/Plus €55; corretos são €19/€39/€65
+- ⏳ **[CRÍTICO-3] Trial wall hardcoded** — botão Upgrade Now vai direto ao Starter sem escolha de tier
+- ⏳ **[GTM-BLOCKER] Self-registration** — após pagar no Stripe, cliente não consegue criar conta; toda conta é criada pelo superadmin
 - ⏳ Switch Stripe para live mode (requer aprovação explícita — HITL)
 
 ---
@@ -77,7 +85,10 @@ app_escala/
 
 ## Blockers
 
-- **Credentials rotation (manual action required)** — Supabase DB password and admin@cafe.com password need to be rotated.
+- **[PRÉ-LAUNCH] Paywall gate ausente** — tenant sem Stripe subscription acessa app grátis sem cartão (viola modelo acordado).
+- **[PRÉ-LAUNCH] Self-registration ausente** — cliente que paga no Stripe não consegue criar conta sozinho; superadmin faz manualmente.
+- **[PRÉ-LAUNCH] Preços errados na UI** — sidebar e trial wall mostram valores incorretos.
+- **Credentials rotation (manual action required)** — Supabase DB password and admin email password need to be rotated.
 - **Budget thresholds (290/300/305h) hardcoded** — Balsbridge-specific, multi-tenancy gap, not critical yet.
 - **Stripe test mode** — all keys are test keys; must switch to live keys before accepting real payments.
 
@@ -85,12 +96,12 @@ app_escala/
 
 ## Next Immediate Steps
 
-1. **Re-deploy Edge Function** — `supabase functions deploy stripe-webhook --project-ref nbggytkbrxqhnqvtvbpl` (index.ts foi atualizado nesta sessão)
-2. **Adicionar STRIPE_SECRET_KEY ao Streamlit Cloud** — ir a share.streamlit.io → app → Settings → Secrets e adicionar a secret key do Stripe (necessária para billing_logic.py)
-3. **Testar billing flow** — Stripe test mode checkout → verificar se tier correto aparece na DB
-4. **Switch Stripe para live mode** — substituir `sk_test_...` por live keys (HITL, requer aprovação explícita)
-5. **Credentials rotation** — senha Supabase DB + admin@cafe.com (HITL, requer aprovação)
-6. **Network tier** — criar produtos Stripe para Network quando o plano multi-loc for lançado
+1. **[Codex] Fix app.py — paywall gate + preços corretos + trial wall com seletor de tier** (em progresso)
+2. **[Codex] Self-registration flow** — webhook Edge Function auto-cria Cafe+User após checkout.session.completed
+3. **Testar billing flow** — Stripe test mode checkout → verificar tier na DB
+4. **Switch Stripe para live mode** — substituir sk_test por live keys (HITL, requer aprovação explícita)
+5. **Credentials rotation** — Supabase DB password + admin email (HITL, requer aprovação)
+6. **Network tier** — criar produtos Stripe para Network quando multi-loc for lançado
 
 ---
 

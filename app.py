@@ -41,6 +41,7 @@ from billing_logic import (
     get_employee_limit,
     check_feature_gate,
     create_stripe_checkout_session,
+    get_subscription,
 )
 
 
@@ -80,6 +81,34 @@ def _trial_expired(tenant_id):
         return now - started > datetime.timedelta(days=15)
     except (TypeError, ValueError, OverflowError):
         return False
+
+
+def _render_plan_cards(tenant_id, key_prefix, button_prefix):
+    """Render the three self-serve monthly plans and start checkout."""
+    _plan_options = [
+        ("starter", "Starter", "€19/mo", "Up to 10 staff"),
+        ("standard", "Standard", "€39/mo", "Up to 20 staff"),
+        ("plus", "Plus", "€65/mo", "Up to 40 staff"),
+    ]
+    _plan_cols = st.columns(3)
+    for _plan_col, (_plan_tier, _plan_name, _plan_price, _plan_limit) in zip(_plan_cols, _plan_options):
+        with _plan_col:
+            st.markdown(
+                f"""<div style="background:#151025;border:1px solid rgba(167,139,250,.28);border-radius:14px;padding:1rem;min-height:110px">
+                <div style="color:#f6f4ff;font-size:1.15rem;font-weight:700">{_plan_name}</div>
+                <div style="color:#a78bfa;font-size:1.4rem;font-weight:700;margin:.35rem 0">{_plan_price}</div>
+                <div style="color:#b8b0ce;font-size:.85rem">{_plan_limit}</div></div>""",
+                unsafe_allow_html=True,
+            )
+            if st.button(f"{button_prefix} — {_plan_price}", key=f"{key_prefix}_{_plan_tier}", type="primary", use_container_width=True):
+                try:
+                    _base = os.environ.get("APP_URL", "https://your-app.streamlit.app")
+                    _url = create_stripe_checkout_session(tenant_id, _plan_tier, f"{_base}?upgraded=1", _base)
+                    st.markdown(f"[➡️ Continue to checkout]({_url})")
+                except KeyError:
+                    st.warning("Payments temporarily unavailable. Please try again later or contact support.")
+                except Exception:
+                    st.error("Could not start checkout. Please try again later or contact support.")
 
 # ==========================================
 # UI HELPERS
@@ -262,6 +291,22 @@ if st.session_state['user'] is None:
 TENANT_ID = st.session_state['tenant_id']
 _user = st.session_state['user']
 
+if _user.get('role') != 'superadmin' and get_subscription(TENANT_ID).get('plano', 'free') == 'free':
+    st.markdown("""
+    <style>
+    [data-testid="stAppViewContainer"] { background: #0d0a1a; }
+    .trial-wall { max-width: 980px; margin: 8vh auto 0; text-align: center; }
+    .trial-wall h1 { color: #f6f4ff; font-size: 2.6rem; letter-spacing: -.04em; }
+    .trial-wall p { color: #b8b0ce; font-size: 1.1rem; }
+    </style>
+    <div class="trial-wall">
+      <h1>Start your 15-day trial</h1>
+      <p>Choose a plan to generate compliant rotas. Card required, cancel anytime.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    _render_plan_cards(TENANT_ID, "trial_wall_upgrade", "Start trial")
+    st.stop()
+
 # Version counters — incremented after each write so @st.cache_data misses and re-fetches.
 if 'equipe_v' not in st.session_state:
     st.session_state['equipe_v'] = 0
@@ -360,7 +405,7 @@ with st.sidebar:
                 )
                 st.markdown("All plans include a 15-day free trial · card required · cancel anytime")
                 _plan_cols = st.columns(3)
-                _upgrade_options = [("starter", "Starter", "€20/mo"), ("standard", "Standard", "€35/mo"), ("plus", "Plus", "€55/mo")]
+                _upgrade_options = [("starter", "Starter", "€19/mo"), ("standard", "Standard", "€39/mo"), ("plus", "Plus", "€65/mo")]
                 for _plan_col, (_plan_tier, _plan_name, _plan_price) in zip(_plan_cols, _upgrade_options):
                     with _plan_col:
                         if st.button(f"{_plan_name}\n{_plan_price}", key=f"upgrade_{_plan_tier}", type="primary"):
@@ -606,14 +651,8 @@ with aba_config:
 # ------------------------------------------
 with aba2:
     if _trial_expired(TENANT_ID):
-        st.warning("⏰ Your 15-day trial has ended. Upgrade to Pro to keep generating rotas — save 3h a week, €20/mo.")
-        if st.button("🚀 Upgrade Now", key="trial_upgrade_setup", type="primary"):
-            try:
-                _base = os.environ.get("APP_URL", "https://your-app.streamlit.app")
-                url = create_stripe_checkout_session(TENANT_ID, "starter", f"{_base}?upgraded=1", _base)
-                st.markdown(f"[➡️ Go to payment]({url})")
-            except Exception:
-                st.error("Payments temporarily unavailable. Please try again later or contact support.")
+        st.warning("⏰ Your 15-day trial has ended. Choose a plan to keep generating rotas.")
+        _render_plan_cards(TENANT_ID, "trial_upgrade_setup", "Choose")
         st.stop()
     st.header("Weekly Selection & Budget")
     esp_esq, col_setup, esp_dir = st.columns([1, 4, 1])
@@ -795,14 +834,8 @@ with aba2:
 # ------------------------------------------
 with aba3:
     if _trial_expired(TENANT_ID):
-        st.warning("⏰ Your 15-day trial has ended. Upgrade to Pro to keep generating rotas — save 3h a week, €20/mo.")
-        if st.button("🚀 Upgrade Now", key="trial_upgrade_rota", type="primary"):
-            try:
-                _base = os.environ.get("APP_URL", "https://your-app.streamlit.app")
-                url = create_stripe_checkout_session(TENANT_ID, "starter", f"{_base}?upgraded=1", _base)
-                st.markdown(f"[➡️ Go to payment]({url})")
-            except Exception:
-                st.error("Payments temporarily unavailable. Please try again later or contact support.")
+        st.warning("⏰ Your 15-day trial has ended. Choose a plan to keep generating rotas.")
+        _render_plan_cards(TENANT_ID, "trial_upgrade_rota", "Choose")
         st.stop()
     st.header("📅 Weekly Rota")
 

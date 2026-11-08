@@ -19,25 +19,28 @@
 ## Ativo
 
 ### Fase 8 — Billing & Subscription (Stripe)
-Monetização do Micro-SaaS. Pricing: **€39.90 setup (one-time) + €20/mês**.
+Monetização do Micro-SaaS. Pricing: **4 tiers (Starter €19/Standard €39/Plus €65/Network €35) + trial 15 dias com cartão obrigatório. Sem free tier, sem setup fee.**
 
 **Scope confirmado:**
-- [ ] Tabela `Subscriptions` (tenant_id, plano, validade, stripe_customer_id, stripe_subscription_id)
-- [ ] Integrar Stripe Checkout para planos mensais (€20/mês)
-- [ ] Webhook Stripe para atualizar `Subscriptions` automaticamente (paid / cancelled / past_due)
-- [ ] Feature gating: bloquear PDF export, Analytics (Tab 4) e Roster History para plano Free
-- [ ] Página de gestão de plano no sidebar do superadmin
+- [x] Tabela `Subscriptions` (tenant_id, plano, validade, stripe_customer_id, stripe_subscription_id)
+- [x] Integrar Stripe Checkout — 4 tiers mensais e anuais
+- [x] Webhook Stripe Edge Function — INSERT audit trail, tier de session.metadata
+- [x] Feature gating: bloqueia PDF export, Analytics, Roster History para plano free
+- [ ] **Paywall gate na entrada** — bloquear acesso sem Stripe subscription (sem free tier)
+- [ ] **Self-registration** — auto-criar Cafe+User após checkout.session.completed no webhook
+- [ ] Preços corretos na UI (sidebar + trial wall)
 
-**Fora do scope desta fase (re-avaliar em fases futuras):**
+**Fora do scope desta fase:**
 - License Keys — incompatível com modelo web SaaS multi-tenant
-- Add-ons Stock / Clock-in — módulos não definidos; implementar só após Phase 8 completa
+- Add-ons Stock / Clock-in — implementar só após Phase 8 completa
 
 ---
 
 ## Próximo
 
-### Fase 9 — Mobile UX & Progressive Web App
+### Fase 9b — Mobile UX & Progressive Web App
 App usável no telemóvel pelos managers do café.
+*(Nota: "Fase 9" foi usada para Persistent Shift Configuration — já completa. Esta é a 9b para evitar conflito.)*
 
 - [ ] Substituir seletor de disponibilidade (8 colunas) por toggle grid responsivo
 - [ ] Aba 2 reformulada para funcionar em ecrã estreito
@@ -62,13 +65,8 @@ Visão histórica e relatórios para compliance.
 
 ---
 
-### Fase 12 — Configurable Shift Templates *(REA: ERPNext)*
-Replace hardcoded `turnos_padrao` dict with a per-tenant `ShiftTemplates` DB table.
-
-- [ ] `ShiftTemplates` table: `{id, tenant_id, name, start_time, end_time, is_keyholder_required}`
-- [ ] Tab 3 UI: manager edits their own shift templates instead of using hardcoded defaults
-- [ ] CP-SAT solver reads templates from DB instead of from `app.py` constant
-- [ ] **Origin:** ERPNext `ShiftType` entity pattern — template entity decoupled from assignment
+### ~~Fase 12 — Configurable Shift Templates~~ ✅ COMPLETA (entregue na Fase 9)
+ShiftTemplates implementado em `database.py` + UI completa em `app.py` (aba "🕒 Shifts"). Solver lê templates da DB via `build_turnos_padrao(tenant_id)`. **Não implementar novamente.**
 
 ### Fase 13 — Multi-Location Management *(REA: ERPNext)*
 Support cafes with multiple branches, each with autonomous rosters and a local manager role.
