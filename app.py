@@ -1,4 +1,4 @@
-"""Streamlit UI for Gerador de Escalas — imports all logic from database.py and logic.py."""
+"""Streamlit UI for Escala Staff Rota — imports all logic from database.py and logic.py."""
 import datetime
 import io
 import os
@@ -91,9 +91,14 @@ def render_availability_selector(prefix, defaults=None):
 
     dias = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
     opcoes = ["Livre", "Só Manhã", "Só Tarde", "Indisponível", "Específico"]
+    _opcoes_display = {
+        "Livre": "Available", "Só Manhã": "Morning only",
+        "Só Tarde": "Afternoon only", "Indisponível": "Unavailable", "Específico": "Custom",
+    }
+    _dias_display = {"Seg": "Mon", "Ter": "Tue", "Qua": "Wed", "Qui": "Thu", "Sex": "Fri", "Sáb": "Sat", "Dom": "Sun"}
     resultados = []
 
-    st.write("**Disponibilidade na Semana**")
+    st.write("**Weekly Availability**")
     cols1 = st.columns(4)
     cols2 = st.columns(4)
     todas_cols = cols1 + cols2
@@ -114,7 +119,13 @@ def render_availability_selector(prefix, defaults=None):
             elif not val_padrao or val_padrao == "0" or val_padrao == "False":
                 idx_opcao = opcoes.index("Indisponível")
 
-            selecao = st.selectbox(dia, opcoes, index=idx_opcao, key=f"{prefix}_sel_{dia}")
+            selecao = st.selectbox(
+                _dias_display.get(dia, dia),
+                opcoes,
+                index=idx_opcao,
+                key=f"{prefix}_sel_{dia}",
+                format_func=lambda o: _opcoes_display.get(o, o),
+            )
 
             if selecao == "Específico":
                 sh_def, sm_def, eh_def, em_def = 9, 0, 17, 0
@@ -123,11 +134,11 @@ def render_availability_selector(prefix, defaults=None):
                     if len(_t) == 2:
                         sh_def, sm_def = int(_t[0][0]), int(_t[0][1])
                         eh_def, em_def = int(_t[1][0]), int(_t[1][1])
-                st.caption("De:")
+                st.caption("From:")
                 _ch, _cm = st.columns(2)
                 sh = _ch.number_input("H", 0, 23, sh_def, 1, format="%02d", key=f"{prefix}_sh_{dia}", label_visibility="collapsed")
                 sm = _cm.number_input("M", 0, 59, sm_def, 5, format="%02d", key=f"{prefix}_sm_{dia}", label_visibility="collapsed")
-                st.caption("Até:")
+                st.caption("To:")
                 _eh, _em = st.columns(2)
                 eh = _eh.number_input("H", 0, 23, eh_def if texto_especifico else 18, 1, format="%02d", key=f"{prefix}_eh_{dia}", label_visibility="collapsed")
                 em = _em.number_input("M", 0, 59, em_def if texto_especifico else 15, 5, format="%02d", key=f"{prefix}_em_{dia}", label_visibility="collapsed")
@@ -191,19 +202,19 @@ if st.session_state['user'] is None:
     st.markdown("<br><br><br>", unsafe_allow_html=True)
     _, col_login, _ = st.columns([3, 2, 3])
     with col_login:
-        st.markdown("<h2 style='text-align:center;margin-bottom:4px'>☕ Gerenciador de Escalas</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align:center;color:#a78bfa;margin-bottom:1.2rem'>Acesso à Plataforma</p>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align:center;margin-bottom:4px'>☕ escala</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align:center;color:#a78bfa;margin-bottom:1.2rem'>Sign in to your account</p>", unsafe_allow_html=True)
         with st.form("form_login"):
-            email_login = st.text_input("Email", placeholder="voce@cafe.com")
-            senha_login = st.text_input("Senha", type="password", placeholder="••••••••")
-            if st.form_submit_button("Entrar", use_container_width=True):
+            email_login = st.text_input("Email", placeholder="you@cafe.com")
+            senha_login = st.text_input("Password", type="password", placeholder="••••••••")
+            if st.form_submit_button("Sign in", use_container_width=True):
                 user = verify_credentials(email_login, senha_login)
                 if user:
                     st.session_state['user'] = user
                     st.session_state['tenant_id'] = user['tenant_id']
                     st.rerun()
                 else:
-                    st.error("Email ou senha incorretos.")
+                    st.error("Incorrect email or password.")
 
     st.stop()
 
@@ -237,28 +248,28 @@ with st.sidebar:
     st.divider()
     _semana_ativa = st.session_state.get("semana_key", "")
     if _semana_ativa:
-        st.caption(f"📋 **Semana:** {_semana_ativa}")
+        st.caption(f"📋 **Week:** {_semana_ativa}")
         st.divider()
     if _user.get('role') == 'superadmin':
         if 'nc_k' not in st.session_state:
             st.session_state['nc_k'] = 0
         _nck = st.session_state['nc_k']
-        with st.expander("➕ Registrar Novo Cafe"):
+        with st.expander("➕ Register New Café"):
             with st.form(f"form_novo_cafe_{_nck}"):
-                _nc_nome = st.text_input("Nome do Cafe", key=f"nc_nome_{_nck}")
-                _nc_email = st.text_input("Email do Admin", key=f"nc_email_{_nck}")
-                _nc_senha = st.text_input("Senha", type="password", key=f"nc_senha_{_nck}")
-                _nc_conf = st.text_input("Confirmar Senha", type="password", key=f"nc_conf_{_nck}")
-                if st.form_submit_button("Cadastrar"):
+                _nc_nome = st.text_input("Café Name", key=f"nc_nome_{_nck}")
+                _nc_email = st.text_input("Admin Email", key=f"nc_email_{_nck}")
+                _nc_senha = st.text_input("Password", type="password", key=f"nc_senha_{_nck}")
+                _nc_conf = st.text_input("Confirm Password", type="password", key=f"nc_conf_{_nck}")
+                if st.form_submit_button("Create"):
                     if _nc_senha != _nc_conf:
-                        st.error("As senhas não coincidem.")
+                        st.error("Passwords do not match.")
                     elif not _nc_nome or not _nc_email or not _nc_senha:
-                        st.error("Preencha todos os campos.")
+                        st.error("Please fill in all fields.")
                     else:
                         try:
                             _ntid = criar_cafe(_nc_nome, _nc_email)
                             create_user(_ntid, _nc_email, _nc_senha, role="admin")
-                            st.success(f"'{_nc_nome}' cadastrado!")
+                            st.success(f"'{_nc_nome}' created!")
                             st.session_state['nc_k'] += 1
                             st.rerun()
                         except Exception as _e:
@@ -267,47 +278,47 @@ with st.sidebar:
         if 'rp_k' not in st.session_state:
             st.session_state['rp_k'] = 0
         _rpk = st.session_state['rp_k']
-        with st.expander("🔑 Reset de Password"):
+        with st.expander("🔑 Reset Password"):
             _all_users = get_all_users()
             if _all_users.empty:
-                st.caption("Nenhum utilizador encontrado.")
+                st.caption("No users found.")
             else:
                 _user_opts = [
                     f"{r['email']} ({r['cafe_nome']})"
                     for _, r in _all_users.iterrows()
                 ]
                 with st.form(f"form_reset_pw_{_rpk}"):
-                    _rp_sel = st.selectbox("Utilizador", _user_opts, key=f"rp_sel_{_rpk}")
-                    _rp_nova = st.text_input("Nova Password", type="password", key=f"rp_nova_{_rpk}")
-                    _rp_conf = st.text_input("Confirmar", type="password", key=f"rp_conf_{_rpk}")
-                    if st.form_submit_button("Redefinir"):
+                    _rp_sel = st.selectbox("User", _user_opts, key=f"rp_sel_{_rpk}")
+                    _rp_nova = st.text_input("New Password", type="password", key=f"rp_nova_{_rpk}")
+                    _rp_conf = st.text_input("Confirm", type="password", key=f"rp_conf_{_rpk}")
+                    if st.form_submit_button("Reset"):
                         if not _rp_nova or len(_rp_nova) < 6:
-                            st.error("Password deve ter pelo menos 6 caracteres.")
+                            st.error("Password must be at least 6 characters.")
                         elif _rp_nova != _rp_conf:
-                            st.error("As passwords não coincidem.")
+                            st.error("Passwords do not match.")
                         else:
                             _rp_email = _rp_sel.split(" (")[0]
                             if reset_password(_rp_email, _rp_nova):
-                                st.success(f"Password de {_rp_email} redefinida.")
+                                st.success(f"Password for {_rp_email} reset.")
                                 st.session_state['rp_k'] += 1
                                 st.rerun()
                             else:
-                                st.error("Utilizador não encontrado.")
+                                st.error("User not found.")
     if _user.get('role') != 'superadmin':
         st.divider()
         _plan_label = "Pro ✨" if _is_pro else "Free"
-        st.caption(f"Plano: **{_plan_label}** · Limite: {_emp_limit} funcionários")
+        st.caption(f"Plan: **{_plan_label}** · Limit: {_emp_limit} staff")
         if not _is_pro:
-            with st.expander("⭐ Upgrade para Pro"):
+            with st.expander("⭐ Upgrade to Pro"):
                 st.markdown(
-                    "**Desbloqueias:**\n"
+                    "**Unlocks:**\n"
                     "- 🖨️ PDF Export\n"
                     "- 📊 Analytics\n"
-                    "- 💾 Histórico de Escalas\n"
-                    "- 👥 Até 20 funcionários"
+                    "- 💾 Rota History\n"
+                    "- 👥 Up to 20 staff"
                 )
-                st.markdown("**€20/mês** · 15 dias de trial gratuito · cancela quando quiseres")
-                if st.button("🚀 Upgrade Agora", key="btn_upgrade", type="primary"):
+                st.markdown("**€20/mo** · 15-day free trial · cancel anytime")
+                if st.button("🚀 Upgrade Now", key="btn_upgrade", type="primary"):
                     try:
                         _base = os.environ.get("APP_URL", "https://your-app.streamlit.app")
                         url = create_stripe_checkout_session(
@@ -315,11 +326,11 @@ with st.sidebar:
                         )
                         st.markdown(f"[➡️ Ir para pagamento]({url})")
                     except KeyError:
-                        st.warning("Pagamentos temporariamente indisponíveis. Tenta novamente em breve ou contacta o suporte.")
+                        st.warning("Payments temporarily unavailable. Please try again later or contact support.")
                     except Exception as _se:
                         st.error(f"Erro ao iniciar checkout: {_se}")
     st.divider()
-    if st.button("🚪 Logout"):
+    if st.button("🚪 Sign out"):
         st.session_state['user'] = None
         st.session_state['tenant_id'] = None
         st.rerun()
@@ -341,10 +352,10 @@ st.markdown('''<style>
 button[kind="primary"] { background: linear-gradient(90deg,#7c3aed,#9c5cf7) !important; border: none !important; }
 </style>''', unsafe_allow_html=True)
 if st.session_state.pop("_upgrade_msg", False):
-    st.success("🎉 Pagamento confirmado! O teu plano Roster Café Pro está ativo.")
+    st.success("🎉 Payment confirmed! Your Roster Café Pro plan is now active.")
 
 aba2, aba3, aba1, aba_config, aba4, aba5 = st.tabs([
-    "⚙️ Setup da Semana", "📅 Rota da Semana", "👥 Equipa", "🕒 Turnos", "📊 Histórico", "📖 Ajuda",
+    "⚙️ Weekly Setup", "📅 Weekly Rota", "👥 Team", "🕒 Shifts", "📊 History", "📖 Help",
 ])
 
 lista_cargos_oficiais = ["Manager", "Assistant Manager", "Head Barista", "Barista"]
@@ -353,7 +364,7 @@ lista_cargos_oficiais = ["Manager", "Assistant Manager", "Head Barista", "Barist
 # ABA 1: GESTÃO DO TIME
 # ------------------------------------------
 with aba1:
-    st.header("Equipa Atual")
+    st.header("Current Team")
     df_equipe = _cached_funcionarios(TENANT_ID, st.session_state['equipe_v'])
 
     espaco_esq, col_tabela, espaco_dir = st.columns([1, 6, 1])
@@ -366,14 +377,14 @@ with aba1:
                 _cols_tabela.append('preferencia_turno')
             st.dataframe(df_equipe[_cols_tabela], use_container_width=True)
         else:
-            st.info("Nenhum funcionário cadastrado ainda.")
-            st.button("➕ Adicionar primeiro funcionário", key="cta_add_first", type="primary")
+            st.info("No staff added yet.")
+            st.button("➕ Add first staff member", key="cta_add_first", type="primary")
 
     st.divider()
     col1, col_espaco, col2 = st.columns([4, 1, 4])
 
     with col1:
-        st.subheader("➕ Novo Funcionário")
+        st.subheader("➕ Add Staff Member")
         if 'novo_k' not in st.session_state:
             st.session_state['novo_k'] = 0
         _nk = st.session_state['novo_k']
@@ -384,41 +395,43 @@ with aba1:
         contrato_novo = c_contrato.selectbox("Contrato", ["Full-time", "Part-time"], key=f"novo_contrato_{_nk}")
 
         c_min, c_max = st.columns(2)
-        h_min_nova = c_min.number_input("Horas Mín.", min_value=0, max_value=60, value=20, key=f"novo_hmin_{_nk}")
-        h_max_nova = c_max.number_input("Horas Máx.", min_value=0, max_value=60, value=39, key=f"novo_hmax_{_nk}")
+        h_min_nova = c_min.number_input("Min Hours", min_value=0, max_value=60, value=20, key=f"novo_hmin_{_nk}")
+        h_max_nova = c_max.number_input("Max Hours", min_value=0, max_value=60, value=39, key=f"novo_hmax_{_nk}")
 
-        nivel_novo = st.selectbox("Nível", ["experiente", "novato"], key=f"novo_nivel_{_nk}",
-                                  help="Novato: não pode partilhar o bloco de abertura ou fecho com outro novato.")
+        nivel_novo = st.selectbox("Level", ["experiente", "novato"], key=f"novo_nivel_{_nk}",
+                                  format_func=lambda x: "Experienced" if x == "experiente" else "Trainee",
+                                  help="Trainee: cannot share an opening or closing block with another trainee.")
 
         pref_novo = st.selectbox(
-            "Preferência de Turno", ["Sem preferência", "Manhã", "Tarde"],
+            "Shift Preference", ["Sem preferência", "Manhã", "Tarde"],
             key=f"novo_pref_{_nk}",
-            help="Soft constraint — o robô tenta respeitar mas nunca viola contratos, keyholder ou WTI.",
+            format_func=lambda x: {"Sem preferência": "No preference", "Manhã": "Morning", "Tarde": "Afternoon"}.get(x, x),
+            help="Soft constraint — the scheduler tries to respect this but never violates contracts, keyholder, or WTI rules.",
         )
 
         dias_selecionados = render_availability_selector(f"novo_{_nk}")
 
-        if st.button("Cadastrar", key=f"novo_btn_{_nk}") and nome_novo:
+        if st.button("Add", key=f"novo_btn_{_nk}") and nome_novo:
             _cur_count = len(df_equipe) if not df_equipe.empty else 0
             if _cur_count >= _emp_limit:
-                st.error(f"Limite do plano atingido: o teu plano atual suporta até {_emp_limit} funcionários ativos. Faz upgrade para Pro no sidebar para adicionar mais.")
+                st.error(f"Staff limit reached: your plan supports up to {_emp_limit} active staff. Upgrade to Pro in the sidebar to add more.")
             else:
                 try:
                     adicionar_funcionario(TENANT_ID, nome_novo, cargo_novo, contrato_novo, h_min_nova, h_max_nova, dias_selecionados, nivel_novo, pref_novo)
-                    st.success(f"{nome_novo} adicionado!")
+                    st.success(f"{nome_novo} added!")
                     st.session_state['equipe_v'] += 1
                     st.session_state['novo_k'] += 1
                     st.rerun()
                 except ValueError as _ve:
                     if "limite_funcionarios" in str(_ve):
-                        st.error(f"Limite do plano atingido: o teu plano suporta até {_emp_limit} funcionários ativos. Faz upgrade para Pro no sidebar.")
+                        st.error(f"Staff limit reached: your plan supports up to {_emp_limit} active staff. Upgrade to Pro in the sidebar.")
                     else:
-                        st.error(f"Erro ao cadastrar: {_ve}")
+                        st.error("Could not save staff member. Please try again.")
 
     with col2:
-        st.subheader("✏️ Editar ou Remover")
+        st.subheader("✏️ Edit or Remove")
         if not df_equipe.empty:
-            func_selecionado = st.selectbox("Selecione um funcionário", df_equipe['nome'].tolist())
+            func_selecionado = st.selectbox("Select a staff member", df_equipe['nome'].tolist())
             dados_atuais = df_equipe[df_equipe['nome'] == func_selecionado].iloc[0]
 
             _pfx = f"ed_{func_selecionado}"
@@ -430,21 +443,23 @@ with aba1:
             contrato_ed = c_contrato_ed.selectbox("Contrato", ["Full-time", "Part-time"], index=idx_contrato, key=f"{_pfx}_contrato")
 
             c_min_ed, c_max_ed = st.columns(2)
-            h_min_ed = c_min_ed.number_input("Horas Mín.", min_value=0, max_value=60, value=int(dados_atuais['horas_min']), key=f"{_pfx}_hmin")
-            h_max_ed = c_max_ed.number_input("Horas Máx.", min_value=0, max_value=60, value=int(dados_atuais['horas_max']), key=f"{_pfx}_hmax")
+            h_min_ed = c_min_ed.number_input("Min Hours", min_value=0, max_value=60, value=int(dados_atuais['horas_min']), key=f"{_pfx}_hmin")
+            h_max_ed = c_max_ed.number_input("Max Hours", min_value=0, max_value=60, value=int(dados_atuais['horas_max']), key=f"{_pfx}_hmax")
 
             _nivel_atual = str(dados_atuais.get('nivel', 'experiente') or 'experiente')
             _nivel_opts = ["experiente", "novato"]
             _nivel_idx = _nivel_opts.index(_nivel_atual) if _nivel_atual in _nivel_opts else 0
-            nivel_ed = st.selectbox("Nível", _nivel_opts, index=_nivel_idx, key=f"{_pfx}_nivel",
-                                    help="Novato: não pode partilhar o bloco de abertura ou fecho com outro novato.")
+            nivel_ed = st.selectbox("Level", _nivel_opts, index=_nivel_idx, key=f"{_pfx}_nivel",
+                                    format_func=lambda x: "Experienced" if x == "experiente" else "Trainee",
+                                    help="Trainee: cannot share an opening or closing block with another trainee.")
 
             _pref_atual = str(dados_atuais.get('preferencia_turno', 'Sem preferência') or 'Sem preferência')
             _pref_opts = ["Sem preferência", "Manhã", "Tarde"]
             _pref_idx = _pref_opts.index(_pref_atual) if _pref_atual in _pref_opts else 0
             pref_ed = st.selectbox(
-                "Preferência de Turno", _pref_opts, index=_pref_idx, key=f"{_pfx}_pref",
-                help="Soft constraint — o robô tenta respeitar mas nunca viola contratos, keyholder ou WTI.",
+                "Shift Preference", _pref_opts, index=_pref_idx, key=f"{_pfx}_pref",
+                format_func=lambda x: {"Sem preferência": "No preference", "Manhã": "Morning", "Tarde": "Afternoon"}.get(x, x),
+                help="Soft constraint — the scheduler tries to respect this but never violates contracts, keyholder, or WTI rules.",
             )
 
             dias_atuais = [
@@ -454,24 +469,24 @@ with aba1:
             dias_ed = render_availability_selector(_pfx, dias_atuais)
 
             col_btn1, col_btn2 = st.columns(2)
-            if col_btn1.button("💾 Salvar", key=f"{_pfx}_salvar"):
+            if col_btn1.button("💾 Save", key=f"{_pfx}_salvar"):
                 atualizar_funcionario(TENANT_ID, int(dados_atuais['id_funcionario']), nome_ed, cargo_ed, contrato_ed, h_min_ed, h_max_ed, dias_ed, nivel_ed, pref_ed)
-                st.success("Atualizado!")
+                st.success("Updated!")
                 st.session_state['equipe_v'] += 1
                 for _sk in [k for k in st.session_state if k.startswith(f"ed_{func_selecionado}")]:
                     del st.session_state[_sk]
                 st.rerun()
-            if col_btn2.button("❌ Desativar", key=f"{_pfx}_desativar"):
+            if col_btn2.button("❌ Deactivate", key=f"{_pfx}_desativar"):
                 desativar_funcionario(TENANT_ID, int(dados_atuais['id_funcionario']))
                 st.session_state['equipe_v'] += 1
-                st.warning("Removido.")
+                st.warning("Deactivated.")
                 st.rerun()
 
 # ------------------------------------------
 # ABA CONFIG: TURNOS E CAPACIDADE
 # ------------------------------------------
 with aba_config:
-    st.header("🕒 Configurações de Turnos")
+    st.header("🕒 Shift Settings")
     _templates = get_shift_templates(TENANT_ID)
     if _templates.empty:
         _templates = seed_shift_templates(TENANT_ID)
@@ -479,68 +494,68 @@ with aba_config:
     _template_rows = []
     for _, _row in _templates.iterrows():
         _template_rows.append({
-            "Dia": _row["dia"],
-            "Início": _row["hora_inicio"],
-            "Fim": _row["hora_fim"],
-            "Fechamento": bool(_row["fechamento"]),
-            "Pessoas": int(_row["headcount"]),
-            "Opcional": _row["prioridade"] == "optional",
-            "Ativo": bool(_row["ativo"]),
+            "Day": _row["dia"],
+            "Start": _row["hora_inicio"],
+            "End": _row["hora_fim"],
+            "Closing": bool(_row["fechamento"]),
+            "Headcount": int(_row["headcount"]),
+            "Optional": _row["prioridade"] == "optional",
+            "Active": bool(_row["ativo"]),
         })
 
     _edited_templates = st.data_editor(
         pd.DataFrame(_template_rows),
         column_config={
-            "Dia": st.column_config.SelectboxColumn("Dia", options=["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"], required=True),
-            "Início": st.column_config.TextColumn("Início", help="Formato HH:MM"),
-            "Fim": st.column_config.TextColumn("Fim", help="Formato HH:MM"),
-            "Fechamento": st.column_config.CheckboxColumn("Fechamento"),
-            "Pessoas": st.column_config.NumberColumn("Pessoas", min_value=1, max_value=6, step=1, format="%d"),
-            "Opcional": st.column_config.CheckboxColumn("Opcional"),
-            "Ativo": st.column_config.CheckboxColumn("Ativo"),
+            "Day": st.column_config.SelectboxColumn("Day", options=["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"], required=True),
+            "Start": st.column_config.TextColumn("Start", help="Format HH:MM"),
+            "End": st.column_config.TextColumn("End", help="Format HH:MM"),
+            "Closing": st.column_config.CheckboxColumn("Closing"),
+            "Headcount": st.column_config.NumberColumn("Headcount", min_value=1, max_value=6, step=1, format="%d"),
+            "Optional": st.column_config.CheckboxColumn("Optional"),
+            "Active": st.column_config.CheckboxColumn("Active"),
         },
         num_rows="dynamic",
         hide_index=True,
         use_container_width=True,
         key="shift_templates_editor",
     )
-    if st.button("💾 Salvar Configuração de Turnos", type="primary"):
+    if st.button("💾 Save Shifts", type="primary"):
         _rows_to_save = []
         _template_errors = []
         for _, _row in _edited_templates.iterrows():
-            _day = _row.get("Dia")
-            _start = _row.get("Início")
-            _end = _row.get("Fim")
-            _active = _row.get("Ativo", True)
+            _day = _row.get("Day")
+            _start = _row.get("Start")
+            _end = _row.get("End")
+            _active = _row.get("Active", True)
             if pd.isna(_day) or pd.isna(_start) or pd.isna(_end) or pd.isna(_active) or not bool(_active):
                 continue
             _day, _start, _end = str(_day).strip(), str(_start).strip(), str(_end).strip()
             if _day not in ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]:
-                _template_errors.append(f"Dia inválido: {_day}")
+                _template_errors.append(f"Invalid day: {_day}")
                 continue
             if not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", _start) or not re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", _end):
-                _template_errors.append(f"Horário inválido: {_start}–{_end}")
+                _template_errors.append(f"Invalid time: {_start}–{_end}")
                 continue
             _rows_to_save.append({
                 "dia": _day,
                 "hora_inicio": _start,
                 "hora_fim": _end,
-                "fechamento": bool(_row.get("Fechamento", False)) if not pd.isna(_row.get("Fechamento", False)) else False,
-                "headcount": max(1, min(6, int(_row.get("Pessoas", 1)) if not pd.isna(_row.get("Pessoas", 1)) else 1)),
-                "prioridade": "optional" if (not pd.isna(_row.get("Opcional", False)) and bool(_row.get("Opcional", False))) else "essential",
+                "fechamento": bool(_row.get("Closing", False)) if not pd.isna(_row.get("Closing", False)) else False,
+                "headcount": max(1, min(6, int(_row.get("Headcount", 1)) if not pd.isna(_row.get("Headcount", 1)) else 1)),
+                "prioridade": "optional" if (not pd.isna(_row.get("Optional", False)) and bool(_row.get("Optional", False))) else "essential",
                 "ativo": True,
             })
         if _template_errors:
             for _error in _template_errors:
                 st.error(_error)
         elif not _rows_to_save:
-            st.error("Guarda pelo menos um turno ativo.")
+            st.error("Keep at least one active shift.")
         else:
             save_shift_templates(TENANT_ID, _rows_to_save)
             st.session_state.pop("turnos_padrao", None)
             st.session_state.pop("slot_config", None)
             st.session_state.pop("roster_df", None)
-            st.success("Configuração de turnos guardada.")
+            st.success("Shift settings saved.")
             st.rerun()
 
 # ------------------------------------------
@@ -548,9 +563,16 @@ with aba_config:
 # ------------------------------------------
 with aba2:
     if _trial_expired(TENANT_ID):
-        st.warning("⏰ O teu trial de 15 dias terminou. Faz upgrade para Pro — poupa 3h por semana em escalas, por €20/mês.")
+        st.warning("⏰ Your 15-day trial has ended. Upgrade to Pro to keep generating rotas — save 3h a week, €20/mo.")
+        if st.button("🚀 Upgrade Now", key="trial_upgrade_setup", type="primary"):
+            try:
+                _base = os.environ.get("APP_URL", "https://your-app.streamlit.app")
+                url = create_stripe_checkout_session(TENANT_ID, f"{_base}?upgraded=1", _base)
+                st.markdown(f"[➡️ Go to payment]({url})")
+            except Exception:
+                st.error("Payments temporarily unavailable. Please try again later or contact support.")
         st.stop()
-    st.header("Seleção Semanal e Budget")
+    st.header("Weekly Selection & Budget")
     esp_esq, col_setup, esp_dir = st.columns([1, 4, 1])
 
     with col_setup:
@@ -568,17 +590,17 @@ with aba2:
             total_horas_planejadas = 0
             dias_semana_opts = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
             with st.form("form_setup_semana"):
-                st.write("Defina quem entra na escala esta semana e ajuste as metas de horas.")
+                st.write("Select who is on the rota this week and adjust target hours.")
                 semana_key = st.text_input(
-                    "Rótulo da semana",
+                    "Week label",
                     value=st.session_state.get("semana_key", ""),
-                    placeholder="ex: Semana 45",
+                    placeholder="e.g. Week 45",
                     key="semana_key_input",
                 )
                 margem_horas = st.number_input(
-                    "Margem de horas tolerada (± alvo)", min_value=0.0, max_value=10.0,
+                    "Hour tolerance (± target)", min_value=0.0, max_value=10.0,
                     value=float(st.session_state.get("margem_horas", 2.0)), step=0.5, key="margem_horas_input",
-                    help="Alerta se as horas reais saírem desta margem do alvo."
+                    help="Alert if actual hours fall outside this margin from the target."
                 )
                 st.divider()
 
@@ -593,20 +615,20 @@ with aba2:
                     disp_formatada = [f"{dia}({val})" for dia, val in dias_map if val != "Indisponível"]
                     dias_str = ", ".join(disp_formatada)
                     if not dias_str:
-                        dias_str = "Indisponível todos os dias"
+                        dias_str = "Unavailable all days"
 
                     _override = _weekly_overrides.get(row['nome'], {})
                     _vai_trabalhar_default = bool(_override.get("vai_trabalhar", True))
                     c_info.write(f"**{row['nome']}** ({row['cargo']})  \n*Disp: {dias_str}*" if _vai_trabalhar_default else f"**{row['nome']}**")
-                    vai_trabalhar = c_check.checkbox("Escalar", key=f"chk_{row['nome']}", value=_vai_trabalhar_default)
+                    vai_trabalhar = c_check.checkbox("Schedule", key=f"chk_{row['nome']}", value=_vai_trabalhar_default)
 
                     if vai_trabalhar:
-                        horas_alvo = c_horas.number_input("Horas Alvo", min_value=0, max_value=60, value=int(_override.get("horas_alvo", row['horas_max'])), key=f"hrs_{row['nome']}")
+                        horas_alvo = c_horas.number_input("Target Hours", min_value=0, max_value=60, value=int(_override.get("horas_alvo", row['horas_max'])), key=f"hrs_{row['nome']}")
                         c_folga, c_ferias, c_treino, c_htreino = st.columns([2, 2, 2, 1])
-                        dias_folga_sel = c_folga.multiselect("🏖️ Folga", dias_semana_opts, default=list(_override.get("dias_folga", [])), key=f"folga_{row['nome']}")
-                        dias_ferias_sel = c_ferias.multiselect("✈️ Férias", dias_semana_opts, default=list(_override.get("dias_ferias", [])), key=f"ferias_{row['nome']}")
-                        dias_treino_sel = c_treino.multiselect("📚 Treinamento", dias_semana_opts, default=list(_override.get("dias_treinamento", [])), key=f"treino_{row['nome']}")
-                        horas_treino = c_htreino.number_input("H. Treino", min_value=0, max_value=40, value=float(_override.get("horas_treinamento", 0)), key=f"htreino_{row['nome']}", help="Total horas de treinamento esta semana.")
+                        dias_folga_sel = c_folga.multiselect("🏖️ Day Off", dias_semana_opts, default=list(_override.get("dias_folga", [])), key=f"folga_{row['nome']}")
+                        dias_ferias_sel = c_ferias.multiselect("✈️ Holiday", dias_semana_opts, default=list(_override.get("dias_ferias", [])), key=f"ferias_{row['nome']}")
+                        dias_treino_sel = c_treino.multiselect("📚 Training", dias_semana_opts, default=list(_override.get("dias_treinamento", [])), key=f"treino_{row['nome']}")
+                        horas_treino = c_htreino.number_input("Training h.", min_value=0, max_value=40, value=float(_override.get("horas_treinamento", 0)), key=f"htreino_{row['nome']}", help="Total training hours this week.")
                     else:
                         horas_alvo = int(_override.get("horas_alvo", row['horas_max']))
                         dias_folga_sel = list(_override.get("dias_folga", []))
@@ -635,15 +657,15 @@ with aba2:
                     }
                     st.divider()
 
-                if st.form_submit_button("Confirmar Horas da Semana"):
+                if st.form_submit_button("Confirm Weekly Hours"):
                     conflitos = []
                     for nome, cfg in inputs_semana.items():
                         dias_overlap = set(cfg["dias_folga"]) & set(cfg["dias_treinamento"])
                         if dias_overlap:
-                            conflitos.append(f"{nome}: {', '.join(sorted(dias_overlap))} marcado como Folga e Treinamento.")
+                            conflitos.append(f"{nome}: {', '.join(sorted(dias_overlap))} marked as both Day Off and Training.")
                         dias_overlap2 = set(cfg["dias_ferias"]) & set(cfg["dias_treinamento"])
                         if dias_overlap2:
-                            conflitos.append(f"{nome}: {', '.join(sorted(dias_overlap2))} marcado como Férias e Treinamento.")
+                            conflitos.append(f"{nome}: {', '.join(sorted(dias_overlap2))} marked as both Holiday and Training.")
                     if conflitos:
                         for c in conflitos:
                             st.warning(f"⚠️ Conflito: {c}")
@@ -660,42 +682,42 @@ with aba2:
                             },
                         }
                         if not _overrides_to_save["semana_key"]:
-                            st.warning("Digite um rótulo para identificar a semana.")
+                            st.warning("Enter a label to identify the week.")
                         else:
                             save_weekly_setup(TENANT_ID, _overrides_to_save["semana_key"], _overrides_to_save)
                             st.session_state["weekly_setup_overrides"] = _overrides_to_save["employees"]
                             st.session_state["semana_key"] = _overrides_to_save["semana_key"]
                             st.session_state['config_semana'] = build_config_semana(TENANT_ID, _overrides_to_save)
                             st.session_state['margem_horas'] = margem_horas
-                            st.success("Setup salvo! Vai à aba '📅 Rota da Semana' para gerar a escala.")
+                            st.success("Setup saved! Go to '📅 Weekly Rota' to generate the schedule.")
 
-            st.subheader("📊 Status do Budget")
+            st.subheader("📊 Budget Status")
             progresso = total_horas_planejadas / 305.0 if total_horas_planejadas <= 305 else 1.0
             st.progress(progresso)
             if total_horas_planejadas < 290:
-                st.warning(f"Total: {total_horas_planejadas}h (Abaixo do ideal).")
+                st.warning(f"Total: {total_horas_planejadas}h (Below target).")
             elif 290 <= total_horas_planejadas <= 300:
-                st.success(f"Total: {total_horas_planejadas}h (Perfeito).")
+                st.success(f"Total: {total_horas_planejadas}h (On target).")
             elif 300 < total_horas_planejadas <= 305:
-                st.warning(f"Total: {total_horas_planejadas}h (Margem de erro).")
+                st.warning(f"Total: {total_horas_planejadas}h (Within margin).")
             else:
-                st.error(f"Total: {total_horas_planejadas}h (Estourado).")
+                st.error(f"Total: {total_horas_planejadas}h (Over budget).")
 
-            with st.expander("📅 Exceções de headcount por data", expanded=False):
+            with st.expander("📅 Headcount exceptions by date", expanded=False):
                 _dho_wkmap = {0: "Seg", 1: "Ter", 2: "Qua", 3: "Qui", 4: "Sex", 5: "Sáb", 6: "Dom"}
                 _dho_date = st.date_input("Data", value=datetime.date.today(), key="dho_date")
                 _dho_wd = _dho_wkmap[_dho_date.weekday()]
                 _dho_all_turnos = st.session_state.get("turnos_padrao") or build_turnos_padrao(TENANT_ID)
                 _dho_shifts = _dho_all_turnos.get(_dho_wd, [])
                 if _dho_shifts:
-                    _dho_shift_sel = st.selectbox("Turno", _dho_shifts, key="dho_shift")
+                    _dho_shift_sel = st.selectbox("Shift", _dho_shifts, key="dho_shift")
                     _dho_hc = st.number_input("Headcount override", min_value=1, max_value=20, value=1, step=1, key="dho_hc")
-                    if st.button("💾 Salvar override", key="dho_save"):
+                    if st.button("💾 Save override", key="dho_save"):
                         save_date_headcount_override(TENANT_ID, _dho_date.strftime("%Y-%m-%d"), _dho_shift_sel, int(_dho_hc))
-                        st.success("Override guardado.")
+                        st.success("Override saved.")
                         st.rerun()
                 else:
-                    st.info(f"Nenhum turno configurado para {_dho_wd}. Configure os turnos na aba Configurações.")
+                    st.info(f"No shifts configured for {_dho_wd}. Set up shifts in the Shifts tab.")
                 # Derive 7 dates for the ISO week containing the selected date
                 _dho_week_start = _dho_date - datetime.timedelta(days=_dho_date.weekday())
                 _dho_week_dates = [
@@ -703,10 +725,10 @@ with aba2:
                 ]
                 _dho_existing = get_date_headcount_overrides(TENANT_ID, _dho_week_dates)
                 if _dho_existing:
-                    st.write("**Overrides para a semana selecionada:**")
+                    st.write("**Overrides for the selected week:**")
                     st.dataframe(
                         pd.DataFrame([
-                            {"Data": r["override_date"], "Turno": r["shift_label"], "Headcount": r["headcount"]}
+                            {"Date": r["override_date"], "Shift": r["shift_label"], "Headcount": r["headcount"]}
                             for r in _dho_existing
                         ]),
                         hide_index=True,
@@ -721,18 +743,25 @@ with aba2:
                             delete_date_headcount_override(TENANT_ID, _dho_r["override_date"], _dho_r["shift_label"])
                             st.rerun()
                 else:
-                    st.caption("Nenhum override para a semana selecionada.")
+                    st.caption("No overrides for the selected week.")
         else:
-            st.warning("Cadastra os funcionários na aba '👥 Equipa' primeiro.")
+            st.warning("Add staff in the '👥 Team' tab first.")
 
 # ------------------------------------------
 # ABA 3: ROSTER E PAINEL DE HORAS
 # ------------------------------------------
 with aba3:
     if _trial_expired(TENANT_ID):
-        st.warning("⏰ O teu trial de 15 dias terminou. Faz upgrade para Pro — poupa 3h por semana em escalas, por €20/mês.")
+        st.warning("⏰ Your 15-day trial has ended. Upgrade to Pro to keep generating rotas — save 3h a week, €20/mo.")
+        if st.button("🚀 Upgrade Now", key="trial_upgrade_rota", type="primary"):
+            try:
+                _base = os.environ.get("APP_URL", "https://your-app.streamlit.app")
+                url = create_stripe_checkout_session(TENANT_ID, f"{_base}?upgraded=1", _base)
+                st.markdown(f"[➡️ Go to payment]({url})")
+            except Exception:
+                st.error("Payments temporarily unavailable. Please try again later or contact support.")
         st.stop()
-    st.header("📅 Escala da Semana")
+    st.header("📅 Weekly Rota")
 
     _fallback_turnos_padrao = {
         "Seg": ["07:00 - 12:00", "07:00 - 14:00", "07:30 - 15:00", "08:00 - 16:00", "09:00 - 18:15 (Fechamento)", "12:00 - 18:15 (Fechamento)", "14:00 - 18:15 (Fechamento)"],
@@ -764,12 +793,12 @@ with aba3:
 
     df_equipe_atual = _cached_funcionarios(TENANT_ID, st.session_state.get('equipe_v', 0))
     lista_nomes = df_equipe_atual['nome'].tolist() if not df_equipe_atual.empty else []
-    lista_nomes.append("Someone (Outra Loja)")
+    lista_nomes.append("Someone (Other Store)")
 
-    if st.button("🤖 Gerar Escala Automática", type="primary", use_container_width=True):
+    if st.button("🤖 Generate Auto Rota", type="primary", use_container_width=True):
         config_semana = st.session_state.get('config_semana', {})
         if not config_semana:
-            st.error("Vai à aba '⚙️ Setup da Semana' e clica em 'Confirmar Horas da Semana' primeiro.")
+            st.error("Go to '⚙️ Weekly Setup' and click 'Confirm Weekly Hours' first.")
         else:
             margem = st.session_state.get('margem_horas', 2.0)
             # patch slot_config with any date-specific overrides
@@ -800,9 +829,9 @@ with aba3:
 
     col_btn_vazio, col_btn_reset = st.columns([5, 1])
 
-    if col_btn_vazio.button("🗑️ Esqueleto manual"):
+    if col_btn_vazio.button("🗑️ Manual skeleton"):
         linhas_roster = [
-            {"Dia": dia, "Horário": turno, "Funcionário": "A Preencher"}
+            {"Dia": dia, "Horário": turno, "Funcionário": "To Fill"}
             for dia, turnos in turnos_padrao.items()
             for turno in turnos
         ]
@@ -810,7 +839,7 @@ with aba3:
         st.rerun()
 
     if 'roster_df' in st.session_state:
-        with st.expander("⬇️ Exportar Escala", expanded=True):
+        with st.expander("⬇️ Export Rota", expanded=True):
             _rdf = st.session_state['roster_df']
             _semana_lbl = st.session_state.get('_last_semana_label', '')
             ec1, ec2, ec3 = st.columns(3)
@@ -822,7 +851,7 @@ with aba3:
             else:
                 ec3.info("🔒 PDF — Pro")
 
-    if col_btn_reset.button("🔄", help="Resetar escala"):
+    if col_btn_reset.button("🔄", help="Reset rota"):
         for _key in ('roster_df', 'constraints_warnings'):
             st.session_state.pop(_key, None)
         st.rerun()
@@ -838,7 +867,7 @@ with aba3:
                 column_config={
                     "Dia": st.column_config.TextColumn("Dia"),
                     "Horário": st.column_config.TextColumn("Horário"),
-                    "Funcionário": st.column_config.SelectboxColumn("Funcionário Atribuído", options=["A Preencher"] + lista_nomes),
+                    "Funcionário": st.column_config.SelectboxColumn("Assigned Staff", options=["To Fill"] + lista_nomes),
                 },
                 num_rows="dynamic",
                 hide_index=True,
@@ -846,7 +875,7 @@ with aba3:
             )
 
         with col_horas:
-            st.write("⏱️ **Horas Dinâmicas**")
+            st.write("⏱️ **Live Hours**")
             config_sem = st.session_state.get('config_semana', {})
             margem_disp = st.session_state.get('margem_horas', 2.0)
             horas_atuais = {nome: 0.0 for nome in config_sem.keys() if config_sem[nome]['vai_trabalhar']}
@@ -861,8 +890,8 @@ with aba3:
                 alvo = cfg['horas_alvo']
                 h_treino = cfg.get('horas_treinamento', 0.0) if cfg.get('dias_treinamento') else 0.0
                 total = horas + h_treino
-                treino_note = f" +{h_treino:.0f}h treino" if h_treino else ""
-                label = f"{func}: {total:.1f}h{treino_note} (Alvo: {alvo}h ± {margem_disp:.0f}h)"
+                treino_note = f" +{h_treino:.0f}h training" if h_treino else ""
+                label = f"{func}: {total:.1f}h{treino_note} (Target: {alvo}h ± {margem_disp:.0f}h)"
                 if total > alvo + margem_disp:
                     st.error(f"🔴 {label}")
                 elif total < alvo - margem_disp:
@@ -870,7 +899,7 @@ with aba3:
                 else:
                     st.success(f"🟢 {label}")
 
-        st.subheader("🚨 Avisos de Regras")
+        st.subheader("🚨 Rule Warnings")
         tem_erro_fechamento, tem_gaps = False, False
 
         for dia in turnos_padrao.keys():
@@ -878,18 +907,18 @@ with aba3:
                 (roster_editado['Dia'] == dia) & (roster_editado['Horário'].fillna('').str.contains("Fechamento"))
             ]
             nomes_no_fecho = turnos_fecho_dia['Funcionário'].tolist()
-            if "A Preencher" in nomes_no_fecho or "Someone (Outra Loja)" in nomes_no_fecho:
+            if "To Fill" in nomes_no_fecho or "Someone (Other Store)" in nomes_no_fecho:
                 tem_gaps = True
 
             cargos_fecho = df_equipe_atual[df_equipe_atual['nome'].isin(nomes_no_fecho)]['cargo'].tolist()
             if not any(cargo in ["Manager", "Assistant Manager", "Head Barista"] for cargo in cargos_fecho) and len(cargos_fecho) > 0:
-                st.error(f"❌ **Erro no Fechamento ({dia}):** Nenhum Manager, Assistant ou Head Barista escalado.")
+                st.error(f"❌ **Closing error ({dia}):** No Manager, Assistant Manager, or Head Barista scheduled.")
                 tem_erro_fechamento = True
 
         if tem_gaps:
-            st.warning("⚠️ **Gaps Encontrados:** Turnos vazios ou designados a 'Someone'.")
+            st.warning("⚠️ **Gaps found:** Empty shifts or assigned to 'Someone'.")
         if not tem_erro_fechamento and not tem_gaps:
-            st.success("✅ Tudo Certo! Nenhuma regra quebrada e sem gaps.")
+            st.success("✅ All clear! No rule violations and no gaps.")
 
         constraints_warnings = st.session_state.get('constraints_warnings', [])
         if constraints_warnings:
@@ -908,7 +937,7 @@ with aba3:
                       if w not in _erros and w not in _infos and not w.startswith("CP-SAT:")]
 
             if _erros or _warns or _infos:
-                label = f"⚠️ Regras Trabalhistas ({len(_erros)} erro(s), {len(_warns)} aviso(s), {len(_infos)} info)"
+                label = f"⚠️ Labour Rules ({len(_erros)} error(s), {len(_warns)} warning(s), {len(_infos)} info)"
                 with st.expander(label, expanded=bool(_erros)):
                     for w in _erros:
                         st.error(w)
@@ -920,40 +949,40 @@ with aba3:
         st.divider()
         if check_feature_gate(TENANT_ID, "roster_history"):
             _sal_col1, _sal_col2 = st.columns([4, 1])
-            semana_label = _sal_col1.text_input("", placeholder="Nome da semana (ex: Semana 03/11)", key="semana_label_input", label_visibility="collapsed")
-            if _sal_col2.button("💾 Guardar", key="btn_salvar_roster"):
+            semana_label = _sal_col1.text_input("", placeholder="Week name (e.g. Week 03/11)", key="semana_label_input", label_visibility="collapsed")
+            if _sal_col2.button("💾 Save", key="btn_salvar_roster"):
                 if not semana_label.strip():
-                    st.warning("Dá um nome à semana antes de guardar.")
+                    st.warning("Give the week a name before saving.")
                 else:
                     dados_json = roster_editado.to_json(orient="records", force_ascii=False)
                     salvar_roster(TENANT_ID, semana_label.strip(), dados_json)
                     st.session_state['_last_semana_label'] = semana_label.strip()
                     st.session_state['roster_v'] += 1
-                    st.success(f"Escala '{semana_label}' guardada! Ver histórico completo na aba '📊 Histórico'.")
+                    st.success(f"Rota '{semana_label}' saved! See full history in the '📊 History' tab.")
                     st.rerun()
         else:
-            st.caption("🔒 Guardar no histórico de escalas — disponível no plano Pro. Faz upgrade no sidebar.")
+            st.caption("🔒 Save to rota history — available on the Pro plan. Upgrade in the sidebar.")
 
 # ------------------------------------------
 # ABA 4: ANÁLISE
 # ------------------------------------------
 with aba4:
-    st.header("📊 Histórico & Análise")
+    st.header("📊 History & Analytics")
 
-    st.subheader("💾 Escalas guardadas")
+    st.subheader("💾 Saved Rotas")
     if not check_feature_gate(TENANT_ID, "roster_history"):
-        st.info("🔒 O Histórico de Escalas guarda todas as semanas para auditoria e comparação — disponível no plano Pro. Faz upgrade no sidebar.")
+        st.info("🔒 Rota History saves every week for auditing and comparison — available on the Pro plan. Upgrade in the sidebar.")
     else:
         df_rosters = _cached_rosters(TENANT_ID, st.session_state['roster_v'])
         if df_rosters.empty:
-            st.info("Nenhuma escala guardada ainda. Gera uma escala e guarda-a na aba '📅 Rota da Semana'.")
+            st.info("No rotas saved yet. Generate a rota and save it in the '📅 Weekly Rota' tab.")
         else:
             for _, r_row in df_rosters.iterrows():
                 r_col1, r_col2, r_col3 = st.columns([3, 2, 1])
                 r_col1.write(f"**{r_row['semana']}**")
                 r_col2.caption(r_row['criado_em'][:16])
-                btn_load = r_col3.button("📂", key=f"hist_load_{r_row['id']}", help="Carregar")
-                btn_del = r_col3.button("🗑️", key=f"hist_del_{r_row['id']}", help="Apagar")
+                btn_load = r_col3.button("📂", key=f"hist_load_{r_row['id']}", help="Load")
+                btn_del = r_col3.button("🗑️", key=f"hist_del_{r_row['id']}", help="Delete")
                 if btn_load:
                     dados = get_roster_by_id(TENANT_ID, int(r_row['id']))
                     if dados:
@@ -965,57 +994,57 @@ with aba4:
                     st.rerun()
 
     st.divider()
-    st.subheader("📈 Análise da Semana")
+    st.subheader("📈 Weekly Analysis")
     if not check_feature_gate(TENANT_ID, "analytics"):
-        st.info("🔒 O painel de Analytics mostra cobertura, gaps e horas por funcionário — disponível no plano Pro. Faz upgrade no sidebar.")
+        st.info("🔒 The Analytics panel shows coverage, gaps and hours per staff member — available on the Pro plan. Upgrade in the sidebar.")
     elif 'roster_df' not in st.session_state:
-        st.info("Gera ou carrega uma escala na aba '📅 Rota da Semana' primeiro.")
+        st.info("Generate or load a rota in the '📅 Weekly Rota' tab first.")
     else:
         _df_an = st.session_state['roster_df']
         _cfg_an = st.session_state.get('config_semana', {})
 
         total_turnos = len(_df_an)
-        preenchidos = len(_df_an[_df_an['Funcionário'] != 'A Preencher'])
+        preenchidos = len(_df_an[_df_an['Funcionário'] != 'To Fill'])
         gaps = total_turnos - preenchidos
         cobertura = preenchidos / total_turnos * 100 if total_turnos else 0
 
         col_m1, col_m2, col_m3, col_m4 = st.columns(4)
-        col_m1.metric("Total de Turnos", total_turnos)
-        col_m2.metric("Preenchidos", preenchidos)
+        col_m1.metric("Total Shifts", total_turnos)
+        col_m2.metric("Filled", preenchidos)
         col_m3.metric("Gaps", gaps, delta=f"-{gaps}" if gaps else None, delta_color="inverse")
-        col_m4.metric("Cobertura", f"{cobertura:.0f}%")
+        col_m4.metric("Coverage", f"{cobertura:.0f}%")
 
         st.divider()
         col_c1, col_c2 = st.columns(2)
 
         with col_c1:
-            st.write("⏱️ **Horas por Funcionário vs. Alvo**")
+            st.write("⏱️ **Hours per Staff vs. Target**")
             if _cfg_an:
                 _horas_fn = {}
                 for _, _r in _df_an.iterrows():
                     _fn = _r['Funcionário']
-                    if _fn != 'A Preencher' and _fn in _cfg_an:
+                    if _fn != 'To Fill' and _fn in _cfg_an:
                         _horas_fn[_fn] = _horas_fn.get(_fn, 0.0) + calcular_horas_turno(str(_r['Horário']))
                 if _horas_fn:
                     _df_horas = pd.DataFrame([
-                        {"Funcionário": fn,
-                         "Atribuídas": round(h, 1),
-                         "Alvo": _cfg_an[fn]['horas_alvo']}
+                        {"Staff": fn,
+                         "Assigned": round(h, 1),
+                         "Target": _cfg_an[fn]['horas_alvo']}
                         for fn, h in _horas_fn.items()
-                    ]).set_index("Funcionário")
+                    ]).set_index("Staff")
                     st.bar_chart(_df_horas)
                 else:
-                    st.info("Nenhuma hora atribuída ainda.")
+                    st.info("No hours assigned yet.")
             else:
-                st.caption("Faz o setup na aba '⚙️ Setup da Semana' para ver comparativo com alvo.")
+                st.caption("Complete the setup in '⚙️ Weekly Setup' to see the comparison against target.")
 
         with col_c2:
-            st.write("📅 **Cobertura por Dia**")
+            st.write("📅 **Coverage by Day**")
             _dias_ordem = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
-            _prench_dia = _df_an[_df_an['Funcionário'] != 'A Preencher'].groupby('Dia').size()
-            _gap_dia = _df_an[_df_an['Funcionário'] == 'A Preencher'].groupby('Dia').size()
+            _prench_dia = _df_an[_df_an['Funcionário'] != 'To Fill'].groupby('Dia').size()
+            _gap_dia = _df_an[_df_an['Funcionário'] == 'To Fill'].groupby('Dia').size()
             _df_cob = pd.DataFrame({
-                "Preenchidos": _prench_dia,
+                "Filled": _prench_dia,
                 "Gaps": _gap_dia,
             }).fillna(0).reindex(_dias_ordem).fillna(0)
             st.bar_chart(_df_cob)
@@ -1024,7 +1053,6 @@ with aba4:
 # ABA 5: AJUDA
 # ------------------------------------------
 with aba5:
-    # ── Boas-vindas ──
     st.markdown("""
     <div style="
         background: linear-gradient(135deg,#1a0a3e 0%,#3b1278 60%,#6b2fa0 100%);
@@ -1032,192 +1060,185 @@ with aba5:
         color:#f0e6ff;
     ">
         <div style="font-size:0.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
-                    color:#c4a8f0;margin-bottom:.4rem">Gerenciador de Escalas</div>
+                    color:#c4a8f0;margin-bottom:.4rem">escala</div>
         <div style="font-size:1.6rem;font-weight:700;margin-bottom:.5rem">
-            Bem-vindo! 👋
+            Welcome! 👋
         </div>
         <div style="font-size:.95rem;opacity:.85;max-width:60ch;line-height:1.6">
-            Este app foi pensado para tornar a gestão de escalas do café mais rápida e justa.
-            Aqui encontras tudo o que precisas saber para tirar o máximo partido de cada funcionalidade.
+            escala is built to make café rota management faster and fairer.
+            Here you'll find everything you need to get the most out of each feature.
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Visão geral das abas ──
-    st.subheader("🗺️ O que faz cada aba")
+    st.subheader("🗺️ What each tab does")
     _ov1, _ov2, _ov3, _ov4 = st.columns(4)
-    _ov1.info("**👥 Aba 1 — Equipa**\nCadastra e edita funcionários. Define disponibilidade permanente e horas de contrato.")
-    _ov2.info("**⚙️ Aba 2 — Semana**\nConfigura exceções desta semana: folga, férias, treinamento e margem de horas.")
-    _ov3.info("**📅 Aba 3 — Escala**\nGera, ajusta e exporta a escala. Vê os avisos de regras trabalhistas.")
-    _ov4.info("**📊 Aba 4 — Análise**\nMétricas de cobertura e comparativo de horas por funcionário.")
+    _ov1.info("**👥 Team**\nAdd and edit staff. Set permanent availability and contract hours.")
+    _ov2.info("**⚙️ Weekly Setup**\nConfigure this week's exceptions: days off, holidays, training and hour tolerance.")
+    _ov3.info("**📅 Weekly Rota**\nGenerate, adjust and export the rota. Review labour rule warnings.")
+    _ov4.info("**📊 History**\nCoverage metrics and hours per staff member vs. target.")
 
     st.divider()
 
-    # ── ABA 1 ──
-    with st.expander("👥 Aba 1 — Gestão do Time", expanded=False):
-        st.markdown("#### Cadastrar um novo funcionário")
+    with st.expander("👥 Team tab", expanded=False):
+        st.markdown("#### Adding a new staff member")
         st.markdown("""
-1. Preenche **Nome**, **Cargo** e **Tipo de Contrato**.
-2. Define as **Horas Mín.** e **Horas Máx.** semanais — o robô nunca passa estes limites.
-3. Configura a **disponibilidade permanente** dia a dia (ver tabela abaixo).
-4. Clica **Cadastrar**.
+1. Fill in **Name**, **Role** and **Contract Type**.
+2. Set **Min Hours** and **Max Hours** per week — the scheduler never exceeds these limits.
+3. Configure **permanent availability** day by day (see table below).
+4. Click **Add**.
         """)
         _d1, _d2 = st.columns(2)
         with _d1:
-            st.markdown("**Opções de disponibilidade**")
+            st.markdown("**Availability options**")
             st.markdown("""
-| Opção | Significado |
+| Option | Meaning |
 |---|---|
-| **Livre** | Qualquer turno nesse dia |
-| **Só Manhã** | Turnos que acabam até às 14h |
-| **Só Tarde** | Turnos a partir das 12h |
-| **Indisponível** | Folga fixa — nunca escalado |
-| **Específico** | Intervalo exato de horas |
+| **Available** | Any shift that day |
+| **Morning only** | Shifts ending by 14:00 |
+| **Afternoon only** | Shifts starting from 12:00 |
+| **Unavailable** | Fixed day off — never scheduled |
+| **Custom** | Exact hours window |
             """)
         with _d2:
-            st.markdown("**Tipos de contrato**")
+            st.markdown("**Contract types**")
             st.markdown("""
-| Contrato | Horas habituais |
+| Contract | Typical hours |
 |---|---|
-| Full-time | Mín 35 / Máx 39 h/semana |
-| Part-time | Mín 16 / Máx 25 h/semana |
+| Full-time | Min 35 / Max 39 h/week |
+| Part-time | Min 16 / Max 25 h/week |
             """)
-        st.info("💡 **Dica:** Marca como *Indisponível* os dias que a pessoa nunca trabalha. O robô trata a folga automaticamente sem configurares nada na Aba 2.")
-        st.markdown("#### Editar ou desativar")
-        st.markdown("No painel da direita, seleciona o nome, altera os campos e clica **Salvar**. Para alguém que saiu da equipa, usa **Desativar** — o registo fica guardado mas deixa de aparecer na escala.")
+        st.info("💡 **Tip:** Mark days as *Unavailable* for days the person never works. The scheduler handles this automatically without needing any entry in Weekly Setup.")
+        st.markdown("#### Editing or deactivating")
+        st.markdown("In the right panel, select a name, change the fields and click **Save**. For someone who has left, use **Deactivate** — the record is kept but they no longer appear in the rota.")
 
-    # ── ABA 2 ──
-    with st.expander("⚙️ Aba 2 — Setup da Semana", expanded=False):
-        st.markdown("#### Antes de gerar a escala, configura sempre a semana atual")
+    with st.expander("⚙️ Weekly Setup tab", expanded=False):
+        st.markdown("#### Always configure the current week before generating a rota")
         st.markdown("""
-1. **Margem de horas tolerada (± alvo)** — quantas horas acima ou abaixo do alvo são aceitáveis antes de gerar aviso. Padrão: 2h.
-2. **Para cada funcionário**, preenche as exceções desta semana:
+1. **Hour tolerance (± target)** — how many hours above or below the target are acceptable before triggering a warning. Default: 2h.
+2. **For each staff member**, fill in this week's exceptions:
         """)
         _e1, _e2, _e3, _e4 = st.columns(4)
-        _e1.success("🏖️ **Folga**\nDias de folga só esta semana (troca pontual).")
-        _e2.success("✈️ **Férias**\nDias em que a pessoa está de férias.")
-        _e3.success("📚 **Treinamento**\nDias em formação — não entra na escala.")
-        _e4.success("⏱️ **H. Treino**\nTotal de horas de formação — contam no total semanal.")
+        _e1.success("🏖️ **Day Off**\nDays off this week only (one-off swap).")
+        _e2.success("✈️ **Holiday**\nDays the person is on annual leave.")
+        _e3.success("📚 **Training**\nDays in training — not included in the rota.")
+        _e4.success("⏱️ **Training h.**\nTotal training hours — count toward the weekly total.")
         st.markdown("""
-3. Ajusta **Horas Alvo, Mín e Máx** se a semana for atípica (feriado, semana curta…).
-4. Clica **Guardar Configuração da Semana** — só depois disto o robô tem dados para trabalhar.
+3. Adjust **Target Hours** if the week is atypical (bank holiday, short week…).
+4. Click **Confirm Weekly Hours** — only after this does the scheduler have data to work with.
         """)
-        st.warning("⚠️ Não podes marcar o mesmo dia em Folga e Treinamento ao mesmo tempo — o sistema bloqueia e explica o conflito.")
-        st.info("💡 As configurações da semana **não ficam guardadas** — começas sempre do zero na Aba 2 a cada semana.")
+        st.warning("⚠️ You cannot mark the same day as both Day Off and Training — the system blocks this and explains the conflict.")
+        st.info("💡 Weekly setup is **not automatically saved** between weeks — you always start fresh in Weekly Setup each week.")
 
-    # ── ABA 3 ──
-    with st.expander("📅 Aba 3 — Rascunho e Aprovação", expanded=False):
-        st.markdown("#### Os três botões principais")
+    with st.expander("📅 Weekly Rota tab", expanded=False):
+        st.markdown("#### The three main buttons")
         _b1, _b2, _b3 = st.columns(3)
-        _b1.info("🗑️ **Gerar Esqueleto Vazio**\nCria a tabela com todos os turnos a *A Preencher*. Para preencher à mão.")
-        _b2.info("🤖 **Gerar Escala Automática**\nO robô distribui a equipa pelos turnos respeitando disponibilidade, contratos e regras trabalhistas.")
-        _b3.info("🔄 **Resetar Aba**\nApaga o rascunho para começares de novo.")
+        _b1.info("🗑️ **Manual Skeleton**\nCreates the table with all shifts set to *To Fill*. Fill in manually.")
+        _b2.info("🤖 **Generate Auto Rota**\nThe scheduler distributes the team across shifts respecting availability, contracts and labour rules.")
+        _b3.info("🔄 **Reset**\nClears the draft so you can start over.")
 
-        st.markdown("#### Ajuste manual")
+        st.markdown("#### Manual adjustments")
         st.markdown("""
-Depois de gerar, podes editar a tabela: clica na célula **Funcionário Atribuído** e altera o nome.
-Turnos com **A Preencher** são os que o robô não conseguiu preencher — trata esses primeiro.
-O painel **Horas Dinâmicas** à direita confirma o total semanal de cada pessoa.
+After generating, you can edit the table: click the **Assigned Staff** cell and change the name.
+Shifts showing **To Fill** are ones the scheduler could not fill — handle those first.
+The **Live Hours** panel on the right confirms each person's weekly total.
         """)
 
-        st.markdown("#### Exportar Escala")
-        st.markdown("Clica no painel **⬇️ Exportar Escala** para descarregar em três formatos:")
+        st.markdown("#### Export")
+        st.markdown("Click the **⬇️ Export Rota** panel to download in three formats:")
         _x1, _x2, _x3 = st.columns(3)
-        _x1.success("📄 **CSV** — para abrir em Excel ou Google Sheets.")
-        _x2.success("📊 **Excel** — ficheiro .xlsx formatado.")
-        _x3.success("🖨️ **PDF** — A4 horizontal, ideal para imprimir ou enviar.")
+        _x1.success("📄 **CSV** — open in Excel or Google Sheets.")
+        _x2.success("📊 **Excel** — formatted .xlsx file.")
+        _x3.success("🖨️ **PDF** — A4 landscape, ideal for printing or sending.")
 
-        st.markdown("#### Histórico de Escalas")
+        st.markdown("#### Rota History")
         st.markdown("""
-1. Dá um nome à semana (ex: *Semana 47 — Nov 2026*) e clica **Guardar Escala Atual**.
-2. Na coluna *Escalas Salvas*, usa 📂 para carregar ou 🗑️ para apagar uma semana anterior.
+1. Give the week a name (e.g. *Week 47 — Nov 2026*) and click **Save**.
+2. In *Saved Rotas*, use 📂 to load or 🗑️ to delete a previous week.
         """)
 
-    # ── ABA 4 ──
-    with st.expander("📊 Aba 4 — Análise", expanded=False):
+    with st.expander("📊 History tab", expanded=False):
         st.markdown("""
-A aba de análise atualiza automaticamente sempre que a escala muda na Aba 3.
+The analytics panel updates automatically whenever the rota changes in the Weekly Rota tab.
 
-| Métrica | O que mostra |
+| Metric | What it shows |
 |---|---|
-| **Total de Turnos** | Todos os turnos da semana configurados |
-| **Preenchidos** | Quantos têm uma pessoa atribuída |
-| **Gaps** | Turnos ainda *A Preencher* — o objetivo é zero |
-| **Cobertura %** | Percentagem de turnos preenchidos. Ideal: 100% |
+| **Total Shifts** | All shifts configured for the week |
+| **Filled** | How many have an assigned staff member |
+| **Gaps** | Shifts still *To Fill* — the goal is zero |
+| **Coverage %** | Percentage of filled shifts. Target: 100% |
 
-O gráfico **Horas por Funcionário vs. Alvo** só aparece depois de configurares a semana na Aba 2.
+The **Hours per Staff vs. Target** chart only appears after you configure the week in Weekly Setup.
         """)
 
     st.divider()
 
-    # ── AVISOS E REGRAS ──
-    st.subheader("⚠️ Avisos explicados")
+    st.subheader("⚠️ Warnings explained")
 
-    st.markdown("O app verifica automaticamente as regras trabalhistas depois de gerar a escala. Os avisos têm três níveis:")
+    st.markdown("The app automatically checks labour rules after generating the rota. Warnings have three levels:")
     _av1, _av2, _av3 = st.columns(3)
-    _av1.error("🔴 **Erros** — Situações sérias que deves resolver antes de aprovar a escala (turno sem keyholder, limite de horas ultrapassado).")
-    _av2.warning("🟡 **Avisos** — Situações a rever mas que não bloqueiam (horas fora da margem, clopening).")
-    _av3.info("🔵 **Infos** — Recomendações de boas práticas (pausas em turnos longos).")
+    _av1.error("🔴 **Errors** — Serious situations to resolve before approving the rota (shift without a keyholder, hours limit exceeded).")
+    _av2.warning("🟡 **Warnings** — Situations to review but that don't block (hours outside margin, clopening).")
+    _av3.info("🔵 **Info** — Best-practice recommendations (breaks on long shifts).")
 
-    st.markdown("#### Avisos mais comuns")
-    with st.expander("🔴 Turno não atribuído — nenhum keyholder elegível"):
+    st.markdown("#### Most common warnings")
+    with st.expander("🔴 Shift unassigned — no eligible keyholder"):
         st.markdown("""
-**O que significa:** Os turnos de fecho precisam de um **Manager**, **Assistant Manager** ou **Head Barista**.
-Se nenhum destes estiver disponível nesse dia, o turno fica por preencher.
+**What it means:** Closing shifts require a **Manager**, **Assistant Manager** or **Head Barista**.
+If none of these are available that day, the shift cannot be filled.
 
-**Como resolver:** Verifica na Aba 1 se a pessoa com o cargo correto tem esse dia como *Livre* ou *Específico*.
-Se não tiver, ajusta manualmente o turno na tabela.
+**How to fix:** Check in the Team tab that the person with the right role has that day as *Available* or *Custom*.
+If not, manually assign the shift in the table.
         """)
-    with st.expander("🔴 Clopening inválido"):
+    with st.expander("🔴 Invalid clopening"):
         st.markdown("""
-**O que significa:** A pessoa fechou num dia (turno termina depois das 17h) e está escalada para abrir
-no dia seguinte com menos de 11h de descanso entre turnos — proibido por lei trabalhista.
+**What it means:** The person closed one day (shift ends after 17:00) and is scheduled to open
+the next day with less than 11h of rest between shifts — prohibited by labour law.
 
-**Como resolver:** Troca o turno de abertura por outra pessoa com descanso suficiente.
+**How to fix:** Swap the opening shift with another person who has enough rest time.
         """)
-    with st.expander("🔴 Fechamento sem keyholder"):
+    with st.expander("🔴 Closing shift without a keyholder"):
         st.markdown("""
-**O que significa:** Há um turno de fecho que foi atribuído a alguém que não tem autorização
-para fechar (cargo não é Manager nem Head Barista).
+**What it means:** A closing shift has been assigned to someone who does not have
+closing authorisation (role is not Manager or Head Barista).
 
-**Como resolver:** Atribui manualmente o turno a alguém com cargo adequado.
+**How to fix:** Manually assign the shift to someone with the appropriate role.
         """)
-    with st.expander("🟡 Horas acima/abaixo da margem"):
+    with st.expander("🟡 Hours above/below the margin"):
         st.markdown("""
-**O que significa:** O total de horas da pessoa saiu da zona de conforto
-(*Alvo ± Margem* definida na Aba 2). Não viola o contrato, mas está fora do ideal.
+**What it means:** The person's total hours fell outside the comfort zone
+(*Target ± Tolerance* set in Weekly Setup). It doesn't violate the contract, but it's not ideal.
 
-**Como resolver:** Ajusta manualmente um turno, ou aumenta a margem na Aba 2 se for aceitável.
+**How to fix:** Manually adjust a shift, or increase the tolerance in Weekly Setup if acceptable.
         """)
-    with st.expander("🟡 7 dias consecutivos sem folga (WTI)"):
+    with st.expander("🟡 7 consecutive days without a day off (WTI)"):
         st.markdown("""
-**O que significa:** A pessoa foi escalada todos os 7 dias da semana sem nenhum dia de descanso —
-viola o mínimo de 1 dia de descanso semanal por lei.
+**What it means:** The person has been scheduled all 7 days of the week with no rest day —
+this violates the minimum of 1 rest day per week required by law.
 
-**Como resolver:** Marca pelo menos 1 dia como *Folga* na Aba 2 ou *Indisponível* na Aba 1.
+**How to fix:** Mark at least 1 day as *Day Off* in Weekly Setup or *Unavailable* in the Team tab.
         """)
-    with st.expander("🔵 Turno >6h — pausa de 30 min obrigatória (WTI)"):
+    with st.expander("🔵 Shift >6h — mandatory 30-min break (WTI)"):
         st.markdown("""
-**O que significa:** Turno com mais de 6 horas exige uma pausa de 30 minutos por lei.
-O app avisa mas não pode forçar a pausa — tens de comunicar à pessoa.
+**What it means:** A shift of more than 6 hours requires a 30-minute break by law.
+The app warns but cannot enforce the break — you need to communicate this to the person.
 
-**Sugestão:** Considera dividir o turno em dois ou garantir que a pausa está marcada no horário.
+**Suggestion:** Consider splitting the shift in two or ensuring the break is marked in the schedule.
         """)
-    with st.expander("🔵 Turno >4.5h — pausa de 15 min recomendada"):
+    with st.expander("🔵 Shift >4.5h — 15-min break recommended"):
         st.markdown("""
-**O que significa:** Recomendação de boas práticas para turnos entre 4.5h e 6h.
-Não é obrigatório por lei mas é boa prática para o bem-estar da equipa.
+**What it means:** Best-practice recommendation for shifts between 4.5h and 6h.
+Not legally required but good practice for team wellbeing.
         """)
 
     st.divider()
 
-    # ── FLUXO RECOMENDADO ──
-    st.subheader("✅ Fluxo recomendado a cada semana")
+    st.subheader("✅ Recommended weekly workflow")
     _f1, _f2, _f3, _f4 = st.columns(4)
-    _f1.success("**1️⃣ Aba 1**\nAtualiza a equipa se alguém entrou, saiu ou mudou de cargo.")
-    _f2.success("**2️⃣ Aba 2**\nConfigura folgas, férias e treinamentos desta semana. Guarda.")
-    _f3.success("**3️⃣ Aba 3**\nGera a escala automática. Revê os avisos. Ajusta manualmente se necessário. Exporta.")
-    _f4.success("**4️⃣ Aba 4**\nConfirma que a cobertura está a 100% e as horas estão equilibradas.")
+    _f1.success("**1️⃣ Team**\nUpdate the team if someone joined, left or changed role.")
+    _f2.success("**2️⃣ Weekly Setup**\nConfigure days off, holidays and training for this week. Confirm.")
+    _f3.success("**3️⃣ Weekly Rota**\nGenerate the auto rota. Review warnings. Adjust manually if needed. Export.")
+    _f4.success("**4️⃣ History**\nConfirm coverage is at 100% and hours are balanced.")
 
     if not _is_pro:
-        st.info("💡 **No plano Pro** podes ter até **20 funcionários ativos** por café. Faz upgrade no sidebar.")
+        st.info("💡 **On the Pro plan** you can have up to **20 active staff** per café. Upgrade in the sidebar.")

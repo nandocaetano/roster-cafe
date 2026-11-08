@@ -41,11 +41,7 @@
 
 | File | Last Change |
 |---|---|
-| `docs/ARCHITECTURE.md` | Remove setup fee €39.90 stale |
-| `docs/CURRENT_STATE.md` | Actualizado com progresso Phase 8 |
-| `escala-landing/.gitignore` | Novo — exclui node_modules/, dist/, .env |
-| `escala-landing/wrangler.toml` | Novo — Cloudflare Workers assets config |
-| `escala-landing/` (git repo) | git init + commit limpo, push para GitHub, deployed Cloudflare Workers |
+| `app.py` | Full PT→EN translation — login, tabs, sidebar, all 6 tabs, help tab |
 
 ---
 
@@ -75,14 +71,13 @@ app_escala/
 
 ## Next Immediate Steps
 
-1. **Supabase Dashboard** → Edge Functions → stripe-webhook → Environment variables:
-   - `STRIPE_WEBHOOK_SECRET` — copiar o `whsec_...` do Stripe Dashboard (Developers → Webhooks → escala-supabase-webhook → Segredo da assinatura → clica no olho para revelar)
-   - `STRIPE_SECRET_KEY` — a chave `sk_test_...` já usada no Streamlit Secrets
-2. **Testar flow completo** em test mode — fazer checkout, verificar subscrição Pro activa na DB
-3. ✅ **GitHub** — repo `escala-landing` criado e push feito (github.com/nandocaetano/escala-landing)
-4. ✅ **Cloudflare Workers** — deployed `escala-landing.caetanolasko.workers.dev`, domínio `escala.madfrog.ie` configurado (DNS a propagar)
-5. **Switch Stripe para live mode** — substituir `sk_test_...` por live keys (requer aprovação explícita — HITL)
-6. **Credentials rotation** — rodar password Supabase DB + admin@cafe.com (requer aprovação)
+1. **git push** — push PT→EN translation to remote + deploy to Streamlit Cloud
+2. **Test billing flow** — Stripe test mode checkout → verify Pro activates in DB
+3. **Switch Stripe to live mode** — replace `sk_test_...` with live keys (HITL, requires explicit approval)
+4. **Credentials rotation** — Supabase DB password + admin@cafe.com (HITL, requires approval)
+5. ✅ **GitHub** — repo `escala-landing` pushed (github.com/nandocaetano/escala-landing)
+6. ✅ **Cloudflare Workers** — deployed `escala.madfrog.ie`
+7. ✅ **Stripe webhook** — `escala-supabase-webhook` active, secrets configured in Supabase
 
 ---
 

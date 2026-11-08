@@ -2,6 +2,29 @@
 
 ---
 
+## 2026-11-08 — Phase 8: Full PT→EN UI translation
+
+### Changed
+- `app.py`: Complete translation of all visible Portuguese copy to English
+  - Login: "Gerenciador de Escalas" → "escala", "Entrar" → "Sign in", etc.
+  - Tabs: "Setup da Semana/Rota da Semana/Equipa/Turnos/Histórico/Ajuda" → EN
+  - Sidebar: plan info, upgrade flow, register/reset forms
+  - Team tab: all labels, buttons, help text, error messages
+  - Shifts tab: column headers, save/error messages (column keys changed to EN)
+  - Weekly Setup tab: form fields, budget status, headcount overrides, trial paywall + inline upgrade button
+  - Weekly Rota tab: buttons, warnings, roster save, trial paywall + inline upgrade button
+  - History & Analytics tab: metrics, chart labels, feature gate messages
+  - Help tab: full EN rewrite
+  - Availability selector: English labels via `format_func`, data values unchanged (DB integrity)
+  - Level/Preference selectboxes: English display labels via `format_func`, PT data values preserved
+
+### Files Modified
+- `app.py`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## 2026-11-08 — Phase 8: Landing page deployed + Stripe webhook registered
 
 ### Added
