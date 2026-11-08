@@ -9,20 +9,31 @@ TIER_LIMITS = {
     "free": 10,
     "starter": 10,
     "standard": 20,
-    "plus": 35,
+    "plus": 40,
     "network": None,
+    "pro": 20,
 }
 TIER_PRICES_CENTS = {
-    "starter": 2000,
-    "standard": 3500,
-    "plus": 5500,
-    "network": 4000,
+    "starter": 1900,
+    "standard": 3900,
+    "plus": 6500,
+    "network": 3500,
+}
+TIER_PRICES_ANNUAL_CENTS = {
+    "starter": 15900,
+    "standard": 32900,
+    "plus": 54900,
+    "network": 29500,
 }
 TIER_PRICE_ENV = {
     "starter": "STRIPE_PRICE_STARTER",
     "standard": "STRIPE_PRICE_STANDARD",
     "plus": "STRIPE_PRICE_PLUS",
     "network": "STRIPE_PRICE_NETWORK",
+    "starter_annual": "STRIPE_PRICE_STARTER_ANNUAL",
+    "standard_annual": "STRIPE_PRICE_STANDARD_ANNUAL",
+    "plus_annual": "STRIPE_PRICE_PLUS_ANNUAL",
+    "network_annual": "STRIPE_PRICE_NETWORK_ANNUAL",
 }
 
 
@@ -84,7 +95,10 @@ def _validity_is_current(validade):
 
 def get_plan_tier(tenant_id):
     """Return the current pricing tier for a tenant."""
-    return str(get_subscription(tenant_id).get("plano", "free") or "free").lower()
+    tier = str(get_subscription(tenant_id).get("plano", "free") or "free").lower()
+    if tier == "pro":
+        tier = "standard"
+    return tier
 
 
 def is_pro(tenant_id):
@@ -106,33 +120,38 @@ def check_feature_gate(tenant_id, feature: str):
     return feature not in {"pdf_export", "analytics", "roster_history"}
 
 
-def create_stripe_checkout_session(tenant_id, tier, success_url, cancel_url):
+def create_stripe_checkout_session(tenant_id, tier, success_url, cancel_url, interval="month"):
     import stripe
 
-    if tier not in TIER_PRICES_CENTS:
+    if tier not in TIER_PRICES_CENTS or interval not in ("month", "year"):
         raise ValueError("Invalid pricing tier")
     stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
-    price_id = os.environ.get(TIER_PRICE_ENV[tier])
+    prices = TIER_PRICES_ANNUAL_CENTS if interval == "year" else TIER_PRICES_CENTS
+    price_env_key = f"{tier}_annual" if interval == "year" else tier
+    price_id = os.environ.get(TIER_PRICE_ENV[price_env_key])
+    product_period = "Anual" if interval == "year" else "Mensal"
     if price_id:
         line_item = {"price": price_id, "quantity": 1}
     else:
         line_item = {
             "price_data": {
                 "currency": "eur",
-                "unit_amount": TIER_PRICES_CENTS[tier],
-                "recurring": {"interval": "month"},
-                "product_data": {"name": f"escala {tier.capitalize()} — Subscricao Mensal"},
+                "unit_amount": prices[tier],
+                "recurring": {"interval": interval},
+                "product_data": {"name": f"escala {tier.capitalize()} — Subscricao {product_period}"},
             },
             "quantity": 1,
         }
+    subscription_data = {
+        "metadata": {"tenant_id": str(tenant_id), "tier": tier},
+    }
+    if interval == "month":
+        subscription_data["trial_period_days"] = 15
     session = stripe.checkout.Session.create(
         mode="subscription",
         line_items=[line_item],
         metadata={"tenant_id": str(tenant_id), "tier": tier},
-        subscription_data={
-            "trial_period_days": 15,
-            "metadata": {"tenant_id": str(tenant_id), "tier": tier},
-        },
+        subscription_data=subscription_data,
         success_url=success_url,
         cancel_url=cancel_url,
     )
