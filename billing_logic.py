@@ -5,6 +5,26 @@ from datetime import date, datetime
 
 from database import _P, _PG, _get_conn
 
+TIER_LIMITS = {
+    "free": 10,
+    "starter": 10,
+    "standard": 20,
+    "plus": 35,
+    "network": None,
+}
+TIER_PRICES_CENTS = {
+    "starter": 2000,
+    "standard": 3500,
+    "plus": 5500,
+    "network": 4000,
+}
+TIER_PRICE_ENV = {
+    "starter": "STRIPE_PRICE_STARTER",
+    "standard": "STRIPE_PRICE_STANDARD",
+    "plus": "STRIPE_PRICE_PLUS",
+    "network": "STRIPE_PRICE_NETWORK",
+}
+
 
 def get_subscription(tenant_id):
     """Return the tenant subscription, or the default free plan."""
@@ -62,15 +82,22 @@ def _validity_is_current(validade):
     return parsed >= now
 
 
+def get_plan_tier(tenant_id):
+    """Return the current pricing tier for a tenant."""
+    return str(get_subscription(tenant_id).get("plano", "free") or "free").lower()
+
+
 def is_pro(tenant_id):
+    tier = get_plan_tier(tenant_id)
     subscription = get_subscription(tenant_id)
-    return subscription.get("plano") == "pro" and _validity_is_current(
+    return tier in ("starter", "standard", "plus", "network") and _validity_is_current(
         subscription.get("validade")
     )
 
 
 def get_employee_limit(tenant_id):
-    return 20 if is_pro(tenant_id) else 10
+    tier = get_plan_tier(tenant_id)
+    return TIER_LIMITS.get(tier, 10)
 
 
 def check_feature_gate(tenant_id, feature: str):
@@ -79,23 +106,28 @@ def check_feature_gate(tenant_id, feature: str):
     return feature not in {"pdf_export", "analytics", "roster_history"}
 
 
-def create_stripe_checkout_session(tenant_id, success_url, cancel_url):
+def create_stripe_checkout_session(tenant_id, tier, success_url, cancel_url):
     import stripe
 
+    if tier not in TIER_PRICES_CENTS:
+        raise ValueError("Invalid pricing tier")
     stripe.api_key = os.environ["STRIPE_SECRET_KEY"]
+    price_id = os.environ.get(TIER_PRICE_ENV[tier])
+    if price_id:
+        line_item = {"price": price_id, "quantity": 1}
+    else:
+        line_item = {
+            "price_data": {
+                "currency": "eur",
+                "unit_amount": TIER_PRICES_CENTS[tier],
+                "recurring": {"interval": "month"},
+                "product_data": {"name": f"escala {tier.capitalize()} — Subscricao Mensal"},
+            },
+            "quantity": 1,
+        }
     session = stripe.checkout.Session.create(
         mode="subscription",
-        line_items=[
-            {
-                "price_data": {
-                    "currency": "eur",
-                    "unit_amount": 2000,  # €20.00/mês
-                    "recurring": {"interval": "month"},
-                    "product_data": {"name": "Escala Pro — Subscrição Mensal"},
-                },
-                "quantity": 1,
-            },
-        ],
+        line_items=[line_item],
         metadata={"tenant_id": str(tenant_id)},
         subscription_data={
             "trial_period_days": 15,
@@ -108,7 +140,7 @@ def create_stripe_checkout_session(tenant_id, success_url, cancel_url):
 
 
 def upsert_subscription(tenant_id, plano, validade, stripe_customer_id=None, stripe_subscription_id=None):
-    """Insert or update the tenant subscription record."""
+    """Append a subscription state change to the tenant audit trail."""
     conn = _get_conn()
     try:
         cur = conn.cursor()
@@ -117,11 +149,6 @@ def upsert_subscription(tenant_id, plano, validade, stripe_customer_id=None, str
                 """
                 INSERT INTO Subscriptions (tenant_id, plano, validade, stripe_customer_id, stripe_subscription_id)
                 VALUES (%s, %s, %s, %s, %s)
-                ON CONFLICT (tenant_id) DO UPDATE
-                  SET plano = EXCLUDED.plano,
-                      validade = EXCLUDED.validade,
-                      stripe_customer_id = COALESCE(EXCLUDED.stripe_customer_id, Subscriptions.stripe_customer_id),
-                      stripe_subscription_id = COALESCE(EXCLUDED.stripe_subscription_id, Subscriptions.stripe_subscription_id)
                 """,
                 (tenant_id, plano, validade, stripe_customer_id, stripe_subscription_id),
             )
@@ -130,11 +157,6 @@ def upsert_subscription(tenant_id, plano, validade, stripe_customer_id=None, str
                 """
                 INSERT INTO Subscriptions (tenant_id, plano, validade, stripe_customer_id, stripe_subscription_id)
                 VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT (tenant_id) DO UPDATE
-                  SET plano = excluded.plano,
-                      validade = excluded.validade,
-                      stripe_customer_id = COALESCE(excluded.stripe_customer_id, Subscriptions.stripe_customer_id),
-                      stripe_subscription_id = COALESCE(excluded.stripe_subscription_id, Subscriptions.stripe_subscription_id)
                 """,
                 (tenant_id, plano, validade, stripe_customer_id, stripe_subscription_id),
             )

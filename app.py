@@ -37,6 +37,7 @@ from database import (
 from logic import calcular_horas_turno, gerar_escala_automatica, gerar_pdf_escala, gerar_excel_escala
 from billing_logic import (
     is_pro,
+    get_plan_tier,
     get_employee_limit,
     check_feature_gate,
     create_stripe_checkout_session,
@@ -232,8 +233,12 @@ if 'roster_v' not in st.session_state:
 
 _cafe = _cached_cafe(TENANT_ID)
 _cafe_nome = _cafe['name'] if _cafe else "Cafe"
+_tier = get_plan_tier(TENANT_ID)
 _is_pro = is_pro(TENANT_ID)
 _emp_limit = get_employee_limit(TENANT_ID)
+_tier_labels = {"free": "Free", "starter": "Starter", "standard": "Standard", "plus": "Plus", "network": "Network"}
+_tier_label = _tier_labels.get(_tier, _tier.title())
+_limit_label = "Unlimited" if _emp_limit is None else str(_emp_limit)
 
 # Post-payment redirect: Stripe sends back ?upgraded=1
 if st.query_params.get("upgraded") == "1":
@@ -306,29 +311,30 @@ with st.sidebar:
                                 st.error("User not found.")
     if _user.get('role') != 'superadmin':
         st.divider()
-        _plan_label = "Pro ✨" if _is_pro else "Free"
-        st.caption(f"Plan: **{_plan_label}** · Limit: {_emp_limit} staff")
-        if not _is_pro:
-            with st.expander("⭐ Upgrade to Pro"):
+        st.caption(f"Plan: **{_tier_label}** · Staff limit: **{_limit_label}**")
+        if _tier == "free":
+            with st.expander("⭐ Upgrade Plan"):
                 st.markdown(
                     "**Unlocks:**\n"
                     "- 🖨️ PDF Export\n"
                     "- 📊 Analytics\n"
                     "- 💾 Rota History\n"
-                    "- 👥 Up to 20 staff"
+                    "- 👥 Scaled staff limits"
                 )
-                st.markdown("**€20/mo** · 15-day free trial · cancel anytime")
-                if st.button("🚀 Upgrade Now", key="btn_upgrade", type="primary"):
-                    try:
-                        _base = os.environ.get("APP_URL", "https://your-app.streamlit.app")
-                        url = create_stripe_checkout_session(
-                            TENANT_ID, f"{_base}?upgraded=1", _base
-                        )
-                        st.markdown(f"[➡️ Ir para pagamento]({url})")
-                    except KeyError:
-                        st.warning("Payments temporarily unavailable. Please try again later or contact support.")
-                    except Exception as _se:
-                        st.error(f"Erro ao iniciar checkout: {_se}")
+                st.markdown("All plans include a 15-day free trial · card required · cancel anytime")
+                _plan_cols = st.columns(3)
+                _upgrade_options = [("starter", "Starter", "€20/mo"), ("standard", "Standard", "€35/mo"), ("plus", "Plus", "€55/mo")]
+                for _plan_col, (_plan_tier, _plan_name, _plan_price) in zip(_plan_cols, _upgrade_options):
+                    with _plan_col:
+                        if st.button(f"{_plan_name}\n{_plan_price}", key=f"upgrade_{_plan_tier}", type="primary"):
+                            try:
+                                _base = os.environ.get("APP_URL", "https://your-app.streamlit.app")
+                                url = create_stripe_checkout_session(TENANT_ID, _plan_tier, f"{_base}?upgraded=1", _base)
+                                st.markdown(f"[➡️ Continue to payment]({url})")
+                            except KeyError:
+                                st.warning("Payments temporarily unavailable. Please try again later or contact support.")
+                            except Exception:
+                                st.error("Could not start checkout. Please try again later or contact support.")
     st.divider()
     if st.button("🚪 Sign out"):
         st.session_state['user'] = None
@@ -413,8 +419,8 @@ with aba1:
 
         if st.button("Add", key=f"novo_btn_{_nk}") and nome_novo:
             _cur_count = len(df_equipe) if not df_equipe.empty else 0
-            if _cur_count >= _emp_limit:
-                st.error(f"Staff limit reached: your plan supports up to {_emp_limit} active staff. Upgrade to Pro in the sidebar to add more.")
+            if _emp_limit is not None and _cur_count >= _emp_limit:
+                st.error(f"Staff limit reached: your plan supports up to {_emp_limit} active staff. Upgrade Plan in the sidebar to add more.")
             else:
                 try:
                     adicionar_funcionario(TENANT_ID, nome_novo, cargo_novo, contrato_novo, h_min_nova, h_max_nova, dias_selecionados, nivel_novo, pref_novo)
@@ -424,7 +430,7 @@ with aba1:
                     st.rerun()
                 except ValueError as _ve:
                     if "limite_funcionarios" in str(_ve):
-                        st.error(f"Staff limit reached: your plan supports up to {_emp_limit} active staff. Upgrade to Pro in the sidebar.")
+                        st.error(f"Staff limit reached: your plan supports up to {_emp_limit} active staff. Upgrade Plan in the sidebar.")
                     else:
                         st.error("Could not save staff member. Please try again.")
 
@@ -567,7 +573,7 @@ with aba2:
         if st.button("🚀 Upgrade Now", key="trial_upgrade_setup", type="primary"):
             try:
                 _base = os.environ.get("APP_URL", "https://your-app.streamlit.app")
-                url = create_stripe_checkout_session(TENANT_ID, f"{_base}?upgraded=1", _base)
+                url = create_stripe_checkout_session(TENANT_ID, "starter", f"{_base}?upgraded=1", _base)
                 st.markdown(f"[➡️ Go to payment]({url})")
             except Exception:
                 st.error("Payments temporarily unavailable. Please try again later or contact support.")
@@ -756,7 +762,7 @@ with aba3:
         if st.button("🚀 Upgrade Now", key="trial_upgrade_rota", type="primary"):
             try:
                 _base = os.environ.get("APP_URL", "https://your-app.streamlit.app")
-                url = create_stripe_checkout_session(TENANT_ID, f"{_base}?upgraded=1", _base)
+                url = create_stripe_checkout_session(TENANT_ID, "starter", f"{_base}?upgraded=1", _base)
                 st.markdown(f"[➡️ Go to payment]({url})")
             except Exception:
                 st.error("Payments temporarily unavailable. Please try again later or contact support.")
@@ -1241,4 +1247,4 @@ Not legally required but good practice for team wellbeing.
     _f4.success("**4️⃣ History**\nConfirm coverage is at 100% and hours are balanced.")
 
     if not _is_pro:
-        st.info("💡 **On the Pro plan** you can have up to **20 active staff** per café. Upgrade in the sidebar.")
+        st.info("💡 **On a paid plan** your café gets a larger staff limit. Upgrade in the sidebar.")
