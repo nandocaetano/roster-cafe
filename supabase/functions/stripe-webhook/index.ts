@@ -91,6 +91,28 @@ serve(async (req: Request) => {
           if (credentialsError) {
             console.error("Pending credentials storage failed:", credentialsError);
           }
+          const resendKey = Deno.env.get('RESEND_API_KEY');
+          if (resendKey && customerEmail && password) {
+            try {
+              const appUrl = Deno.env.get('APP_URL') ?? 'https://roster-cafe.streamlit.app';
+              const emailHtml = '<!DOCTYPE html><html><body style="font-family:sans-serif;max-width:520px;margin:0 auto;color:#1a1a2e;padding:24px"><p style="font-size:22px;font-weight:700;margin:0 0 4px">escala</p><p style="color:#888;font-size:13px;margin:0 0 28px">Cafe rota management</p><p>Hi,</p><p>Your 15-day trial is active. Here are your login details:</p><div style="background:#f5f5f5;border-radius:8px;padding:16px;margin:20px 0"><p style="margin:0 0 8px"><strong>Email:</strong> ' + customerEmail + '</p><p style="margin:0"><strong>Temporary password:</strong> ' + password + '</p></div><p><a href="' + appUrl + '" style="background:#7c3aed;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">Open escala</a></p><p style="margin-top:24px;font-size:13px;color:#888">Add your team, set your shifts, and generate your first rota in under 10 minutes.</p><hr style="border:none;border-top:1px solid #eee;margin:28px 0"><p style="font-size:12px;color:#aaa">escala by Mad Frog Studio - Dublin - hello@madfrog.ie</p></body></html>';
+              await fetch('https://api.resend.com/emails', {
+                method: 'POST',
+                headers: {
+                  'Authorization': 'Bearer ' + resendKey,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  from: 'escala <hello@madfrog.ie>',
+                  to: [customerEmail],
+                  subject: 'You are in - open your escala roster',
+                  html: emailHtml,
+                }),
+              });
+            } catch (emailErr) {
+              console.error('Welcome email failed:', emailErr);
+            }
+          }
         }
       }
 
