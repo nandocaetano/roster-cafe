@@ -31,10 +31,18 @@
 - ✅ StreamlitMixedNumericTypesError corrigido (training hours input, app.py:674)
 - ✅ Prod DB tables criadas manualmente no SQL Editor (shifttemplates, weeklysetup, dateheadcountoverrides — lowercase)
 - ✅ Admin user reset com credenciais novas
-- ⏳ **[CRÍTICO-1] Paywall gate** — tenant sem subscription Stripe acessa app 15 dias grátis sem cartão; implementar paywall na primeira entrada
-- ⏳ **[CRÍTICO-2] Preços errados na UI** — sidebar mostra Starter €20/Standard €35/Plus €55; corretos são €19/€39/€65
-- ⏳ **[CRÍTICO-3] Trial wall hardcoded** — botão Upgrade Now vai direto ao Starter sem escolha de tier
-- ⏳ **[GTM-BLOCKER] Self-registration** — após pagar no Stripe, cliente não consegue criar conta; toda conta é criada pelo superadmin
+- ✅ Paywall gate implementado — tenant sem subscription vê trial wall com seletor de tier (app.py)
+- ✅ Preços corrigidos na UI — Starter €19 / Standard €39 / Plus €65 (sidebar + trial walls)
+- ✅ Trial wall atualizado — seletor de 3 tiers em vez de botão hardcoded para Starter
+- ✅ Self-registration — stripe-webhook auto-cria Cafe+User com password temporária após checkout (tenant_id=0)
+- ✅ Welcome email via Resend — webhook envia credenciais por email após criar conta
+- ✅ Resend configurado — domínio madfrog.ie adicionado, DNS records no Cloudflare, RESEND_API_KEY no Supabase
+- ✅ Edge Function create-checkout — nova função para landing page iniciar checkout com nome do café
+- ✅ Landing page atualizada — modal com nome do café + seletor de tier + Stripe checkout real (substitui mailto:)
+- ⏳ **[PRÉ-LAUNCH] Price IDs em falta no Supabase** — STRIPE_PRICE_* precisam ser adicionados como secrets na Edge Function
+- ⏳ **[PRÉ-LAUNCH] Landing page deploy** — `npx wrangler deploy` em escala-landing após adicionar os price IDs
+- ⏳ **[PRÉ-LAUNCH] Resend DNS** — verificação do domínio madfrog.ie ainda a propagar no Cloudflare
+- ⏳ **[PRÉ-LAUNCH] Teste end-to-end** — fluxo completo: landing → Stripe → webhook → email → login → primeira escala
 - ⏳ Switch Stripe para live mode (requer aprovação explícita — HITL)
 
 ---
@@ -58,12 +66,12 @@
 
 | File | Last Change |
 |---|---|
-| `billing_logic.py` | 4-tier pricing + annual billing + TIER_LIMITS/PRICES/ENV dicts + audit trail INSERT |
-| `database.py` | EMPLOYEE_LIMIT elevado de 20 para 100 (cap de segurança para Plus/Network) |
-| `supabase/functions/stripe-webhook/index.ts` | INSERT audit trail, tier de session.metadata, sem UPSERT |
-| `skills/saas-headline-copywriter.md` | Nova skill — 3 fórmulas de headline para SaaS B2B |
-| `skills/awesome-prompts-advertiser.md` | Nova skill — framework de copy para hero sections |
-| `skills/pricing_strategy.md` | Skill reconstruída — GTM analyst, unit economics, tier logic |
+| `app.py` | Paywall gate na entrada, preços corrigidos (€19/€39/€65), trial walls com seletor de tier, helper `_render_plan_cards` |
+| `billing_logic.py` | Parâmetro `cafe_name` adicionado a `create_stripe_checkout_session`, passado no metadata Stripe |
+| `supabase/functions/stripe-webhook/index.ts` | Auto-cria Cafe+User quando tenant_id=0; hash SHA-256+salt; Resend welcome email |
+| `supabase/functions/create-checkout/index.ts` | Nova Edge Function — recebe cafe_name+tier+interval, cria sessão Stripe, retorna URL |
+| `escala-landing/src/pages/index.astro` | Modal nome do café + seletor tier + fetch para create-checkout; remove mailto: hrefs |
+| `docs/CURRENT_STATE.md` | Atualizado com estado atual |
 
 ---
 
@@ -85,9 +93,9 @@ app_escala/
 
 ## Blockers
 
-- **[PRÉ-LAUNCH] Paywall gate ausente** — tenant sem Stripe subscription acessa app grátis sem cartão (viola modelo acordado).
-- **[PRÉ-LAUNCH] Self-registration ausente** — cliente que paga no Stripe não consegue criar conta sozinho; superadmin faz manualmente.
-- **[PRÉ-LAUNCH] Preços errados na UI** — sidebar e trial wall mostram valores incorretos.
+- **[PRÉ-LAUNCH] Price IDs em falta no Supabase** — `create-checkout` Edge Function precisa de STRIPE_PRICE_STARTER/STANDARD/PLUS/+ANNUAL como secrets no Supabase.
+- **[PRÉ-LAUNCH] Landing page não deployada** — `npx wrangler deploy` em `escala-landing` após secrets.
+- **[PRÉ-LAUNCH] Resend DNS a propagar** — domínio madfrog.ie ainda em verificação; email funciona quando verificado.
 - **Credentials rotation (manual action required)** — Supabase DB password and admin email password need to be rotated.
 - **Budget thresholds (290/300/305h) hardcoded** — Balsbridge-specific, multi-tenancy gap, not critical yet.
 - **Stripe test mode** — all keys are test keys; must switch to live keys before accepting real payments.
@@ -96,12 +104,12 @@ app_escala/
 
 ## Next Immediate Steps
 
-1. **[Codex] Fix app.py — paywall gate + preços corretos + trial wall com seletor de tier** (em progresso)
-2. **[Codex] Self-registration flow** — webhook Edge Function auto-cria Cafe+User após checkout.session.completed
-3. **Testar billing flow** — Stripe test mode checkout → verificar tier na DB
-4. **Switch Stripe para live mode** — substituir sk_test por live keys (HITL, requer aprovação explícita)
-5. **Credentials rotation** — Supabase DB password + admin email (HITL, requer aprovação)
-6. **Network tier** — criar produtos Stripe para Network quando multi-loc for lançado
+1. **Adicionar price IDs ao Supabase** — STRIPE_PRICE_STARTER/STANDARD/PLUS/+ANNUAL como Edge Function secrets
+2. **Deploy landing page** — `cd escala-landing && npx wrangler deploy`
+3. **Teste end-to-end** — Nati: escala.madfrog.ie → nome do café → Stripe test card `4242 4242 4242 4242` → email → login → primeira escala
+4. **Confirmar Resend DNS** — verificar em resend.com/domains que madfrog.ie ficou verde
+5. **Switch Stripe para live mode** — substituir sk_test por live keys (HITL, requer aprovação explícita)
+6. **Credentials rotation** — Supabase DB password + admin email (HITL, requer aprovação)
 
 ---
 

@@ -2,6 +2,33 @@
 
 ---
 
+## 2026-11-08 — Phase 8: Self-Registration, Resend Email & Landing Page Checkout
+
+### Added
+- `supabase/functions/create-checkout/index.ts`: nova Edge Function — recebe `cafe_name + tier + interval`, cria sessão Stripe com `tenant_id=0`, retorna URL de checkout
+- `supabase/functions/stripe-webhook/index.ts`: auto-cria `Cafe + User` quando `tenant_id=0`; hash SHA-256+salt com Web Crypto; guarda em `pendingcredentials`; envia welcome email via Resend
+
+### Changed
+- `app.py`: paywall gate na entrada (bloqueia tenants sem subscription); helper `_render_plan_cards` com 3 tiers; preços corrigidos €19/€39/€65; trial walls com seletor de tier
+- `billing_logic.py`: parâmetro `cafe_name` adicionado a `create_stripe_checkout_session`, passado no metadata Stripe
+- `escala-landing/src/pages/index.astro`: modal de nome do café + seletor de tier + fetch para `create-checkout`; remove hrefs `mailto:`; copy corrigida "Card required. Cancel anytime."
+
+### Infrastructure
+- Resend account configurado (GitHub SSO); domínio `madfrog.ie` adicionado; 4 DNS records no Cloudflare (DKIM TXT + 2 CNAME SPF + DMARC TXT — DNS only)
+- `RESEND_API_KEY` adicionado como secret na Edge Function Supabase
+- `stripe-webhook` e `create-checkout` re-deployados
+
+### Files Modified
+- `app.py`
+- `billing_logic.py`
+- `supabase/functions/stripe-webhook/index.ts`
+- `supabase/functions/create-checkout/index.ts` (novo)
+- `escala-landing/src/pages/index.astro`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## 2026-11-08 — Phase 8: 4-Tier Pricing, Annual Billing & Stripe Setup
 
 ### Added
