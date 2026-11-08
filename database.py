@@ -420,7 +420,7 @@ def reset_password(email: str, new_password: str) -> bool:
 # Employee CRUD — all queries scoped to tenant_id
 # ──────────────────────────────────────────────────────────────────
 
-EMPLOYEE_LIMIT = 20
+EMPLOYEE_LIMIT = 100  # safety-net cap; billing tiers enforce real limits via get_employee_limit()
 
 
 def get_funcionarios_ativos(tenant_id):

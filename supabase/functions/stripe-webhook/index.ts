@@ -51,18 +51,18 @@ serve(async (req: Request) => {
 
       const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
       const customerId = typeof session.customer === "string" ? session.customer : null;
-      const validade = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
+      const tier = session.metadata?.tier ?? "starter";
 
-      const { error } = await supabase.from("subscriptions").upsert({
+      const { error } = await supabase.from("Subscriptions").insert({
         tenant_id: tenantId,
-        plano: "pro",
-        validade,
+        plano: tier,
+        validade: null,
         stripe_customer_id: customerId,
         stripe_subscription_id: subscriptionId,
         criado_em: new Date().toISOString(),
-      }, { onConflict: "tenant_id" });
+      });
       if (error) throw error;
-      console.log(`Tenant ${tenantId} → Pro, valid until ${validade}`);
+      console.log(`Tenant ${tenantId} → ${tier} (subscription active)`);
     }
 
     // ── Subscription cancelled → downgrade to Free ──────────────────────────
@@ -89,12 +89,14 @@ serve(async (req: Request) => {
         return new Response("Could not resolve tenant", { status: 400 });
       }
 
-      const { error } = await supabase
-        .from("subscriptions")
-        .update({ plano: "free", validade: null })
-        .eq("tenant_id", tenantId);
+      const { error } = await supabase.from("Subscriptions").insert({
+        tenant_id: tenantId,
+        plano: "free",
+        validade: null,
+        criado_em: new Date().toISOString(),
+      });
       if (error) throw error;
-      console.log(`Tenant ${tenantId} → Free (subscription cancelled)`);
+      console.log(`Tenant ${tenantId} → free (subscription cancelled)`);
     }
   } catch (err) {
     console.error("Error processing webhook:", err);

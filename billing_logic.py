@@ -128,10 +128,10 @@ def create_stripe_checkout_session(tenant_id, tier, success_url, cancel_url):
     session = stripe.checkout.Session.create(
         mode="subscription",
         line_items=[line_item],
-        metadata={"tenant_id": str(tenant_id)},
+        metadata={"tenant_id": str(tenant_id), "tier": tier},
         subscription_data={
             "trial_period_days": 15,
-            "metadata": {"tenant_id": str(tenant_id)},
+            "metadata": {"tenant_id": str(tenant_id), "tier": tier},
         },
         success_url=success_url,
         cancel_url=cancel_url,
