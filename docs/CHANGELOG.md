@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-11-08 — Phase 8: Modal Bug Fix, Permissions & SaaS Bootstrap Kit
+
+### Fixed
+- `escala-landing/src/pages/index.astro`: modal de checkout auto-abria no carregamento da página e o botão de fechar (×) não funcionava. Root cause: `<div hidden style="display:grid">` — o `display:grid` inline sobrepunha o `display:none` do atributo `hidden`. Fix: substituído por `style="display:none"` e JS atualizado para usar `modal.style.display`.
+- Modal deployado ao Cloudflare Workers (`escala-landing.caetanolasko.workers.dev`) — versão `9b769bd4`.
+
+### Added
+- `.claude/settings.local.json`: permissões `Bash(npx wrangler *)` e `Bash(npm run *)` adicionadas para evitar prompts em modo auto durante deploys.
+- **SaaS Bootstrap Kit** (Artifact): documento completo para reusar o ambiente Maestri (agentes, Second Brain, skills, session flow, HITL rules, phase template) em novos projetos SaaS — `claude.ai/artifact/TnBJ16NNn37TuQThVFcRgY`.
+
+### Files Modified
+- `escala-landing/src/pages/index.astro` (repo separado)
+- `.claude/settings.local.json` (local, não rastreado)
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## 2026-11-08 — Phase 8: Self-Registration, Resend Email & Landing Page Checkout
 
 ### Added
