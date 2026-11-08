@@ -14,9 +14,10 @@
 - ✅ upsert_subscription() helper adicionado a billing_logic.py
 - ✅ Webhook Supabase Edge Function deployed (`stripe-webhook` → projeto `nbggytkbrxqhnqvtvbpl`)
 - ✅ `escala-landing` git init + commit limpo (12 source files, node_modules/dist/.astro excluídos via .gitignore)
-- ⏳ Registar endpoint no Stripe Dashboard + copiar `STRIPE_WEBHOOK_SECRET`
-- ⏳ Adicionar secrets à Edge Function (`STRIPE_WEBHOOK_SECRET` + `STRIPE_SECRET_KEY`)
-- ⏳ Deploy landing page (Cloudflare Pages — precisa de repo GitHub primeiro)
+- ✅ Webhook registado no Stripe Dashboard (`escala-supabase-webhook`, 2 eventos, URL Supabase)
+- ⏳ Copiar `STRIPE_WEBHOOK_SECRET` (whsec_...) do Stripe Dashboard → Supabase Edge Function secrets
+- ✅ GitHub repo `escala-landing` criado e push feito (github.com/nandocaetano/escala-landing, branch: main)
+- ✅ Landing page deployed (escala-landing.caetanolasko.workers.dev + escala.madfrog.ie configurado)
 - ⏳ Switch Stripe para live mode (requer aprovação explícita — HITL)
 
 ---
@@ -40,9 +41,11 @@
 
 | File | Last Change |
 |---|---|
-| `docs/ARCHITECTURE.md` | Remove setup fee €39.90 (já removido da lógica; docs actualizados) |
+| `docs/ARCHITECTURE.md` | Remove setup fee €39.90 stale |
+| `docs/CURRENT_STATE.md` | Actualizado com progresso Phase 8 |
 | `escala-landing/.gitignore` | Novo — exclui node_modules/, dist/, .env |
-| `escala-landing/` (git repo) | git init + commit limpo com 12 source files (node_modules/dist excluídos) |
+| `escala-landing/wrangler.toml` | Novo — Cloudflare Workers assets config |
+| `escala-landing/` (git repo) | git init + commit limpo, push para GitHub, deployed Cloudflare Workers |
 
 ---
 
@@ -72,13 +75,12 @@ app_escala/
 
 ## Next Immediate Steps
 
-1. **Stripe Dashboard** → Developers → Webhooks → Add endpoint:
-   - URL: `https://nbggytkbrxqhnqvtvbpl.supabase.co/functions/v1/stripe-webhook`
-   - Eventos: `checkout.session.completed` + `customer.subscription.deleted`
-   - Copia o `STRIPE_WEBHOOK_SECRET` gerado
-2. **Supabase Dashboard** → Edge Functions → stripe-webhook → Secrets → adiciona `STRIPE_WEBHOOK_SECRET` + `STRIPE_SECRET_KEY`
-3. **GitHub** — cria repo `escala-landing` manualmente (gh não está instalado): `gh repo create escala-landing --public` OU via github.com/new, depois: `cd C:\Users\caeta\Desktop\escala-landing && git remote add origin https://github.com/nandocaetano/escala-landing.git && git push -u origin master`
-4. **Cloudflare Pages** — conecta ao repo GitHub, build: `npm run build`, output: `dist/`
+1. **Supabase Dashboard** → Edge Functions → stripe-webhook → Environment variables:
+   - `STRIPE_WEBHOOK_SECRET` — copiar o `whsec_...` do Stripe Dashboard (Developers → Webhooks → escala-supabase-webhook → Segredo da assinatura → clica no olho para revelar)
+   - `STRIPE_SECRET_KEY` — a chave `sk_test_...` já usada no Streamlit Secrets
+2. **Testar flow completo** em test mode — fazer checkout, verificar subscrição Pro activa na DB
+3. ✅ **GitHub** — repo `escala-landing` criado e push feito (github.com/nandocaetano/escala-landing)
+4. ✅ **Cloudflare Workers** — deployed `escala-landing.caetanolasko.workers.dev`, domínio `escala.madfrog.ie` configurado (DNS a propagar)
 5. **Switch Stripe para live mode** — substituir `sk_test_...` por live keys (requer aprovação explícita — HITL)
 6. **Credentials rotation** — rodar password Supabase DB + admin@cafe.com (requer aprovação)
 

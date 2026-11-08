@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-11-08 — Phase 8: Landing page deployed + Stripe webhook registered
+
+### Added
+- `escala-landing` git repo inicializado e pushed para github.com/nandocaetano/escala-landing
+- `wrangler.toml` para Cloudflare Workers + Assets deploy
+- Landing page deployed em `escala-landing.caetanolasko.workers.dev`
+- Domínio custom `escala.madfrog.ie` configurado no Cloudflare Workers
+- Webhook `escala-supabase-webhook` registado no Stripe (test mode), 2 eventos: `checkout.session.completed` + `customer.subscription.deleted`
+
+### Fixed
+- `docs/ARCHITECTURE.md`: setup fee €39.90 removido (stale desde sessão anterior)
+- `escala-landing/.gitignore`: node_modules/ e dist/ excluídos do repo
+
+### Files Modified
+- `escala-landing/.gitignore` (novo)
+- `escala-landing/wrangler.toml` (novo)
+- `docs/ARCHITECTURE.md`
+- `docs/CURRENT_STATE.md`
+
+---
+
 ## 2026-11-07 — Phase 8: Webhook deployed + permissions config
 
 ### Added
