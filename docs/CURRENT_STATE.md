@@ -11,13 +11,22 @@
 - ✅ UX audit completo (ux-menu-architect) — tab order, CTA primário, mensagens, Histórico separado
 - ✅ Trial paywall guard (aba2 + aba3, 15 dias, _trial_expired())
 - ✅ Stripe checkout corrigido: sem setup fee, trial_period_days=15
-- ✅ upsert_subscription() helper adicionado a billing_logic.py
+- ✅ 4 tiers de preços: Starter/Standard/Plus/Network — billing_logic.py refatorado
+- ✅ billing_logic.py: TIER_LIMITS, TIER_PRICES_CENTS, TIER_PRICES_ANNUAL_CENTS, create_stripe_checkout_session com interval='month'|'year'
+- ✅ database.py: EMPLOYEE_LIMIT elevado para 100 (cap de segurança; Plus exige >20)
+- ✅ Edge Function stripe-webhook: INSERT audit trail, tier lido de session.metadata, sem UPSERT
 - ✅ Webhook Supabase Edge Function deployed (`stripe-webhook` → projeto `nbggytkbrxqhnqvtvbpl`)
 - ✅ `escala-landing` git init + commit limpo (12 source files, node_modules/dist/.astro excluídos via .gitignore)
 - ✅ Webhook registado no Stripe Dashboard (`escala-supabase-webhook`, 2 eventos, URL Supabase)
-- ⏳ Copiar `STRIPE_WEBHOOK_SECRET` (whsec_...) do Stripe Dashboard → Supabase Edge Function secrets
+- ✅ Supabase Edge Function secrets: STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET confirmados
+- ✅ Produtos Stripe criados: Starter/Standard/Pro com preços mensais e anuais (6 price IDs)
+- ✅ Streamlit Cloud secrets: 6 price IDs + APP_URL adicionados
 - ✅ GitHub repo `escala-landing` criado e push feito (github.com/nandocaetano/escala-landing, branch: main)
 - ✅ Landing page deployed (escala-landing.caetanolasko.workers.dev + escala.madfrog.ie configurado)
+- ✅ Hero headline aprovado: "Your roster done in minutes!" + subtítulo Irish law
+- ✅ Pricing page: 4 cards com toggle Mensal/Anual, 2 meses grátis messaging
+- ⏳ Re-deploy Edge Function (index.ts foi modificado — `supabase functions deploy stripe-webhook --project-ref nbggytkbrxqhnqvtvbpl`)
+- ⏳ Adicionar STRIPE_SECRET_KEY ao Streamlit Cloud secrets (necessário para billing_logic.py chamar Stripe API)
 - ⏳ Switch Stripe para live mode (requer aprovação explícita — HITL)
 
 ---
@@ -41,7 +50,12 @@
 
 | File | Last Change |
 |---|---|
-| `app.py` | Full PT→EN translation — login, tabs, sidebar, all 6 tabs, help tab |
+| `billing_logic.py` | 4-tier pricing + annual billing + TIER_LIMITS/PRICES/ENV dicts + audit trail INSERT |
+| `database.py` | EMPLOYEE_LIMIT elevado de 20 para 100 (cap de segurança para Plus/Network) |
+| `supabase/functions/stripe-webhook/index.ts` | INSERT audit trail, tier de session.metadata, sem UPSERT |
+| `skills/saas-headline-copywriter.md` | Nova skill — 3 fórmulas de headline para SaaS B2B |
+| `skills/awesome-prompts-advertiser.md` | Nova skill — framework de copy para hero sections |
+| `skills/pricing_strategy.md` | Skill reconstruída — GTM analyst, unit economics, tier logic |
 
 ---
 
@@ -71,13 +85,12 @@ app_escala/
 
 ## Next Immediate Steps
 
-1. **git push** — push PT→EN translation to remote + deploy to Streamlit Cloud
-2. **Test billing flow** — Stripe test mode checkout → verify Pro activates in DB
-3. **Switch Stripe to live mode** — replace `sk_test_...` with live keys (HITL, requires explicit approval)
-4. **Credentials rotation** — Supabase DB password + admin@cafe.com (HITL, requires approval)
-5. ✅ **GitHub** — repo `escala-landing` pushed (github.com/nandocaetano/escala-landing)
-6. ✅ **Cloudflare Workers** — deployed `escala.madfrog.ie`
-7. ✅ **Stripe webhook** — `escala-supabase-webhook` active, secrets configured in Supabase
+1. **Re-deploy Edge Function** — `supabase functions deploy stripe-webhook --project-ref nbggytkbrxqhnqvtvbpl` (index.ts foi atualizado nesta sessão)
+2. **Adicionar STRIPE_SECRET_KEY ao Streamlit Cloud** — ir a share.streamlit.io → app → Settings → Secrets e adicionar a secret key do Stripe (necessária para billing_logic.py)
+3. **Testar billing flow** — Stripe test mode checkout → verificar se tier correto aparece na DB
+4. **Switch Stripe para live mode** — substituir `sk_test_...` por live keys (HITL, requer aprovação explícita)
+5. **Credentials rotation** — senha Supabase DB + admin@cafe.com (HITL, requer aprovação)
+6. **Network tier** — criar produtos Stripe para Network quando o plano multi-loc for lançado
 
 ---
 

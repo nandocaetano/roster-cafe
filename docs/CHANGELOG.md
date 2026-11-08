@@ -2,6 +2,41 @@
 
 ---
 
+## 2026-11-08 — Phase 8: 4-Tier Pricing, Annual Billing & Stripe Setup
+
+### Added
+- `skills/saas-headline-copywriter.md`: skill de copywriting com 3 fórmulas de headline B2B SaaS
+- `skills/awesome-prompts-advertiser.md`: skill de framework para hero sections com foco no mercado irlandês
+- `skills/pricing_strategy.md`: skill reconstruída — GTM analyst com unit economics e tier logic check
+
+### Changed
+- `billing_logic.py`: refatorado para 4 tiers (Starter/Standard/Plus/Network), preços mensais e anuais, `create_stripe_checkout_session` com `interval='month'|'year'`, INSERT audit trail
+- `database.py`: `EMPLOYEE_LIMIT` elevado de 20 para 100 (cap de segurança; Plus exige >20 funcionários)
+- `supabase/functions/stripe-webhook/index.ts`: INSERT audit trail em vez de UPSERT, tier lido de `session.metadata`, fallback por `stripe_subscription_id`
+- `escala-landing/src/pages/index.astro`: headline "Your roster done in minutes!", 4 pricing cards com toggle Mensal/Anual, messaging "2 months free"
+
+### Fixed
+- `billing_logic.py`: `upsert_subscription()` → plain INSERT (não havia UNIQUE constraint em tenant_id)
+- `billing_logic.py`: `EMPLOYEE_LIMIT=20` bloqueava Plus (40) e Network (ilimitado)
+- `billing_logic.py`: tier ausente do metadata Stripe → Edge Function não sabia qual tier registar
+
+### Infrastructure
+- 6 produtos Stripe criados (Starter/Standard/Pro × Mensal+Anual), price IDs coletados
+- Streamlit Cloud secrets: 6 price IDs + APP_URL adicionados
+- Supabase Edge Function secrets: STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET confirmados presentes
+
+### Files Modified
+- `billing_logic.py`
+- `database.py`
+- `supabase/functions/stripe-webhook/index.ts`
+- `skills/saas-headline-copywriter.md` (novo)
+- `skills/awesome-prompts-advertiser.md` (novo)
+- `skills/pricing_strategy.md` (reconstruído)
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## 2026-11-08 — Phase 8: Full PT→EN UI translation
 
 ### Changed
