@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-11-09 — Phase 8: Webhook Fix + Teste E2E Completo
+
+### Fixed
+- `STRIPE_WEBHOOK_SECRET` no Supabase Secrets estava errado — atualizado via `supabase secrets set` com o signing secret correto do Stripe Dashboard.
+- `stripe-webhook` Edge Function redeployada para apanhar o novo secret.
+
+### Result
+- Fluxo end-to-end 100% funcional: landing → `create-checkout` → Stripe Checkout → `checkout.session.completed` → webhook cria Cafe + User + Subscription + pendingcredentials → login com password temporária funciona → app abre no plano correto (Starter, staff limit 10).
+- Root cause: o secret tinha sido salvo incorretamente em sessão anterior (mesmo padrão do `STRIPE_SECRET_KEY` com aspas no valor).
+
+### Files Modified
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## 2026-11-09 — Phase 9: Dias de Folga Mínimos por Semana
 
 ### Added

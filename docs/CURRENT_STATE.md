@@ -47,8 +47,9 @@
 - ✅ `.claude/settings.local.json` — permissões `npx wrangler *` e `npm run *` adicionadas (local, não commitado)
 - ✅ SaaS Bootstrap Kit criado — Artifact com prompt mestre + estrutura completa do ambiente Maestri para reusar em novos projetos
 - ✅ Dias de folga mínimos por semana — coluna `min_dias_folga` em `Cafes`, constraint CP-SAT no solver, UI na Aba 5 (admin/superadmin)
-- ⏳ **[PRÉ-LAUNCH] Resend DNS** — verificação do domínio madfrog.ie ainda a propagar no Cloudflare
-- ⏳ **[PRÉ-LAUNCH] Teste end-to-end** — fluxo completo: landing → Stripe → webhook → email → login → primeira escala
+- ✅ **[CRÍTICO RESOLVIDO] STRIPE_WEBHOOK_SECRET corrigido** — secret estava errado no Supabase; atualizado via CLI + redeploy da stripe-webhook Edge Function
+- ✅ **Teste end-to-end completo** — landing → create-checkout → Stripe Checkout → webhook → Cafe+User+Subscription+pendingcredentials criados → login com password temporária → app abre no plano correto (Starter, staff limit 10)
+- ⏳ **[PRÉ-LAUNCH] Resend DNS** — verificação do domínio madfrog.ie ainda a propagar no Cloudflare (email de welcome não entrega até DNS verde)
 - ⏳ Switch Stripe para live mode (requer aprovação explícita — HITL)
 
 ---
@@ -72,9 +73,10 @@
 
 | File | Last Change |
 |---|---|
-| `app.py` | Leitura de `min_dias_folga` antes de gerar escala; UI de configuração na Aba 5 (admin/superadmin) |
-| `database.py` | Coluna `min_dias_folga` em `Cafes` (default 1, migration idempotente); `get/set_cafe_min_dias_folga()` |
-| `logic.py` | Novo parâmetro `min_dias_folga` em `gerar_escala_automatica`; constraint CP-SAT de descanso mínimo; warning WTI dinâmico |
+| `docs/CURRENT_STATE.md` | Registado STRIPE_WEBHOOK_SECRET fix + teste E2E completo |
+| `docs/CHANGELOG.md` | Nova entrada: webhook fix + E2E test |
+
+> **Infra alterada (fora do git):** `STRIPE_WEBHOOK_SECRET` atualizado via `supabase secrets set` + `stripe-webhook` Edge Function redeployada.
 
 ---
 
@@ -96,19 +98,19 @@ app_escala/
 
 ## Blockers
 
-- **[PRÉ-LAUNCH] Resend DNS a propagar** — domínio madfrog.ie ainda em verificação; email funciona quando verificado (nameservers Reg365 → Cloudflare pendentes).
-- **Credentials rotation (manual action required)** — Supabase DB password and admin email password need to be rotated.
+- **[PRÉ-LAUNCH] Resend DNS a propagar** — domínio madfrog.ie ainda em verificação; email de welcome não entrega até DNS ficar verde (nameservers Reg365 → Cloudflare pendentes).
+- **Credentials rotation (HITL)** — Supabase DB password + admin email precisam de rotação antes do go-live.
 - **Budget thresholds (290/300/305h) hardcoded** — Balsbridge-specific, multi-tenancy gap, not critical yet.
-- **Stripe test mode** — all keys are test keys; must switch to live keys before accepting real payments.
+- **Stripe test mode** — all keys are test keys; must switch to live keys before accepting real payments (HITL).
 
 ---
 
 ## Next Immediate Steps
 
-1. **Teste end-to-end com Nati** — escala.madfrog.ie → nome do café → Stripe test card `4242 4242 4242 4242` → credenciais (via Supabase se email ainda não chegar) → login → primeira escala
-2. **Confirmar Resend DNS** — verificar em resend.com/domains que madfrog.ie ficou verde (aguardando propagação dos NS Reg365 → Cloudflare)
-4. **Switch Stripe para live mode** — substituir sk_test por live keys (HITL, requer aprovação explícita)
-5. **Credentials rotation** — Supabase DB password + admin email (HITL, requer aprovação)
+1. **Confirmar Resend DNS** — verificar em resend.com/domains que madfrog.ie ficou verde (aguardando propagação dos NS Reg365 → Cloudflare); testar welcome email de verdade
+2. **Testar escala.madfrog.ie** — confirmar que a landing page pública está a funcionar (DNS Cloudflare) e fazer teste com URL da landing real
+3. **Switch Stripe para live mode** — substituir sk_test por live keys (HITL, requer aprovação explícita)
+4. **Credentials rotation** — Supabase DB password + admin email (HITL, requer aprovação)
 
 ---
 
