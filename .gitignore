@@ -8,3 +8,4 @@ __pycache__/
 .impeccable/
 cf-pages*.png
 tests/evidence/
+supabase/.temp/

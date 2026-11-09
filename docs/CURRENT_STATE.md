@@ -70,11 +70,11 @@
 
 ---
 
-## Modified Files (last session)
+## Modified Files (last session — 2026-11-09)
 
 | File | Last Change |
 |---|---|
-| `docs/CURRENT_STATE.md` | Trial 7 dias confirmado via Playwright E2E |
+| `docs/CURRENT_STATE.md` | Trial 7 dias confirmado via Playwright E2E; push main confirmado |
 | `docs/DECISIONS.md` | D-006, D-007, D-008 registados |
 | `docs/AGENTS.md` | Regra smoke test antes de push em main |
 | `billing_logic.py` | trial_period_days 15→7 |
@@ -84,7 +84,7 @@
 | `tests/test_smoke.py` | Novo — smoke test de imports |
 | `tests/evidence/` | Screenshots Playwright E2E (gitignored) |
 
-> **Infra alterada (fora do git):** `create-checkout` Edge Function redeployada (trial=7 dias, --no-verify-jwt confirmado).
+> **Infra alterada (fora do git):** `create-checkout` e `stripe-webhook` Edge Functions redeployadas (trial=7 dias, --no-verify-jwt). Push `42531f5..22d158c` → `origin/main` concluído em 2026-11-09.
 
 ---
 
@@ -106,7 +106,8 @@ app_escala/
 
 ## Blockers
 
-- **[PRÉ-LAUNCH] Resend DNS a propagar** — domínio madfrog.ie ainda em verificação; email de welcome não entrega até DNS ficar verde (nameservers Reg365 → Cloudflare pendentes).
+- **[BLOQUEADOR EXTERNO] madfrog.ie NXDOMAIN** — retenção de registo no Register365, aguarda documento IEDR. Sem ação técnica possível. Resend DNS e landing pública ficam bloqueados até liberar.
+- **[RLS desligado]** — `cafes`, `users`, `funcionarios`, `rosters`, `subscriptions` sem Row Level Security. Políticas propostas (ver SQL abaixo em § RLS Proposal). Aplicar antes de go-live (HITL).
 - **Credentials rotation (HITL)** — Supabase DB password + admin email precisam de rotação antes do go-live.
 - **Budget thresholds (290/300/305h) hardcoded** — Balsbridge-specific, multi-tenancy gap, not critical yet.
 - **Stripe test mode** — all keys are test keys; must switch to live keys before accepting real payments (HITL).
@@ -115,8 +116,8 @@ app_escala/
 
 ## Next Immediate Steps
 
-1. **Confirmar Resend DNS** — verificar em resend.com/domains que madfrog.ie ficou verde (aguardando propagação dos NS Reg365 → Cloudflare); testar welcome email de verdade
-2. **Testar escala.madfrog.ie** — confirmar que a landing page pública está a funcionar (DNS Cloudflare) e fazer teste com URL da landing real
+1. **Aguardar madfrog.ie** — bloqueador externo (Register365/IEDR). Quando domínio liberar: deploy landing + verificar Resend DNS + testar welcome email.
+2. **Aplicar RLS** — aprovar e aplicar políticas propostas no Supabase (ver § RLS Proposal). Teste em staging antes. Entra no checklist D-007 antes do go-live.
 3. **Switch Stripe para live mode** — substituir sk_test por live keys (HITL, requer aprovação explícita)
 4. **Credentials rotation** — Supabase DB password + admin email (HITL, requer aprovação)
 

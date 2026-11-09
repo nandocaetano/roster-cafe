@@ -14,7 +14,7 @@ TIER_LIMITS = {
     "pro": 20,
 }
 TIER_PRICES_CENTS = {
-    "starter": 1900,
+    "starter": 1990,
     "standard": 3900,
     "plus": 6500,
     "network": 3500,

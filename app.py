@@ -88,7 +88,7 @@ def _trial_expired(tenant_id):
 def _render_plan_cards(tenant_id, key_prefix, button_prefix, cafe_name=""):
     """Render the three self-serve monthly plans and start checkout."""
     _plan_options = [
-        ("starter", "Starter", "€19/mo", "Up to 10 staff"),
+        ("starter", "Starter", "€19,90/mo", "Up to 10 staff"),
         ("standard", "Standard", "€39/mo", "Up to 20 staff"),
         ("plus", "Plus", "€65/mo", "Up to 40 staff"),
     ]
@@ -407,7 +407,7 @@ with st.sidebar:
                 )
                 st.markdown("All plans include a 7-day free trial · card required · cancel anytime")
                 _plan_cols = st.columns(3)
-                _upgrade_options = [("starter", "Starter", "€19/mo"), ("standard", "Standard", "€39/mo"), ("plus", "Plus", "€65/mo")]
+                _upgrade_options = [("starter", "Starter", "€19,90/mo"), ("standard", "Standard", "€39/mo"), ("plus", "Plus", "€65/mo")]
                 for _plan_col, (_plan_tier, _plan_name, _plan_price) in zip(_plan_cols, _upgrade_options):
                     with _plan_col:
                         if st.button(f"{_plan_name}\n{_plan_price}", key=f"upgrade_{_plan_tier}", type="primary"):
