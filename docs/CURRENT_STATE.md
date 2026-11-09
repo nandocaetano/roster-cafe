@@ -74,10 +74,17 @@
 
 | File | Last Change |
 |---|---|
-| `docs/CURRENT_STATE.md` | Registado STRIPE_WEBHOOK_SECRET fix + teste E2E completo |
-| `docs/CHANGELOG.md` | Nova entrada: webhook fix + E2E test |
+| `docs/CURRENT_STATE.md` | Trial 7 dias confirmado via Playwright E2E |
+| `docs/DECISIONS.md` | D-006, D-007, D-008 registados |
+| `docs/AGENTS.md` | Regra smoke test antes de push em main |
+| `billing_logic.py` | trial_period_days 15→7 |
+| `app.py` | Mensagens "15-day" → "7-day" |
+| `supabase/functions/create-checkout/index.ts` | trial_period_days "15"→"7" |
+| `supabase/functions/stripe-webhook/index.ts` | Email template "15-day"→"7-day" |
+| `tests/test_smoke.py` | Novo — smoke test de imports |
+| `tests/evidence/` | Screenshots Playwright E2E (gitignored) |
 
-> **Infra alterada (fora do git):** `STRIPE_WEBHOOK_SECRET` atualizado via `supabase secrets set` + `stripe-webhook` Edge Function redeployada.
+> **Infra alterada (fora do git):** `create-checkout` Edge Function redeployada (trial=7 dias, --no-verify-jwt confirmado).
 
 ---
 

@@ -7,3 +7,4 @@ __pycache__/
 .hallmark/
 .impeccable/
 cf-pages*.png
+tests/evidence/
