@@ -2,6 +2,22 @@
 
 ---
 
+## 2026-11-09 — Phase 9: Dias de Folga Mínimos por Semana
+
+### Added
+- `database.py`: coluna `min_dias_folga INTEGER NOT NULL DEFAULT 1` na tabela `Cafes`; migration idempotente (PostgreSQL + SQLite); funções `get_cafe_min_dias_folga()` e `set_cafe_min_dias_folga()`.
+- `logic.py`: parâmetro `min_dias_folga` em `gerar_escala_automatica`; constraint CP-SAT `sum(worked_days) <= len(days) - min_dias_folga` por funcionário; warning WTI agora usa o valor configurado.
+- `app.py`: leitura do setting antes de chamar o solver; UI na Aba 5 (Help) com `st.number_input` visível para `admin` e `superadmin`.
+
+### Files Modified
+- `app.py`
+- `database.py`
+- `logic.py`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## 2026-11-08 — Phase 8: Checkout End-to-End Desbloqueado
 
 ### Fixed

@@ -46,7 +46,7 @@
 - ✅ Checkout end-to-end funcionando — modal → Stripe Checkout abre corretamente
 - ✅ `.claude/settings.local.json` — permissões `npx wrangler *` e `npm run *` adicionadas (local, não commitado)
 - ✅ SaaS Bootstrap Kit criado — Artifact com prompt mestre + estrutura completa do ambiente Maestri para reusar em novos projetos
-- ⏳ **[PRÉ-LAUNCH] Price IDs em falta no Supabase** — STRIPE_PRICE_* precisam ser adicionados como secrets na Edge Function
+- ✅ Dias de folga mínimos por semana — coluna `min_dias_folga` em `Cafes`, constraint CP-SAT no solver, UI na Aba 5 (admin/superadmin)
 - ⏳ **[PRÉ-LAUNCH] Resend DNS** — verificação do domínio madfrog.ie ainda a propagar no Cloudflare
 - ⏳ **[PRÉ-LAUNCH] Teste end-to-end** — fluxo completo: landing → Stripe → webhook → email → login → primeira escala
 - ⏳ Switch Stripe para live mode (requer aprovação explícita — HITL)
@@ -72,9 +72,9 @@
 
 | File | Last Change |
 |---|---|
-| `supabase/functions/create-checkout/index.ts` | Removido `payment_method_types` (descontinuado pelo Stripe); re-deployada com `--no-verify-jwt` |
-| `docs/CURRENT_STATE.md` | Atualizado com estado atual |
-| `docs/CHANGELOG.md` | Nova entrada adicionada |
+| `app.py` | Leitura de `min_dias_folga` antes de gerar escala; UI de configuração na Aba 5 (admin/superadmin) |
+| `database.py` | Coluna `min_dias_folga` em `Cafes` (default 1, migration idempotente); `get/set_cafe_min_dias_folga()` |
+| `logic.py` | Novo parâmetro `min_dias_folga` em `gerar_escala_automatica`; constraint CP-SAT de descanso mínimo; warning WTI dinâmico |
 
 ---
 
@@ -105,10 +105,11 @@ app_escala/
 
 ## Next Immediate Steps
 
-1. **Teste end-to-end com Nati** — escala.madfrog.ie → nome do café → Stripe test card `4242 4242 4242 4242` → credenciais (via Supabase se email ainda não chegar) → login → primeira escala
-2. **Confirmar Resend DNS** — verificar em resend.com/domains que madfrog.ie ficou verde (aguardando propagação dos NS Reg365 → Cloudflare)
-3. **Switch Stripe para live mode** — substituir sk_test por live keys (HITL, requer aprovação explícita)
-4. **Credentials rotation** — Supabase DB password + admin email (HITL, requer aprovação)
+1. **Adicionar `min_dias_folga` ao Supabase** — a nova coluna precisa de migration no banco de prod (SQL Editor: `ALTER TABLE cafes ADD COLUMN IF NOT EXISTS min_dias_folga INTEGER NOT NULL DEFAULT 1`)
+2. **Teste end-to-end com Nati** — escala.madfrog.ie → nome do café → Stripe test card `4242 4242 4242 4242` → credenciais (via Supabase se email ainda não chegar) → login → primeira escala
+3. **Confirmar Resend DNS** — verificar em resend.com/domains que madfrog.ie ficou verde (aguardando propagação dos NS Reg365 → Cloudflare)
+4. **Switch Stripe para live mode** — substituir sk_test por live keys (HITL, requer aprovação explícita)
+5. **Credentials rotation** — Supabase DB password + admin email (HITL, requer aprovação)
 
 ---
 
