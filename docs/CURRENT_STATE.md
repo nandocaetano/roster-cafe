@@ -105,9 +105,8 @@ app_escala/
 
 ## Next Immediate Steps
 
-1. **Adicionar `min_dias_folga` ao Supabase** — a nova coluna precisa de migration no banco de prod (SQL Editor: `ALTER TABLE cafes ADD COLUMN IF NOT EXISTS min_dias_folga INTEGER NOT NULL DEFAULT 1`)
-2. **Teste end-to-end com Nati** — escala.madfrog.ie → nome do café → Stripe test card `4242 4242 4242 4242` → credenciais (via Supabase se email ainda não chegar) → login → primeira escala
-3. **Confirmar Resend DNS** — verificar em resend.com/domains que madfrog.ie ficou verde (aguardando propagação dos NS Reg365 → Cloudflare)
+1. **Teste end-to-end com Nati** — escala.madfrog.ie → nome do café → Stripe test card `4242 4242 4242 4242` → credenciais (via Supabase se email ainda não chegar) → login → primeira escala
+2. **Confirmar Resend DNS** — verificar em resend.com/domains que madfrog.ie ficou verde (aguardando propagação dos NS Reg365 → Cloudflare)
 4. **Switch Stripe para live mode** — substituir sk_test por live keys (HITL, requer aprovação explícita)
 5. **Credentials rotation** — Supabase DB password + admin email (HITL, requer aprovação)
 
