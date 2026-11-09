@@ -33,6 +33,8 @@ from database import (
     get_date_headcount_overrides,
     save_date_headcount_override,
     delete_date_headcount_override,
+    get_cafe_min_dias_folga,
+    set_cafe_min_dias_folga,
 )
 from logic import calcular_horas_turno, gerar_escala_automatica, gerar_pdf_escala, gerar_excel_escala
 from billing_logic import (
@@ -897,7 +899,8 @@ with aba3:
                     _patched_sc[_key]["headcount"] = _row["headcount"]
             df_escala, constraints_warnings = gerar_escala_automatica(
                 config_semana, turnos_padrao, margem,
-                slot_config=_patched_sc
+                slot_config=_patched_sc,
+                min_dias_folga=get_cafe_min_dias_folga(TENANT_ID),
             )
             st.session_state['roster_df'] = df_escala
             st.session_state['constraints_warnings'] = constraints_warnings
@@ -1129,6 +1132,24 @@ with aba4:
 # ABA 5: AJUDA
 # ------------------------------------------
 with aba5:
+    if _user.get('role') in ('admin', 'superadmin'):
+        st.subheader("⚙️ Café settings")
+        _min_dias_folga = st.number_input(
+            "Minimum days off per employee per week",
+            min_value=1,
+            max_value=7,
+            value=get_cafe_min_dias_folga(TENANT_ID),
+            step=1,
+            key="cafe_min_dias_folga",
+        )
+        if st.button("Save", key="save_cafe_min_dias_folga"):
+            try:
+                set_cafe_min_dias_folga(TENANT_ID, _min_dias_folga)
+                st.success("Minimum days off saved.")
+            except Exception as _e:
+                st.error(f"Could not save setting: {_e}")
+        st.divider()
+
     st.markdown("""
     <div style="
         background: linear-gradient(135deg,#1a0a3e 0%,#3b1278 60%,#6b2fa0 100%);

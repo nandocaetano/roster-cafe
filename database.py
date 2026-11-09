@@ -89,6 +89,7 @@ def init_db():
                 id          SERIAL PRIMARY KEY,
                 name        TEXT    NOT NULL,
                 admin_email TEXT,
+                min_dias_folga INTEGER NOT NULL DEFAULT 1,
                 created_at  TEXT    NOT NULL DEFAULT (NOW()::TEXT)
             )
         ''')
@@ -185,12 +186,17 @@ def init_db():
             ALTER TABLE Funcionarios
             ADD COLUMN IF NOT EXISTS preferencia_turno TEXT DEFAULT 'Sem preferência'
         ''')
+        cur.execute('''
+            ALTER TABLE Cafes
+            ADD COLUMN IF NOT EXISTS min_dias_folga INTEGER NOT NULL DEFAULT 1
+        ''')
     else:
         cur.execute('''
             CREATE TABLE IF NOT EXISTS Cafes (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 name        TEXT    NOT NULL,
                 admin_email TEXT,
+                min_dias_folga INTEGER NOT NULL DEFAULT 1,
                 created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
             )
         ''')
@@ -288,6 +294,10 @@ def init_db():
             cur.execute("ALTER TABLE Funcionarios ADD COLUMN preferencia_turno TEXT DEFAULT 'Sem preferência'")
         except sqlite3.OperationalError:
             pass
+        try:
+            cur.execute("ALTER TABLE Cafes ADD COLUMN min_dias_folga INTEGER NOT NULL DEFAULT 1")
+        except sqlite3.OperationalError:
+            pass
 
     # Seed default tenant
     if _cnt(cur, 'Cafes') == 0:
@@ -360,6 +370,36 @@ def get_cafe_by_id(cafe_id):
     row = cur.fetchone()
     conn.close()
     return dict(row) if row else None
+
+
+def get_cafe_min_dias_folga(cafe_id):
+    """Return the configured minimum weekly rest days for a cafe."""
+    conn = _get_conn()
+    cur = conn.cursor()
+    try:
+        cur.execute(f"SELECT min_dias_folga FROM Cafes WHERE id = {_P}", (cafe_id,))
+        row = cur.fetchone()
+    except Exception:
+        row = None
+    conn.close()
+    try:
+        value = int((dict(row) if row else {}).get("min_dias_folga") or 1)
+    except (TypeError, ValueError):
+        value = 1
+    return max(1, min(7, value))
+
+
+def set_cafe_min_dias_folga(cafe_id, min_dias_folga):
+    """Persist the minimum weekly rest days for a cafe."""
+    value = max(1, min(7, int(min_dias_folga)))
+    conn = _get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        f"UPDATE Cafes SET min_dias_folga = {_P} WHERE id = {_P}",
+        (value, cafe_id),
+    )
+    conn.commit()
+    conn.close()
 
 
 # ──────────────────────────────────────────────────────────────────

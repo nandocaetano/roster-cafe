@@ -37,7 +37,7 @@ def pode_trabalhar(nome, turno_str, dia, config_semana):
     return True
 
 
-def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_horas: float = 2.0, slot_config: dict = None) -> tuple:
+def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_horas: float = 2.0, slot_config: dict = None, min_dias_folga: int = 1) -> tuple:
     """Generate a constraint-compliant weekly roster via OR-Tools CP-SAT solver."""
     from ortools.sat.python import cp_model
 
@@ -168,6 +168,7 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
     model  = cp_model.CpModel()
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = 10.0
+    min_dias_folga = max(1, min(7, int(min_dias_folga or 1)))
 
     # Decision variables
     x          = {}   # x[e, d, s] = 1 iff employee e works shift s on day d
@@ -203,7 +204,16 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
         for d in days:
             model.Add(sum(x[e, d, s] for s in turnos_padrao[d]) <= 1)
 
-    # C4: Contract max hours (minutes arithmetic to stay integer)
+    # C4: Minimum weekly rest days per employee.
+    for e in employees:
+        worked_days = []
+        for d in days:
+            worked = model.NewBoolVar(f"worked|{e}|{d}")
+            model.Add(worked == sum(x[e, d, s] for s in turnos_padrao[d]))
+            worked_days.append(worked)
+        model.Add(sum(worked_days) <= len(days) - min_dias_folga)
+
+    # C5: Contract max hours (minutes arithmetic to stay integer)
     for e in employees:
         assigned_min_expr = sum(
             duration_min(s) * x[e, d, s]
@@ -212,14 +222,14 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
         )
         model.Add(assigned_min_expr + training_min[e] <= int(maximum_hours[e] * 60))
 
-    # C5: Keyholder on closing shifts
+    # C6: Keyholder on closing shifts
     for d in days:
         for s in closing_shifts_by_day[d]:
             for e in employees:
                 if str(config_semana[e].get("cargo", "")) not in keyholder_roles:
                     model.Add(x[e, d, s] == 0)
 
-    # C6: WTI clopening — 11h rest between close and next-day open
+    # C7: WTI clopening — 11h rest between close and next-day open
     for i, d in enumerate(days[:-1]):
         next_d = days[i + 1]
         for e in employees:
@@ -232,7 +242,7 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
                         if gap < 11 * 60:
                             model.Add(x[e, d, s_close] + x[e, next_d, s_open] <= 1)
 
-    # C7: Novato constraint — max 1 novato per opening block and per closing block per day
+    # C8: Novato constraint — max 1 novato per opening block and per closing block per day
     if novato_emps:
         for d in days:
             if opening_shifts_by_day[d]:
@@ -407,9 +417,9 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
         if row["Funcionário"] in assigned_days:
             assigned_days[row["Funcionário"]].add(row["Dia"])
     for e in employees:
-        if len(assigned_days[e]) == len(days):
+        if len(assigned_days[e]) > len(days) - min_dias_folga:
             warnings.append(
-                f"{e}: WTI — {len(days)} dias consecutivos sem folga (mín. 1 dia de descanso/semana)."
+                f"{e}: WTI — {len(days)} dias consecutivos sem folga (mín. {min_dias_folga} dias de descanso/semana)."
             )
 
     # WTI break warnings — one summary line each instead of one per shift
