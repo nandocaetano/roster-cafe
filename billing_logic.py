@@ -146,7 +146,7 @@ def create_stripe_checkout_session(tenant_id, tier, success_url, cancel_url, int
         "metadata": {"tenant_id": str(tenant_id), "tier": tier},
     }
     if interval == "month":
-        subscription_data["trial_period_days"] = 15
+        subscription_data["trial_period_days"] = 7
     session = stripe.checkout.Session.create(
         mode="subscription",
         line_items=[line_item],

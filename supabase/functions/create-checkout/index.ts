@@ -40,7 +40,7 @@ Deno.serve(async (req: Request) => {
     form.set("mode", "subscription");
     form.set("line_items[0][price]", priceId);
     form.set("line_items[0][quantity]", "1");
-    form.set("subscription_data[trial_period_days]", "15");
+    form.set("subscription_data[trial_period_days]", "7");
     form.set("subscription_data[metadata][tenant_id]", "0");
     form.set("subscription_data[metadata][tier]", tier);
     form.set("subscription_data[metadata][cafe_name]", cafeName);

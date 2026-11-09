@@ -70,7 +70,7 @@ def _cached_rosters(tenant_id, _v=0):
 
 
 def _trial_expired(tenant_id):
-    """Return True when a non-Pro tenant is beyond the 15-day trial."""
+    """Return True when a non-Pro tenant is beyond the 7-day trial."""
     if is_pro(tenant_id):
         return False
     cafe = _cached_cafe(tenant_id)
@@ -302,7 +302,7 @@ if _user.get('role') != 'superadmin' and get_subscription(TENANT_ID).get('plano'
     .trial-wall p { color: #b8b0ce; font-size: 1.1rem; }
     </style>
     <div class="trial-wall">
-      <h1>Start your 15-day trial</h1>
+      <h1>Start your 7-day trial</h1>
       <p>Choose a plan to generate compliant rotas. Card required, cancel anytime.</p>
     </div>
     """, unsafe_allow_html=True)
@@ -405,7 +405,7 @@ with st.sidebar:
                     "- 💾 Rota History\n"
                     "- 👥 Scaled staff limits"
                 )
-                st.markdown("All plans include a 15-day free trial · card required · cancel anytime")
+                st.markdown("All plans include a 7-day free trial · card required · cancel anytime")
                 _plan_cols = st.columns(3)
                 _upgrade_options = [("starter", "Starter", "€19/mo"), ("standard", "Standard", "€39/mo"), ("plus", "Plus", "€65/mo")]
                 for _plan_col, (_plan_tier, _plan_name, _plan_price) in zip(_plan_cols, _upgrade_options):
@@ -653,7 +653,7 @@ with aba_config:
 # ------------------------------------------
 with aba2:
     if _trial_expired(TENANT_ID):
-        st.warning("⏰ Your 15-day trial has ended. Choose a plan to keep generating rotas.")
+        st.warning("⏰ Your 7-day trial has ended. Choose a plan to keep generating rotas.")
         _render_plan_cards(TENANT_ID, "trial_upgrade_setup", "Choose")
         st.stop()
     st.header("Weekly Selection & Budget")
@@ -836,7 +836,7 @@ with aba2:
 # ------------------------------------------
 with aba3:
     if _trial_expired(TENANT_ID):
-        st.warning("⏰ Your 15-day trial has ended. Choose a plan to keep generating rotas.")
+        st.warning("⏰ Your 7-day trial has ended. Choose a plan to keep generating rotas.")
         _render_plan_cards(TENANT_ID, "trial_upgrade_rota", "Choose")
         st.stop()
     st.header("📅 Weekly Rota")

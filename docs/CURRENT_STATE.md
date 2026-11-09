@@ -10,8 +10,8 @@
 **Phase 8 — Stripe Billing & Launch Prep** *(in progress)*
 
 - ✅ UX audit completo (ux-menu-architect) — tab order, CTA primário, mensagens, Histórico separado
-- ✅ Trial paywall guard (aba2 + aba3, 15 dias, _trial_expired())
-- ✅ Stripe checkout corrigido: sem setup fee, trial_period_days=15
+- ✅ Trial paywall guard (aba2 + aba3, 7 dias, _trial_expired())
+- ✅ Stripe checkout corrigido: sem setup fee, trial_period_days=7 (D-008)
 - ✅ 4 tiers de preços: Starter/Standard/Plus/Network — billing_logic.py refatorado
 - ✅ billing_logic.py: TIER_LIMITS, TIER_PRICES_CENTS, TIER_PRICES_ANNUAL_CENTS, create_stripe_checkout_session com interval='month'|'year'
 - ✅ database.py: EMPLOYEE_LIMIT elevado para 100 (cap de segurança; Plus exige >20)
