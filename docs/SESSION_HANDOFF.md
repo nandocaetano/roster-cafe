@@ -12,6 +12,26 @@
 
 ---
 
+## 2026-11-09 — Push dos dois repos + fix Python 3.14
+
+- **Quem:** Maestro (Claude Code)
+- **O que foi feito:**
+  - Confirmado: Streamlit Cloud publica a partir da branch `main` (visto nas settings)
+  - Push de 8 commits para `app_escala/main` e 2 commits para `escala-landing/main`
+  - Detectado ImportError no Streamlit após rebuild: Python 3.14 não suporta wheels de `ortools`/`psycopg2-binary`
+  - Corrigido: adicionado `runtime.txt` com `python-3.11` → pushado → rebuild em curso
+  - Cloudflare Worker (`escala.madfrog.ie`): push ao GitHub NÃO faz deploy automático; código atualizado no git mas Worker ainda serve versão anterior; deploy manual (`npm run deploy`) requer aprovação do Fernando
+  - Resend DNS: ainda a propagar (status "Checking DNS" no Resend dashboard; `madfrog.ie` retorna NXDOMAIN)
+- **Próximo passo:** confirmar que o app abre e login funciona após rebuild com Python 3.11; depois decidir deploy do Worker
+- **Bloqueios:**
+  - Resend DNS: aguardando propagação IEDR do `madfrog.ie` → Cloudflare
+  - Worker deploy: `escala.madfrog.ie` desatualizado (modal checkout com nome do café não está live); requer `npm run deploy` + aprovação Fernando
+  - Duração do trial (15 vs 7 dias) — D-003 ainda pendente
+  - Stripe live mode — HITL, requer aprovação Fernando
+  - Credentials rotation — HITL, requer aprovação Fernando
+
+---
+
 ## 2026-11-09 — Adequação Fase A (padrão Mad Frog)
 
 - **Quem:** Gerente de Criação (Cérebro), com aprovação do Fernando
