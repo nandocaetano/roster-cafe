@@ -22,8 +22,9 @@
   - Corrigido: adicionado `runtime.txt` com `python-3.11` → pushado → rebuild em curso
   - Cloudflare Worker (`escala.madfrog.ie`): push ao GitHub NÃO faz deploy automático; código atualizado no git mas Worker ainda serve versão anterior; deploy manual (`npm run deploy`) requer aprovação do Fernando
   - Resend DNS: ainda a propagar (status "Checking DNS" no Resend dashboard; `madfrog.ie` retorna NXDOMAIN)
-- **Próximo passo:** confirmar que o app abre e login funciona após rebuild com Python 3.11; depois decidir deploy do Worker
+- **Próximo passo:** decidir deploy do Worker (`npm run deploy` em `escala-landing`) + confirmar login manualmente com credenciais reais
 - **Bloqueios:**
+  - ✅ App online: ecrã de login confirma deploy bem-sucedido com Python 3.11
   - Resend DNS: aguardando propagação IEDR do `madfrog.ie` → Cloudflare
   - Worker deploy: `escala.madfrog.ie` desatualizado (modal checkout com nome do café não está live); requer `npm run deploy` + aprovação Fernando
   - Duração do trial (15 vs 7 dias) — D-003 ainda pendente
