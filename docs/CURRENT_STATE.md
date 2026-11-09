@@ -1,3 +1,4 @@
+> Leia também LEIA-ME.md e docs/DECISIONS.md antes de começar (padrão Mad Frog, 2026-11-09). Preço oficial: D-003.
 # Current State
 
 > Single source of truth. Update this file at the end of every session.

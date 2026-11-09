@@ -3,3 +3,7 @@ __pycache__/
 *.db
 .env
 .maestri/
+.codex/
+.hallmark/
+.impeccable/
+cf-pages*.png
