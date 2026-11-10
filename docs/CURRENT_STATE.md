@@ -70,19 +70,17 @@
 
 ---
 
-## Modified Files (last session — 2026-11-09)
+## Modified Files (last session — 2026-11-10)
 
 | File | Last Change |
 |---|---|
-| `docs/CURRENT_STATE.md` | RLS aplicado; skills cleanup |
-| `docs/SESSION_HANDOFF.md` | Nova entrada sessão 2026-11-09 (RLS) |
-| `.gitignore` | `.skills-backup/` adicionado |
-| `supabase/rls_enable.sql` | Novo — ALTER TABLE ... ENABLE ROW LEVEL SECURITY (5 tabelas) |
-| `supabase/rls_rollback.sql` | Novo — rollback das 5 tabelas |
-| `.claude/skills/` | Mantidas só: grill-me, to-spec, to-tickets (37 movidas para .skills-backup/) |
-| `.agents/skills/` | Idem — 37 skills movidas para .skills-backup/ |
+| `docs/CURRENT_STATE.md` | Atualizado com sessão 2026-11-10 |
+| `docs/SESSION_HANDOFF.md` | Nova entrada 2026-11-10 — protótipo UX aprovado, commits dev, permissões |
+| `docs/CHANGELOG.md` | Nova entrada 2026-11-10 |
+| `docs/DECISIONS.md` | D-011: nota Q24 ajusta Q6 adicionada; newline no fim |
+| `skills-lock.json` | Metadata do registry de skills (hashes + source paths) atualizado |
 
-> **Infra alterada (fora do git):** RLS habilitado no Supabase remote (roster-cafe / nbggytkbrxqhnqvtvbpl) via `supabase db query --remote`. Verificado: 9/9 tabelas `rowsecurity = true`. Smoke tests 4/4 passando.
+> **Local (não commitado):** `.claude/settings.local.json` — `permissions.allow` reduzido a `git status/diff/log/show` (removidos `npx wrangler *` e `npm run *`).
 
 ---
 
@@ -114,10 +112,11 @@ app_escala/
 
 ## Next Immediate Steps
 
-1. **Aguardar madfrog.ie** — bloqueador externo (Register365/IEDR). Quando domínio liberar: deploy landing + verificar Resend DNS + testar welcome email.
-2. **Aplicar RLS** — aprovar e aplicar políticas propostas no Supabase (ver § RLS Proposal). Teste em staging antes. Entra no checklist D-007 antes do go-live.
-3. **Switch Stripe para live mode** — substituir sk_test por live keys (HITL, requer aprovação explícita)
-4. **Credentials rotation** — Supabase DB password + admin email (HITL, requer aprovação)
+1. **Aguardar aprovação da Nati no protótipo UX** — Artifact em https://claude.ai/artifact/Natfjn4qTzEYeVVYm89mzd (D-011). Com o OK, implementar UX no `app.py` no branch `dev`.
+2. **Implementar D-011 no app.py** — após aprovação Nati: tabs Rota·Team·Settings, fluxo guiado 3 passos, Outfit, empty states, mobile fixes. Testar → push `dev → main` (requer aprovação Fernando).
+3. **Aguardar madfrog.ie** — bloqueador externo (Register365/IEDR). Quando domínio liberar: deploy landing + verificar Resend DNS + testar welcome email.
+4. **Switch Stripe para live mode** — substituir sk_test por live keys (HITL, requer aprovação explícita)
+5. **Credentials rotation** — Supabase DB password + admin email (HITL, requer aprovação)
 
 ---
 

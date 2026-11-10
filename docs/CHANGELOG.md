@@ -2,6 +2,31 @@
 
 ---
 
+## 2026-11-10 — Phase 8: UX Prototype + RLS + Skills Cleanup
+
+### Added
+- Protótipo UX interativo (D-011) publicado como Artifact — 9 telas, dark brand theme, Outfit 700, fluxo guiado 3 passos, tabs Rota·Team·Settings.
+- `supabase/rls_enable.sql` e `supabase/rls_rollback.sql` — SQL versionado para habilitar/reverter RLS nas 5 tabelas restantes.
+
+### Changed
+- `docs/DECISIONS.md` — D-011 atualizado: nota "(Q24 ajusta Q6)" adicionada; trailing newline.
+- `skills-lock.json` — metadata do registry de skills atualizado após limpeza das mattpocock skills.
+- `.claude/settings.local.json` (local, não commitado) — `permissions.allow` reduzido a `git status/diff/log/show`.
+
+### Fixed
+- RLS habilitado nas 9/9 tabelas do Supabase remote (cafes, users, funcionarios, rosters, subscriptions + 4 restantes).
+
+### Files Modified
+- `docs/CURRENT_STATE.md`
+- `docs/SESSION_HANDOFF.md`
+- `docs/CHANGELOG.md`
+- `docs/DECISIONS.md`
+- `supabase/rls_enable.sql`
+- `supabase/rls_rollback.sql`
+- `skills-lock.json`
+
+---
+
 ## 2026-11-09 — Phase 8: Webhook Fix + Teste E2E Completo
 
 ### Fixed
