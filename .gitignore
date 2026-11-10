@@ -9,3 +9,4 @@ __pycache__/
 cf-pages*.png
 tests/evidence/
 supabase/.temp/
+.skills-backup/
