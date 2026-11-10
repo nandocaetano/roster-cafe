@@ -74,17 +74,15 @@
 
 | File | Last Change |
 |---|---|
-| `docs/CURRENT_STATE.md` | Trial 7 dias confirmado via Playwright E2E; push main confirmado |
-| `docs/DECISIONS.md` | D-006, D-007, D-008 registados |
-| `docs/AGENTS.md` | Regra smoke test antes de push em main |
-| `billing_logic.py` | trial_period_days 15→7 |
-| `app.py` | Mensagens "15-day" → "7-day" |
-| `supabase/functions/create-checkout/index.ts` | trial_period_days "15"→"7" |
-| `supabase/functions/stripe-webhook/index.ts` | Email template "15-day"→"7-day" |
-| `tests/test_smoke.py` | Novo — smoke test de imports |
-| `tests/evidence/` | Screenshots Playwright E2E (gitignored) |
+| `docs/CURRENT_STATE.md` | RLS aplicado; skills cleanup |
+| `docs/SESSION_HANDOFF.md` | Nova entrada sessão 2026-11-09 (RLS) |
+| `.gitignore` | `.skills-backup/` adicionado |
+| `supabase/rls_enable.sql` | Novo — ALTER TABLE ... ENABLE ROW LEVEL SECURITY (5 tabelas) |
+| `supabase/rls_rollback.sql` | Novo — rollback das 5 tabelas |
+| `.claude/skills/` | Mantidas só: grill-me, to-spec, to-tickets (37 movidas para .skills-backup/) |
+| `.agents/skills/` | Idem — 37 skills movidas para .skills-backup/ |
 
-> **Infra alterada (fora do git):** `create-checkout` e `stripe-webhook` Edge Functions redeployadas (trial=7 dias, --no-verify-jwt). Push `42531f5..22d158c` → `origin/main` concluído em 2026-11-09.
+> **Infra alterada (fora do git):** RLS habilitado no Supabase remote (roster-cafe / nbggytkbrxqhnqvtvbpl) via `supabase db query --remote`. Verificado: 9/9 tabelas `rowsecurity = true`. Smoke tests 4/4 passando.
 
 ---
 
@@ -107,7 +105,7 @@ app_escala/
 ## Blockers
 
 - **[BLOQUEADOR EXTERNO] madfrog.ie NXDOMAIN** — retenção de registo no Register365, aguarda documento IEDR. Sem ação técnica possível. Resend DNS e landing pública ficam bloqueados até liberar.
-- **[RLS desligado]** — `cafes`, `users`, `funcionarios`, `rosters`, `subscriptions` sem Row Level Security. Políticas propostas (ver SQL abaixo em § RLS Proposal). Aplicar antes de go-live (HITL).
+- ✅ **[RLS aplicado 2026-11-09]** — `rowsecurity = true` nas 9 tabelas: cafes, users, funcionarios, rosters, subscriptions, shifttemplates, weeklysetup, dateheadcountoverrides, pendingcredentials. SQL em `supabase/rls_enable.sql`, rollback em `supabase/rls_rollback.sql`.
 - **Credentials rotation (HITL)** — Supabase DB password + admin email precisam de rotação antes do go-live.
 - **Budget thresholds (290/300/305h) hardcoded** — Balsbridge-specific, multi-tenancy gap, not critical yet.
 - **Stripe test mode** — all keys are test keys; must switch to live keys before accepting real payments (HITL).

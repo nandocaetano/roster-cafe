@@ -30,3 +30,7 @@ Antes de qualquer tarefa: seguir a ordem de leitura do `LEIA-ME.md`.
 
 - Todo o trabalho acontece em `dev`; `main` só recebe merge aprovado por Fernando.
 - Nunca fazer push para `main` sem os smoke tests passarem: `python tests/test_smoke.py` + `python test_fairness_solver.py`.
+
+## Skills e plugins
+
+As skills obedecem a este AGENTS.md. Sem push para main, sem deploy e sem modo hands-off (lfg) sem aprovação do Fernando. Em conflito, prevalece o AGENTS.md.

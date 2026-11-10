@@ -12,6 +12,25 @@
 
 ---
 
+## 2026-11-09 — RLS habilitado + skills cleanup
+
+- **Quem:** Maestro (Claude Code)
+- **O que foi feito:**
+  - Skills do mattpocock: 37 movidas para `.skills-backup/` em cada pasta; mantidas apenas `grill-me`, `to-spec`, `to-tickets` em `.claude/skills/` e `.agents/skills/`. `.skills-backup/` adicionado ao `.gitignore`.
+  - RLS habilitado nas 5 tabelas faltantes (`cafes`, `users`, `funcionarios`, `rosters`, `subscriptions`) via `supabase db query --remote`. Total: 9/9 tabelas com `rowsecurity = true`.
+  - SQL versionado em `supabase/rls_enable.sql` e `supabase/rls_rollback.sql`.
+  - Smoke tests 4/4 passando (imports + billing_logic).
+- **Próximo passo:**
+  - Teste manual obrigatório (confirmação do usuário): login → gerar escala → criar funcionário → checkout de teste da landing.
+  - Após confirmação: Stripe live mode (HITL) + credentials rotation (HITL).
+- **Bloqueios:**
+  - Teste E2E manual (login, escala, funcionário, checkout) pendente — requer browser do usuário.
+  - `madfrog.ie` NXDOMAIN — bloqueador externo (Register365/IEDR), sem ação técnica.
+  - Stripe live mode — HITL, requer aprovação explícita.
+  - Credentials rotation — HITL, requer aprovação explícita.
+
+---
+
 ## 2026-11-09 — Push dos dois repos + fix Python 3.14
 
 - **Quem:** Maestro (Claude Code)
