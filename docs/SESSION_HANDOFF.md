@@ -12,6 +12,31 @@
 
 ---
 
+## 2026-11-10 — Protótipo UX aprovado + commits dev + permissões
+
+- **Quem:** Maestro (Claude Code) + Fernando
+- **O que foi feito:**
+  - Commits no branch `dev` (sem push):
+    - `0592eba` — security: RLS habilitado nas 5 tabelas restantes
+    - `22563af` — chore: limpeza das skills do mattpocock (37 removidas, 4 mantidas)
+    - `da0f148` — docs: D-010 e D-011 registrados; CURRENT_STATE e SESSION_HANDOFF atualizados
+  - `settings.local.json` reduzido: `permissions.allow` agora só com `git status`, `git diff`, `git log`, `git show` (removidos `npx wrangler` e `npm run`).
+  - Protótipo UX (D-011) publicado como Artifact e aprovado pelo Fernando. Acabamento aprovado para implementação:
+    - Conteúdo centralizado `max-width: 1160px`; cards do fluxo guiado com `max-width: 560px` centrados.
+    - `+ Add another` e `+ Add another shift` com borda tracejada e cor da marca (`.btn-dashed`).
+    - Morning e Afternoon com badges de violeta diferentes (`.sp-m` / `.sp-a`); "Off" em cinza legível (`.td-off`).
+    - "Regenerate" abre modal de confirmação antes de sobrescrever.
+    - Mobile: barra de passos só com números + Skip abaixo da barra; sem scroll horizontal na página; tabela da Rota em `overflow-x: auto`.
+- **Próximo passo:** Aguardar OK da Nati no protótipo → implementar D-011 no `app.py` no branch `dev` → testar → pedir aprovação para push `dev → main`.
+- **Bloqueios:**
+  - Aprovação da Nati no protótipo pendente.
+  - `skills-lock.json` não commitado — decidir se incluir em commit futuro.
+  - Verificar origem dos hooks do Impeccable no `settings.local.json` (foram mantidos sem revisão).
+  - `madfrog.ie` NXDOMAIN — bloqueador externo (Register365/IEDR), sem ação técnica.
+  - Stripe live mode e credentials rotation — HITL, requerem aprovação explícita.
+
+---
+
 ## 2026-11-09 — RLS habilitado + skills cleanup
 
 - **Quem:** Maestro (Claude Code)
