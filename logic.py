@@ -338,7 +338,22 @@ def gerar_escala_automatica(config_semana: dict, turnos_padrao: dict, margem_hor
                         _affinity_terms.append(PARTTIME_AFFINITY * x[e, d, s])
     parttime_affinity_cost = sum(_affinity_terms) if _affinity_terms else 0
 
-    model.Minimize(unassigned_cost + hour_deviation_cost + preference_cost + fairness_cost + parttime_affinity_cost)
+    # Hard-soft: being below horas_min costs 500/min — far outweighs fairness
+    # (10/min × spread). C6 is unaffected (hard constraint); BIG_PENALTY
+    # (100 000/slot) still dominates over individual min-hours requirements.
+    MIN_HOURS_COST = 500
+    min_hours_cost_terms = []
+    for e in employees:
+        if minimum_hours[e] <= 0:
+            continue
+        min_m = int(minimum_hours[e] * 60)
+        _assigned_e = sum(duration_min(s) * x[e, d, s] for d in days for s in turnos_padrao[d])
+        below_min = model.NewIntVar(0, min_m, f"below_min|{e}")
+        model.Add(_assigned_e + training_min[e] + below_min >= min_m)
+        min_hours_cost_terms.append(MIN_HOURS_COST * below_min)
+    min_hours_cost = sum(min_hours_cost_terms) if min_hours_cost_terms else 0
+
+    model.Minimize(unassigned_cost + hour_deviation_cost + preference_cost + fairness_cost + parttime_affinity_cost + min_hours_cost)
 
     # ── SOLVE ────────────────────────────────────────────────────────────────
 
