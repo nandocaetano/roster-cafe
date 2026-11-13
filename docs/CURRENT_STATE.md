@@ -52,6 +52,10 @@
 - ✅ **Teste end-to-end completo** — landing → create-checkout → Stripe Checkout → webhook → Cafe+User+Subscription+pendingcredentials criados → login com password temporária → app abre no plano correto (Starter, staff limit 10)
 - ⏳ **[PRÉ-LAUNCH] Resend DNS** — verificação do domínio madfrog.ie ainda a propagar no Cloudflare (email de welcome não entrega até DNS verde)
 - ⏳ Switch Stripe para live mode (requer aprovação explícita — HITL)
+- ✅ **T-20261113-04** — KeyError guard na Weekly Rota quando equipe está vazia ou sem colunas nome/cargo; Sign out limpa roster residual da sessão
+- ✅ **T-20261113-04** — Validação de campos obrigatórios (nome, cargo, contrato, horas min≤max) no Add e Save da aba Team, com `st.error` explícito
+- ✅ **T-20261113-04** — Rule Warnings reagrupados em 4 expanders fechados por categoria: No eligible staff · Closing/keyholder · Rest days/clopening · Other warnings
+- ✅ **T-20261113-04** — Cache DB: `get_subscription @st.cache_data(ttl=30)`, `_ensure_db_initialized @st.cache_resource`, `_cached_shift_templates`, `_cached_min_dias_folga`; ~13 round trips/rerun → 1
 
 ---
 
@@ -70,17 +74,17 @@
 
 ---
 
-## Modified Files (last session — 2026-11-10)
+## Modified Files (last session — 2026-11-13)
 
 | File | Last Change |
 |---|---|
-| `docs/CURRENT_STATE.md` | Atualizado com sessão 2026-11-10 |
-| `docs/SESSION_HANDOFF.md` | Nova entrada 2026-11-10 — protótipo UX aprovado, commits dev, permissões |
-| `docs/CHANGELOG.md` | Nova entrada 2026-11-10 |
-| `docs/DECISIONS.md` | D-011: nota Q24 ajusta Q6 adicionada; newline no fim |
-| `skills-lock.json` | Metadata do registry de skills (hashes + source paths) atualizado |
+| `app.py` | T-20261113-04: KeyError guard, validação Team, expanders Rule Warnings, cache wrappers, `_ensure_db_initialized` |
+| `billing_logic.py` | T-20261113-04: `@st.cache_data(ttl=30)` em `get_subscription`; clear cache após `upsert_subscription` |
+| `docs/agents/tasks/T-20261113-04.md` | Task criada — Objetivo, confirmação, fatias 1-3, testes |
+| `docs/CURRENT_STATE.md` | Atualizado com sessão 2026-11-13 |
+| `docs/CHANGELOG.md` | Nova entrada 2026-11-13 |
 
-> **Local (não commitado):** `.claude/settings.local.json` — `permissions.allow` reduzido a `git status/diff/log/show` (removidos `npx wrangler *` e `npm run *`).
+> **Commit já aplicado:** `e47fcbf` — *fix: guard empty-team KeyError, group rule warnings, cache DB queries* (main, pushed).
 
 ---
 
@@ -112,11 +116,12 @@ app_escala/
 
 ## Next Immediate Steps
 
-1. **Aguardar aprovação da Nati no protótipo UX** — Artifact em https://claude.ai/artifact/Natfjn4qTzEYeVVYm89mzd (D-011). Com o OK, implementar UX no `app.py` no branch `dev`.
-2. **Implementar D-011 no app.py** — após aprovação Nati: tabs Rota·Team·Settings, fluxo guiado 3 passos, Outfit, empty states, mobile fixes. Testar → push `dev → main` (requer aprovação Fernando).
-3. **Aguardar madfrog.ie** — bloqueador externo (Register365/IEDR). Quando domínio liberar: deploy landing + verificar Resend DNS + testar welcome email.
-4. **Switch Stripe para live mode** — substituir sk_test por live keys (HITL, requer aprovação explícita)
-5. **Credentials rotation** — Supabase DB password + admin email (HITL, requer aprovação)
+1. **Verificar T-20261113-04 no app em produção** — confirmar: (a) café sem equipe abre Weekly Rota sem KeyError; (b) Add com nome vazio mostra erro; (c) expanders Rule Warnings fechados com contagem no título; (d) app responde mais depressa após primeiro load.
+2. **Aguardar aprovação da Nati no protótipo UX** — Artifact (D-011). Com o OK, implementar UX no `app.py` no branch `dev`.
+3. **Implementar D-011 no app.py** — após aprovação Nati: tabs Rota·Team·Settings, fluxo guiado 3 passos, Outfit, empty states, mobile fixes. Testar → push `dev → main`.
+4. **Aguardar madfrog.ie** — bloqueador externo (Register365/IEDR). Quando domínio liberar: deploy landing + verificar Resend DNS + testar welcome email.
+5. **Switch Stripe para live mode** — substituir sk_test por live keys (HITL, requer aprovação explícita)
+6. **Credentials rotation** — Supabase DB password + admin email (HITL, requer aprovação)
 
 ---
 

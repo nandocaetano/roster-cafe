@@ -2,6 +2,29 @@
 
 ---
 
+## 2026-11-13 — Phase 8: Bug Fixes + Rule Warnings UX + DB Cache (T-20261113-04)
+
+### Fixed
+- `app.py`: KeyError em `df_equipe_atual['nome']` / `['cargo']` quando a equipe está vazia ou `get_funcionarios_ativos` devolve DataFrame sem colunas — guarda `empty` + `'nome' in columns` adicionada antes do acesso.
+- `app.py`: Sign out limpa `roster_df` e `constraints_warnings` da sessão, evitando que a escala de um café apareça em sessão de outro.
+- `app.py`: Botão Add (aba Team) não mostrava mensagem quando nome estava em branco — substituído por validação explícita com `st.error`.
+- `app.py`: Botão Save da edição (aba Team) não validava campos antes de chamar `atualizar_funcionario` — validação de nome/cargo/contrato/horas adicionada.
+
+### Changed
+- `app.py`: Rule Warnings reagrupados em 4 `st.expander` fechados por padrão, um por categoria: *No eligible staff* · *Closing / keyholder* · *Rest days / clopening* · *Other warnings*. Os `st.error` soltos de fechamento por dia e o aviso de Gaps movidos para os expanders correspondentes. CP-SAT continua como `st.info` solto.
+- `billing_logic.py`: `get_subscription` decorada com `@st.cache_data(ttl=30, show_spinner=False)` — elimina ~13 round trips ao Supabase por rerun. Cache limpa automaticamente após `upsert_subscription`.
+- `app.py`: `init_db` protegido com `@st.cache_resource` via `_ensure_db_initialized()` — corre no máximo uma vez por processo do Streamlit, não uma vez por sessão de browser.
+- `app.py`: `get_shift_templates` e `get_cafe_min_dias_folga` substituídas por `_cached_shift_templates` (TTL 5 min) e `_cached_min_dias_folga` (TTL 60 s), com `clear()` após cada escrita.
+
+### Files Modified
+- `app.py`
+- `billing_logic.py`
+- `docs/agents/tasks/T-20261113-04.md`
+- `docs/CURRENT_STATE.md`
+- `docs/CHANGELOG.md`
+
+---
+
 ## 2026-11-10 — Phase 8: UX Prototype + RLS + Skills Cleanup
 
 ### Added
