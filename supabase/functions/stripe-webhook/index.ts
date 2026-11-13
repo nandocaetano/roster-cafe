@@ -48,6 +48,42 @@ serve(async (req: Request) => {
       const customerEmail = session.customer_details?.email ?? session.customer_email ?? null;
       const cafeName = session.metadata?.cafe_name?.trim() || "New Cafe";
 
+      const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
+      const customerId = typeof session.customer === "string" ? session.customer : null;
+      const tier = session.metadata?.tier ?? "starter";
+
+      // Idempotency: Stripe may deliver the same event more than once (retries, manual resend).
+      if (subscriptionId) {
+        const { data: existingSub, error: existingSubError } = await supabase
+          .from("subscriptions")
+          .select("id, tenant_id")
+          .eq("stripe_subscription_id", subscriptionId)
+          .limit(1)
+          .maybeSingle();
+        if (existingSubError) throw existingSubError;
+        if (existingSub) {
+          console.log(`Event ${event.id}: subscription ${subscriptionId} already stored for tenant ${existingSub.tenant_id}; skipping`);
+          return new Response(JSON.stringify({ received: true, duplicate: true }), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      }
+
+      // Returning customer: an account with this email already exists -> reuse its tenant, create nothing.
+      if (tenantId <= 0 && customerEmail) {
+        const { data: existingUser, error: existingUserError } = await supabase
+          .from("users")
+          .select("tenant_id")
+          .eq("email", customerEmail)
+          .limit(1)
+          .maybeSingle();
+        if (existingUserError) throw existingUserError;
+        if (existingUser?.tenant_id) {
+          tenantId = existingUser.tenant_id;
+          console.log(`Event ${event.id}: email already registered; reusing tenant ${tenantId}`);
+        }
+      }
+
       if (tenantId <= 0) {
         if (!customerEmail) {
           console.error("New checkout has no customer email; account creation skipped");
@@ -78,7 +114,12 @@ serve(async (req: Request) => {
             role: "admin",
             created_at: new Date().toISOString(),
           });
-          if (userError) throw userError;
+          if (userError) {
+            // Do not leave an orphan cafe behind (this is what happened with cafes 5 and 6).
+            const { error: cleanupError } = await supabase.from("cafes").delete().eq("id", tenantId);
+            if (cleanupError) console.error("Orphan cafe cleanup failed:", cleanupError);
+            throw userError;
+          }
 
           // Credentials are stored for the onboarding flow; failure here must not fail Stripe delivery.
           const { error: credentialsError } = await supabase.from("pendingcredentials").insert({
@@ -116,9 +157,12 @@ serve(async (req: Request) => {
         }
       }
 
-      const subscriptionId = typeof session.subscription === "string" ? session.subscription : null;
-      const customerId = typeof session.customer === "string" ? session.customer : null;
-      const tier = session.metadata?.tier ?? "starter";
+      if (tenantId <= 0) {
+        console.error(`Event ${event.id}: no tenant resolved; subscription not stored`);
+        return new Response(JSON.stringify({ received: true, warning: "No tenant resolved" }), {
+          headers: { "Content-Type": "application/json" },
+        });
+      }
 
       const { error } = await supabase.from("subscriptions").insert({
         tenant_id: tenantId,
@@ -168,8 +212,10 @@ serve(async (req: Request) => {
       console.log(`Tenant ${tenantId} → free (subscription cancelled)`);
     }
   } catch (err) {
-    console.error("Error processing webhook:", err);
-    return new Response(JSON.stringify({ received: true, warning: "Webhook processing failed" }), {
+    console.error(`Error processing webhook ${event.id} (${event.type}):`, err);
+    // 500 so Stripe retries automatically; safe now that the handler is idempotent.
+    return new Response(JSON.stringify({ received: false, error: "Webhook processing failed" }), {
+      status: 500,
       headers: { "Content-Type": "application/json" },
     });
   }
