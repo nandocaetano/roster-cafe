@@ -3,6 +3,7 @@
 import os
 from datetime import date, datetime
 
+import streamlit as st
 from database import _P, _PG, _get_conn
 
 TIER_LIMITS = {
@@ -37,6 +38,7 @@ TIER_PRICE_ENV = {
 }
 
 
+@st.cache_data(ttl=30, show_spinner=False)
 def get_subscription(tenant_id):
     """Return the tenant subscription, or the default free plan."""
     conn = _get_conn()
@@ -180,5 +182,6 @@ def upsert_subscription(tenant_id, plano, validade, stripe_customer_id=None, str
                 (tenant_id, plano, validade, stripe_customer_id, stripe_subscription_id),
             )
         conn.commit()
+        get_subscription.clear()
     finally:
         conn.close()

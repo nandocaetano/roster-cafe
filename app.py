@@ -70,6 +70,18 @@ def _cached_rosters(tenant_id, _v=0):
     return get_rosters(tenant_id)
 
 
+@st.cache_data(ttl=300)
+def _cached_shift_templates(tenant_id, _v=0):
+    """Cache shift templates for 5 min; clear after save."""
+    return get_shift_templates(tenant_id)
+
+
+@st.cache_data(ttl=60)
+def _cached_min_dias_folga(tenant_id):
+    """Cache min days off for 60 s; clear after save."""
+    return get_cafe_min_dias_folga(tenant_id)
+
+
 def _trial_expired(tenant_id):
     """Return True when a non-Pro tenant is beyond the 7-day trial."""
     if is_pro(tenant_id):
@@ -187,12 +199,12 @@ def render_availability_selector(prefix, defaults=None):
 # ==========================================
 st.set_page_config(page_title="Escala", page_icon="⬡", layout="wide")
 
-# Run init_db only once per browser session — not on every Streamlit rerun.
-# On Supabase, every _get_conn() is a network round-trip (~200-400 ms);
-# init_db sends 6+ DDL statements, so skipping it after the first run saves 1-2 s.
-if 'db_initialized' not in st.session_state:
+@st.cache_resource
+def _ensure_db_initialized():
+    """Run init_db at most once per Streamlit server process, not once per browser session."""
     init_db()
-    st.session_state['db_initialized'] = True
+    return True
+_ensure_db_initialized()
 
 if 'user' not in st.session_state:
     st.session_state['user'] = None
@@ -425,6 +437,8 @@ with st.sidebar:
     if st.button("🚪 Sign out"):
         st.session_state['user'] = None
         st.session_state['tenant_id'] = None
+        for _k in ('roster_df', 'constraints_warnings'):
+            st.session_state.pop(_k, None)
         st.rerun()
 
 st.markdown('''<div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
@@ -503,22 +517,34 @@ with aba1:
 
         dias_selecionados = render_availability_selector(f"novo_{_nk}")
 
-        if st.button("Add", key=f"novo_btn_{_nk}") and nome_novo:
-            _cur_count = len(df_equipe) if not df_equipe.empty else 0
-            if _emp_limit is not None and _cur_count >= _emp_limit:
-                st.error(f"Staff limit reached: your plan supports up to {_emp_limit} active staff. Upgrade Plan in the sidebar to add more.")
+        if st.button("Add", key=f"novo_btn_{_nk}"):
+            _erros_add = []
+            if not nome_novo.strip():
+                _erros_add.append("Name is required.")
+            if cargo_novo not in lista_cargos_oficiais:
+                _erros_add.append("Role must be a valid option.")
+            if contrato_novo not in ["Full-time", "Part-time"]:
+                _erros_add.append("Contract type must be Full-time or Part-time.")
+            if h_min_nova > h_max_nova:
+                _erros_add.append(f"Min hours ({h_min_nova}) cannot exceed Max hours ({h_max_nova}).")
+            if _erros_add:
+                st.error("Cannot save: " + " | ".join(_erros_add))
             else:
-                try:
-                    adicionar_funcionario(TENANT_ID, nome_novo, cargo_novo, contrato_novo, h_min_nova, h_max_nova, dias_selecionados, nivel_novo, pref_novo)
-                    st.success(f"{nome_novo} added!")
-                    st.session_state['equipe_v'] += 1
-                    st.session_state['novo_k'] += 1
-                    st.rerun()
-                except ValueError as _ve:
-                    if "limite_funcionarios" in str(_ve):
-                        st.error(f"Staff limit reached: your plan supports up to {_emp_limit} active staff. Upgrade Plan in the sidebar.")
-                    else:
-                        st.error("Could not save staff member. Please try again.")
+                _cur_count = len(df_equipe) if not df_equipe.empty else 0
+                if _emp_limit is not None and _cur_count >= _emp_limit:
+                    st.error(f"Staff limit reached: your plan supports up to {_emp_limit} active staff. Upgrade Plan in the sidebar to add more.")
+                else:
+                    try:
+                        adicionar_funcionario(TENANT_ID, nome_novo, cargo_novo, contrato_novo, h_min_nova, h_max_nova, dias_selecionados, nivel_novo, pref_novo)
+                        st.success(f"{nome_novo} added!")
+                        st.session_state['equipe_v'] += 1
+                        st.session_state['novo_k'] += 1
+                        st.rerun()
+                    except ValueError as _ve:
+                        if "limite_funcionarios" in str(_ve):
+                            st.error(f"Staff limit reached: your plan supports up to {_emp_limit} active staff. Upgrade Plan in the sidebar.")
+                        else:
+                            st.error("Could not save staff member. Please try again.")
 
     with col2:
         st.subheader("✏️ Edit or Remove")
@@ -562,12 +588,24 @@ with aba1:
 
             col_btn1, col_btn2 = st.columns(2)
             if col_btn1.button("💾 Save", key=f"{_pfx}_salvar"):
-                atualizar_funcionario(TENANT_ID, int(dados_atuais['id_funcionario']), nome_ed, cargo_ed, contrato_ed, h_min_ed, h_max_ed, dias_ed, nivel_ed, pref_ed)
-                st.success("Updated!")
-                st.session_state['equipe_v'] += 1
-                for _sk in [k for k in st.session_state if k.startswith(f"ed_{func_selecionado}")]:
-                    del st.session_state[_sk]
-                st.rerun()
+                _erros_ed = []
+                if not nome_ed.strip():
+                    _erros_ed.append("Name is required.")
+                if cargo_ed not in lista_cargos_oficiais:
+                    _erros_ed.append("Role must be a valid option.")
+                if contrato_ed not in ["Full-time", "Part-time"]:
+                    _erros_ed.append("Contract type must be Full-time or Part-time.")
+                if h_min_ed > h_max_ed:
+                    _erros_ed.append(f"Min hours ({h_min_ed}) cannot exceed Max hours ({h_max_ed}).")
+                if _erros_ed:
+                    st.error("Cannot save: " + " | ".join(_erros_ed))
+                else:
+                    atualizar_funcionario(TENANT_ID, int(dados_atuais['id_funcionario']), nome_ed, cargo_ed, contrato_ed, h_min_ed, h_max_ed, dias_ed, nivel_ed, pref_ed)
+                    st.success("Updated!")
+                    st.session_state['equipe_v'] += 1
+                    for _sk in [k for k in st.session_state if k.startswith(f"ed_{func_selecionado}")]:
+                        del st.session_state[_sk]
+                    st.rerun()
             if col_btn2.button("❌ Deactivate", key=f"{_pfx}_desativar"):
                 desativar_funcionario(TENANT_ID, int(dados_atuais['id_funcionario']))
                 st.session_state['equipe_v'] += 1
@@ -579,9 +617,10 @@ with aba1:
 # ------------------------------------------
 with aba_config:
     st.header("🕒 Shift Settings")
-    _templates = get_shift_templates(TENANT_ID)
+    _templates = _cached_shift_templates(TENANT_ID)
     if _templates.empty:
         _templates = seed_shift_templates(TENANT_ID)
+        _cached_shift_templates.clear()
 
     _template_rows = []
     for _, _row in _templates.iterrows():
@@ -644,6 +683,7 @@ with aba_config:
             st.error("Keep at least one active shift.")
         else:
             save_shift_templates(TENANT_ID, _rows_to_save)
+            _cached_shift_templates.clear()
             st.session_state.pop("turnos_padrao", None)
             st.session_state.pop("slot_config", None)
             st.session_state.pop("roster_df", None)
@@ -902,7 +942,7 @@ with aba3:
             df_escala, constraints_warnings = gerar_escala_automatica(
                 config_semana, turnos_padrao, margem,
                 slot_config=_patched_sc,
-                min_dias_folga=get_cafe_min_dias_folga(TENANT_ID),
+                min_dias_folga=_cached_min_dias_folga(TENANT_ID),
             )
             st.session_state['roster_df'] = df_escala
             st.session_state['constraints_warnings'] = constraints_warnings
@@ -981,51 +1021,74 @@ with aba3:
                     st.success(f"🟢 {label}")
 
         st.subheader("🚨 Rule Warnings")
-        tem_erro_fechamento, tem_gaps = False, False
+        constraints_warnings = st.session_state.get('constraints_warnings', [])
 
+        # CP-SAT solver status — standalone banner, not grouped
+        for _cs in [w for w in constraints_warnings if w.startswith("CP-SAT:")]:
+            st.info(f"ℹ️ {_cs}")
+
+        # Collect closing errors from live roster (keyholder check per day)
+        _closing_errors_ui = []
+        _gaps_found = False
         for dia in turnos_padrao.keys():
             turnos_fecho_dia = roster_editado[
                 (roster_editado['Dia'] == dia) & (roster_editado['Horário'].fillna('').str.contains("Fechamento"))
             ]
             nomes_no_fecho = turnos_fecho_dia['Funcionário'].tolist()
             if "To Fill" in nomes_no_fecho or "Someone (Other Store)" in nomes_no_fecho:
-                tem_gaps = True
+                _gaps_found = True
+            if not df_equipe_atual.empty and 'nome' in df_equipe_atual.columns and 'cargo' in df_equipe_atual.columns:
+                cargos_fecho = df_equipe_atual[df_equipe_atual['nome'].isin(nomes_no_fecho)]['cargo'].tolist()
+                if not any(cargo in ["Manager", "Assistant Manager", "Head Barista"] for cargo in cargos_fecho) and len(cargos_fecho) > 0:
+                    _closing_errors_ui.append(f"❌ **Closing error ({dia}):** No Manager, Assistant Manager, or Head Barista scheduled.")
 
-            cargos_fecho = df_equipe_atual[df_equipe_atual['nome'].isin(nomes_no_fecho)]['cargo'].tolist()
-            if not any(cargo in ["Manager", "Assistant Manager", "Head Barista"] for cargo in cargos_fecho) and len(cargos_fecho) > 0:
-                st.error(f"❌ **Closing error ({dia}):** No Manager, Assistant Manager, or Head Barista scheduled.")
-                tem_erro_fechamento = True
+        # Categorise constraints_warnings from solver
+        _cw_no_keyholder = [w for w in constraints_warnings if "nenhum keyholder elegível" in w or "fechamento sem keyholder" in w]
+        _cw_no_staff     = [w for w in constraints_warnings if "nenhum funcionário elegível" in w or ("turno não atribuído" in w and w not in _cw_no_keyholder)]
+        _cw_rest         = [w for w in constraints_warnings if "WTI —" in w or "dias de descanso" in w or "clopening inválido" in w]
+        _cw_other        = [w for w in constraints_warnings
+                            if not w.startswith("CP-SAT:")
+                            and w not in _cw_no_keyholder
+                            and w not in _cw_no_staff
+                            and w not in _cw_rest]
 
-        if tem_gaps:
-            st.warning("⚠️ **Gaps found:** Empty shifts or assigned to 'Someone'.")
-        if not tem_erro_fechamento and not tem_gaps:
-            st.success("✅ All clear! No rule violations and no gaps.")
+        # Group 1 — No eligible staff
+        if _cw_no_staff:
+            with st.expander(f"No eligible staff ({len(_cw_no_staff)})", expanded=False):
+                for w in _cw_no_staff:
+                    st.error(w)
 
-        constraints_warnings = st.session_state.get('constraints_warnings', [])
-        if constraints_warnings:
-            # CP-SAT solver status shown as a standalone banner
-            _cpsat = [w for w in constraints_warnings if w.startswith("CP-SAT:")]
-            for _cs in _cpsat:
-                st.info(f"ℹ️ {_cs}")
+        # Group 2 — Closing / keyholder issues (solver warnings + live roster errors)
+        _g2_total = len(_cw_no_keyholder) + len(_closing_errors_ui)
+        if _cw_no_keyholder or _closing_errors_ui:
+            with st.expander(f"Closing / keyholder ({_g2_total})", expanded=False):
+                for w in _closing_errors_ui:
+                    st.error(w)
+                for w in _cw_no_keyholder:
+                    st.error(w)
 
-            _erros = [w for w in constraints_warnings if any(k in w for k in (
-                "turno não atribuído", "limite semanal", "mínimo semanal",
-                "clopening inválido", "fechamento sem keyholder"
-            ))]
-            # >4.5h recommendation and CP-SAT lines go to info; >6h mandatory break stays in warns
-            _infos = [w for w in constraints_warnings if "recomendada" in w]
-            _warns = [w for w in constraints_warnings
-                      if w not in _erros and w not in _infos and not w.startswith("CP-SAT:")]
+        # Group 3 — Rest days / clopening
+        if _cw_rest:
+            with st.expander(f"Rest days / clopening ({len(_cw_rest)})", expanded=False):
+                for w in _cw_rest:
+                    st.warning(w)
 
-            if _erros or _warns or _infos:
-                label = f"⚠️ Labour Rules ({len(_erros)} error(s), {len(_warns)} warning(s), {len(_infos)} info)"
-                with st.expander(label, expanded=bool(_erros)):
-                    for w in _erros:
-                        st.error(w)
-                    for w in _warns:
-                        st.warning(w)
-                    for w in _infos:
+        # Group 4 — Other (hours, WTI breaks, gaps, solver misc)
+        _g4_gaps = ["⚠️ **Gaps found:** Empty shifts or assigned to 'Someone'."] if _gaps_found else []
+        _g4_total = len(_cw_other) + len(_g4_gaps)
+        if _cw_other or _g4_gaps:
+            with st.expander(f"Other warnings ({_g4_total})", expanded=False):
+                for w in _g4_gaps:
+                    st.warning(w)
+                for w in _cw_other:
+                    if "recomendada" in w:
                         st.info(w)
+                    else:
+                        st.warning(w)
+
+        # All-clear only when truly nothing to report
+        if not _closing_errors_ui and not _gaps_found and not any([_cw_no_staff, _cw_no_keyholder, _cw_rest, _cw_other]):
+            st.success("✅ All clear! No rule violations and no gaps.")
 
         st.divider()
         if check_feature_gate(TENANT_ID, "roster_history"):
@@ -1140,13 +1203,14 @@ with aba5:
             "Minimum days off per employee per week",
             min_value=1,
             max_value=7,
-            value=get_cafe_min_dias_folga(TENANT_ID),
+            value=_cached_min_dias_folga(TENANT_ID),
             step=1,
             key="cafe_min_dias_folga",
         )
         if st.button("Save", key="save_cafe_min_dias_folga"):
             try:
                 set_cafe_min_dias_folga(TENANT_ID, _min_dias_folga)
+                _cached_min_dias_folga.clear()
                 st.success("Minimum days off saved.")
             except Exception as _e:
                 st.error(f"Could not save setting: {_e}")
