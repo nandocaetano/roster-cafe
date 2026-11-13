@@ -44,6 +44,7 @@ from billing_logic import (
     check_feature_gate,
     create_stripe_checkout_session,
     get_subscription,
+    upsert_subscription,
 )
 
 
@@ -358,6 +359,7 @@ with st.sidebar:
                         try:
                             _ntid = criar_cafe(_nc_nome, _nc_email)
                             create_user(_ntid, _nc_email, _nc_senha, role="admin")
+                            upsert_subscription(_ntid, "starter", None)
                             st.success(f"'{_nc_nome}' created!")
                             st.session_state['nc_k'] += 1
                             st.rerun()
