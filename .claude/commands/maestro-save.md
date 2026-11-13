@@ -1,4 +1,4 @@
-Wrap up the current session by updating the Second Brain and committing all changes.
+Wrap up the current session by updating the Second Brain and prepare the suggested commit.
 
 Steps:
 1. Run `git status` and `git diff --stat` to identify every modified file this session.
@@ -12,8 +12,6 @@ Steps:
    - `### Added` / `### Changed` / `### Fixed` sections as appropriate.
    - `### Files Modified` listing every file touched.
 4. If `docs/ROADMAP.md` needs updating (a phase was completed or a new one started), update it now.
-5. Stage all relevant files. Never stage `.env`, `*.db`, or binary build artefacts.
-6. Create a git commit using Conventional Commit format (feat/fix/refactor/docs) with a subject ≤ 72 chars and a 2–3 bullet body explaining *why*.
-7. End the commit message with:
-   `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>`
-8. Print exactly: "Session closed, docs updated, and git commit complete."
+5. Liste os arquivos que devem entrar no commit (nunca .env, *.db, segredos ou binários de build) e mostre o comando git add exato. Não rode.
+6. Mostre a mensagem de commit sugerida (Conventional Commit, feat/fix/refactor/docs, subject ≤ 72 chars, 2–3 bullet body) e o comando git exato com Co-Authored-By. Não rode. O Nando roda um comando por vez.
+7. Print exactly: "Session closed, docs updated. Suggested git commit ready for Nando."

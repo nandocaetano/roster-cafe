@@ -1,4 +1,4 @@
-Wrap up the session: update the Second Brain docs and commit all changes.
+Wrap up the session: update the Second Brain docs and prepare the suggested commit.
 
 Steps:
 1. Run `git status` and `git diff` to identify every modified and untracked file changed this session.
@@ -10,9 +10,6 @@ Steps:
    - Date heading: `## YYYY-MM-DD — <Phase Name>: <Short Title>`
    - `### Added` / `### Changed` / `### Fixed` sections as appropriate.
    - `### Files Modified` listing every file touched.
-4. Stage all relevant files. Do not stage secrets, `.env` files, or binary build artefacts.
-5. Create a git commit using Conventional Commit format:
-   - `feat:` for new features, `refactor:` for structural changes, `fix:` for bug fixes, `docs:` for documentation-only changes.
-   - Subject line ≤ 72 characters.
-   - Body: 2–3 bullet points describing *why* the changes were made, not just what changed.
-6. Print exactly: "Session closed, docs updated, and git commit complete."
+4. Liste os arquivos que devem entrar no commit (nunca .env, *.db, segredos ou binários de build) e mostre o comando git add exato. Não rode.
+5. Mostre a mensagem de commit sugerida (Conventional Commit) e o comando git exato. Não rode. O Nando roda um comando por vez.
+6. Print exactly: "Session closed, docs updated. Suggested git commit ready for Nando."
